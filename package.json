@@ -4,8 +4,12 @@
   "description": "A lightweight chatbot for the Signal platform.",
   "main": "index.js",
   "scripts": {
+    "start": "node src/app.js",
     "test": "jest --watch"
   },
   "author": "David Jay",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.17.1"
+  }
 }
