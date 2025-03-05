@@ -1,0 +1,11 @@
+{
+  "name": "rhizal",
+  "version": "1.0.0",
+  "description": "A lightweight chatbot for the Signal platform.",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest --watch"
+  },
+  "author": "David Jay",
+  "license": "ISC"
+}
