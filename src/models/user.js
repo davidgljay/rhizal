@@ -92,6 +92,29 @@ class User {
             console.error('Error updating user status:', error);
         }
     }
+
+
+    static async create(phone) {
+        try {
+            const mutation = `
+                mutation createUser($phone: String!) {
+                    createUser(phone: $phone) {
+                        id
+                        phone
+                    }
+                }
+            `;
+            const variables = { phone };
+            const response = await graphql(mutation, variables);
+            const userData = response.data.createUser;
+            const user = new User();
+            user.id = userData.id;
+            user.phone = userData.phone;
+            return user;
+        } catch (error) {
+            console.error('Error creating user:', error);
+        }
+    }
 }
 
 export default User;

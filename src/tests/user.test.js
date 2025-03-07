@@ -137,4 +137,32 @@ describe('User', () => {
             consoleSpy.mockRestore();
         });
     });
+    describe('create', () => {
+        it('should create a new user when the response is successful', async () => {
+            const mockResponse = {
+                data: {
+                    createUser: {
+                        id: '1',
+                        phone: '1234567890',
+                    },
+                },
+            };
+            graphql.mockResolvedValue(mockResponse);
+
+            const newUser = await User.create('1234567890');
+
+            expect(newUser.id).toBe('1');
+            expect(newUser.phone).toBe('1234567890');
+        });
+
+        it('should log an error when the response is unsuccessful', async () => {
+            const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+            graphql.mockRejectedValue(new Error('GraphQL error'));
+
+            await User.create('1234567890');
+
+            expect(consoleSpy).toHaveBeenCalledWith('Error creating user:', expect.any(Error));
+            consoleSpy.mockRestore();
+        });
+    });
 });
