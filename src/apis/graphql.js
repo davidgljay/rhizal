@@ -1,7 +1,7 @@
 const fetch = require('node-fetch');
 
 export async function graphql(query) {
-    const HASURA_GRAPHQL_URL = 'https://rhyzal.hasura.app/v1/graphql';
+    const HASURA_GRAPHQL_URL =  process.env.HASURA_GRAPHQL_URL;
     const HASURA_ADMIN_SECRET = process.env.HASURA_ADMIN_SECRET;
     const response = await fetch(HASURA_GRAPHQL_URL, {
         method: 'POST',

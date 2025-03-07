@@ -4,10 +4,11 @@ const fetch = require('node-fetch');
 jest.mock('node-fetch');
 
 describe('graphql', () => {
-    const HASURA_GRAPHQL_URL = 'https://rhyzal.hasura.app/v1/graphql';
+    const HASURA_GRAPHQL_URL = 'https://test.hasura.app/v1/graphql';
     const HASURA_ADMIN_SECRET = 'test-secret';
 
     beforeEach(() => {
+        process.env.HASURA_GRAPHQL_URL = HASURA_GRAPHQL_URL
         process.env.HASURA_ADMIN_SECRET = HASURA_ADMIN_SECRET;
     });
 
