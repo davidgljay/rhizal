@@ -1,15 +1,15 @@
 const { graphql } = require('../apis/graphql');
 
 class Script {
-    constructor(id, name, yaml, varsquery, targetquery) {
-        this.id = id;
-        this.name = name;
-        this.yaml = yaml;
-        this.varsquery = varsquery;
-        this.targetquery = targetquery;
+    constructor() {
+        this.id = '';
+        this.name = '';
+        this.yaml = '';
+        this.varsquery = '';
+        this.targetquery = '';
     }
 
-    static async get(name) {
+    async get(name) {
 
         try {
         const scriptData = await graphql({
@@ -27,8 +27,12 @@ query GetScript($name: String!) {
             variables: { name }
         });
 
-        const { id, yaml, varsquery, targetquery } = scriptData.data.script;
-        return new Script(id, name, yaml, varsquery, targetquery);
+        this.id = scriptData.data.script.id;
+        this.name = scriptData.data.script.name;
+        this.yaml = scriptData.data.script.yaml;
+        this.varsquery = scriptData.data.script.varsquery;
+        this.targetquery = scriptData.data.script.targetquery;
+        return 
         } catch (error) {
             if (error.message) {
                 throw new Error(error.message);

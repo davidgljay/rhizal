@@ -5,13 +5,14 @@ jest.mock('../apis/graphql');
 
 describe('Script', () => {
     describe('get_targets', () => {
-        const scriptInstance = new Script(1, 'Test Script', 'yaml content', 'vars query', 'target query');
+        const scriptInstance = new Script();
 
         afterEach(() => {
             jest.clearAllMocks();
         });
 
         it('should return targets data when the response is successful', async () => {
+            scriptInstance.targetquery = 'target query';
             const mockResponse = {
                 data: { targets: [{ id: 1, name: 'Target 1' }] },
             };
@@ -40,13 +41,14 @@ describe('Script', () => {
 
 
     describe('get_vars', () => {
-        const scriptInstance = new Script(1, 'Test Script', 'yaml content', 'vars query', 'target query');
+        const scriptInstance = new Script();
 
         afterEach(() => {
             jest.clearAllMocks();
         });
 
         it('should return vars data when the response is successful', async () => {
+            scriptInstance.varsquery = 'vars query';
             const mockResponse = {
                 data: { vars: [{ id: 1, name: 'Var 1' }] },
             };
@@ -75,6 +77,7 @@ describe('Script', () => {
     });
 
     describe(Script.get, () => {
+        const scriptInstance = new Script();
         afterEach(() => {
             jest.clearAllMocks();
         });
@@ -93,7 +96,7 @@ describe('Script', () => {
             };
             graphql.mockResolvedValue(mockResponse);
 
-            const script = await Script.get('Test Script');
+            await scriptInstance.get('Test Script');
 
             expect(graphql).toHaveBeenCalledWith({
                 query: `
@@ -109,24 +112,24 @@ query GetScript($name: String!) {
 `,
                 variables: { name: 'Test Script' },
             });
-            expect(script).toBeInstanceOf(Script);
-            expect(script.id).toBe(1);
-            expect(script.name).toBe('Test Script');
-            expect(script.yaml).toBe('yaml content');
-            expect(script.varsquery).toBe('vars query');
-            expect(script.targetquery).toBe('target query');
+            expect(scriptInstance).toBeInstanceOf(Script);
+            expect(scriptInstance.id).toBe(1);
+            expect(scriptInstance.name).toBe('Test Script');
+            expect(scriptInstance.yaml).toBe('yaml content');
+            expect(scriptInstance.varsquery).toBe('vars query');
+            expect(scriptInstance.targetquery).toBe('target query');
         });
 
         it('should throw an error when the response is not successful', async () => {
             graphql.mockRejectedValue(new Error('Error message'));
 
-            await expect(Script.get('Test Script')).rejects.toThrow('Error message');
+            await expect(scriptInstance.get('Test Script')).rejects.toThrow('Error message');
         });
 
         it('should throw an unknown error when the response is not successful and no error message is provided', async () => {
             graphql.mockRejectedValue(new Error());
 
-            await expect(Script.get('Test Script')).rejects.toThrow('Unknown error getting script data');
+            await expect(scriptInstance.get('Test Script')).rejects.toThrow('Unknown error getting script data');
         });
     });
 });
