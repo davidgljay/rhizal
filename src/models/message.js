@@ -2,7 +2,7 @@
 const { graphql } = require('../apis/graphql');
 
 class Message {
-    async get(message_id) {
+    static async get(message_id) {
         const GET_MESSAGE = `
 query GetMessage($id: ID!) {
     message(id: $id) {
@@ -16,15 +16,10 @@ query GetMessage($id: ID!) {
         `;
 
         const result = await graphql(GET_MESSAGE, { id: message_id });
-        this.id = result.data.message.id;
-        this.text = result.data.message.text;
-        this.sender = result.data.message.sender;
-        this.sent_time = result.data.message.sent_time;
-        this.recipients = result.data.message.recipients;
         return result.data.message;
     }
 
-    async create(sender, text, sent_time, recipients) {
+    static async create(sender, text, sent_time, recipients) {
         const CREATE_MESSAGE = `
 mutation CreateMessage($input: CreateMessageInput!) {
     createMessage(input: $input) {
