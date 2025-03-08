@@ -19,7 +19,6 @@ query GetUser($phone: String!) {
 `;
             const variables = { phone: user_phone };
             const response = await graphql(query, variables);
-            console.log(response)
             if (response.data.user.length === 0) {
                 return null;
             }
