@@ -4,6 +4,11 @@ const { graphql } = require('../apis/graphql');
 jest.mock('../apis/graphql');
 
 describe('User Model', () => {
+
+    afterEach(() => {
+        jest.clearAllMocks();
+    });
+
     describe('set_variable', () => {
         it('should throw an error for an invalid variable', async () => {
             await expect(User.set_variable('123', 'invalidVar', 'value')).rejects.toThrow('Invalid variable. Valid variables are: fname, fullname, location, email');
@@ -35,6 +40,16 @@ describe('User Model', () => {
             await User.create('1234567890');
 
             expect(graphql).toHaveBeenCalledWith(expect.stringContaining('mutation createUser'), { phone: '1234567890' });
+        });
+
+        it('should return a user object', async () => {
+            graphql.mockResolvedValue({ data: { createUser: { id: '123', phone: '1234567890' } } });
+
+            const user = await User.create('1234567890');
+
+            expect(user).toBeInstanceOf(User);
+            expect(user.id).toBe('123');
+            expect(user.phone).toBe('1234567890');
         });
 
         it('should log an error if graphql request fails', async () => {
