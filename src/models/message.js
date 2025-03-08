@@ -49,7 +49,7 @@ mutation CreateMessage($input: CreateMessageInput!) {
         return result.data.createMessage;
     }
 
-    static async send_message(phone, text, attachment) {
+    static async send(phone, text, attachment) {
         //TODO: send a message via the signal API
     }
 
