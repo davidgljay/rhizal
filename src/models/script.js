@@ -1,12 +1,16 @@
 const { graphql } = require('../apis/graphql');
+const RhizalParser = require('../helpers/rhizal_parser');
+const Message = require('./message');
+const User = require('./user');
 
 class Script {
-    constructor() {
+    constructor(name) {
         this.id = '';
         this.name = '';
         this.yaml = '';
         this.varsquery = '';
         this.targetquery = '';
+        this.parser = null;
     }
 
     async get(name) {
@@ -32,6 +36,7 @@ query GetScript($name: String!) {
         this.yaml = scriptData.data.script.yaml;
         this.varsquery = scriptData.data.script.varsquery;
         this.targetquery = scriptData.data.script.targetquery;
+        this.parser = new RhizalParser(this.yaml, Message.send_message, User.set_variable)
         return 
         } catch (error) {
             if (error.message) {
@@ -48,7 +53,7 @@ query GetScript($name: String!) {
                 query: this.varsquery,
                 variables: { user_id }
             });
-    
+            this.vars = varsData.data
             return varsData.data;    
         } catch (error) {
             if (error.message) {
@@ -64,7 +69,7 @@ query GetScript($name: String!) {
             const targetsData = await graphql({
                 query: this.targetquery
             });
-    
+            this.targets = targetsData.data;
             return targetsData.data;    
         } catch (error) {
             if (error.message) {
@@ -74,6 +79,15 @@ query GetScript($name: String!) {
             }
         }
     }
+
+    async send(step) {
+       return await this.parser.send(step, this.vars);
+    }
+
+    async receive(step, message) {
+        return await this.parser.receive(step, this.vars, message)
+    }
+
 }
 
 module.exports = Script;

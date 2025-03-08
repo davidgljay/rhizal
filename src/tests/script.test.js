@@ -132,4 +132,34 @@ query GetScript($name: String!) {
             await expect(scriptInstance.get('Test Script')).rejects.toThrow('Unknown error getting script data');
         });
     });
+
+    describe('send', () => {
+        it('should send a message via the parser', () => {
+            const scriptInstance = new Script();
+            scriptInstance.parser = {
+                send: jest.fn(),
+            };
+            scriptInstance.vars = { var1: 'value1' };
+
+            const step = 'step1';
+
+            scriptInstance.send(step);
+
+            expect(scriptInstance.parser.send).toHaveBeenCalledWith(step, scriptInstance.vars);
+        });
+    })
+
+    describe('receive', () => {
+        it('should properly process a received message via the parser', () => {
+            const scriptInstance = new Script();
+            scriptInstance.parser = {
+                receive: jest.fn(),
+            };
+            scriptInstance.vars = { var1: 'value1' };
+
+            scriptInstance.receive('step', 'message_content');
+
+            expect(scriptInstance.parser.receive).toHaveBeenCalledWith('step', { var1: 'value1' }, 'message_content');
+        })
+    })
 });

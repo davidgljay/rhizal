@@ -11,11 +11,10 @@ The function parses the yaml script, replaces the variables in the messages, and
 */
 class RhyzalParser {
 
-    constructor(yaml_script, send_message, send_attachment, set_user_variable) {
+    constructor(yaml_script, send_message, set_variable) {
         let script_obj;
         this.send_message = send_message;
-        this.send_attachment = send_attachment;
-        this.set_user_variable = set_user_variable;
+        this.set_user_variable = set_variable;
         try {
             script_obj = yaml.load(yaml_script);
         }
@@ -39,8 +38,10 @@ class RhyzalParser {
 
             for (let i = 0; i < messages.length; i++) {
                 if (messages[i].match(/attach\(([^)]+)\)/)) {
+
                     const file = messages[i].match(/attach\(([^)]+)\)/)[1];
-                    this.send_attachment(file);
+                    //TODO: update to include user_phone number 
+                    this.send_message('', file);
                 } else {
                     let message = messages[i];
                     for (const key in vars) {
@@ -51,7 +52,7 @@ class RhyzalParser {
             }
     }
 
-    receive(step, vars) {
+    receive(step, vars, message) {
         if (!this.script) {
             throw new Error('Script not initialized');
         }
