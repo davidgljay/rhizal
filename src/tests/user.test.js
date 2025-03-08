@@ -62,4 +62,41 @@ describe('User Model', () => {
             consoleSpy.mockRestore();
         });
     });
+
+    describe('get', () => {
+        it('should call graphql with correct query and variables', async () => {
+            graphql.mockResolvedValue({ data: { user: [{ id: '123', phone: '1234567890' }] } });
+            await User.get('1234567890');
+
+            expect(graphql).toHaveBeenCalledWith(expect.stringContaining('query GetUser'), { phone: '1234567890' });
+        });
+
+        it('should return a user object', async () => {
+            graphql.mockResolvedValue({ data: { user: [{ id: '123', phone: '1234567890' }] } });
+
+            const user = await User.get('1234567890');
+
+            expect(user).toBeInstanceOf(User);
+            expect(user.id).toBe('123');
+            expect(user.phone).toBe('1234567890');
+        });
+
+        it('should return null if user is not found', async () => {
+            graphql.mockResolvedValue({ data: { user: []}});
+
+            const user = await User.get('123');
+            expect(user).toBeNull();
+        });
+
+        it('should log an error if graphql request fails', async () => {
+            const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+            graphql.mockRejectedValue(new Error('GraphQL Error'));
+
+            await User.get('123');
+
+            expect(consoleSpy).toHaveBeenCalledWith('Error getting user:', expect.any(Error));
+            consoleSpy.mockRestore();
+        });
+    });
+
 });

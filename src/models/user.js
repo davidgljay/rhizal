@@ -7,6 +7,30 @@ class User {
         this.phone = phone;
     }
 
+    static async get(user_phone) {
+        try {
+            const query = `
+query GetUser($phone: String!) {
+    user(phone: $phone) {
+        id
+        phone
+    }
+}
+`;
+            const variables = { phone: user_phone };
+            const response = await graphql(query, variables);
+            console.log(response)
+            if (response.data.user.length === 0) {
+                return null;
+            }
+            const {id, phone} = response.data.user[0];
+            return new User(id, phone);
+        } catch (error) {
+            console.error('Error getting user:', error);
+        }
+    }
+
+
     static async set_variable(user_id, variable, value) {
         const validVariables = ['fname', 'fullname', 'location', 'email'];
         if (!validVariables.includes(variable)) {
