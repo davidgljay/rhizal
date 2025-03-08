@@ -76,7 +76,7 @@ describe('Script', () => {
         });
     });
 
-    describe('get', () => {
+    describe('init', () => {
         const scriptInstance = new Script();
         afterEach(() => {
             jest.clearAllMocks();
@@ -96,7 +96,7 @@ describe('Script', () => {
             };
             graphql.mockResolvedValue(mockResponse);
 
-            await scriptInstance.get('Test Script');
+            await scriptInstance.init('Test Script');
 
             expect(graphql).toHaveBeenCalledWith({
                 query: `
@@ -123,13 +123,13 @@ query GetScript($name: String!) {
         it('should throw an error when the response is not successful', async () => {
             graphql.mockRejectedValue(new Error('Error message'));
 
-            await expect(scriptInstance.get('Test Script')).rejects.toThrow('Error message');
+            await expect(scriptInstance.init('Test Script')).rejects.toThrow('Error message');
         });
 
         it('should throw an unknown error when the response is not successful and no error message is provided', async () => {
             graphql.mockRejectedValue(new Error());
 
-            await expect(scriptInstance.get('Test Script')).rejects.toThrow('Unknown error getting script data');
+            await expect(scriptInstance.init('Test Script')).rejects.toThrow('Unknown error getting script data');
         });
     });
 
