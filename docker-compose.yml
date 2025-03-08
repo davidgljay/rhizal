@@ -1,0 +1,31 @@
+version: '0.1'
+
+services:
+  app:
+    image: node:14
+    working_dir: /usr/src/app
+    volumes:
+      - .:/usr/src/app
+    command: sh -c "yarn install && yarn start"
+    ports:
+      - "3000:3000"
+    environment:
+      - HASURA_GRAPHQL_URL=http://hasura:8080/v1/graphql
+      - HASURA_ADMIN_SECRET=${HASURA_ADMIN_SECRET}
+    depends_on:
+      - signal-cli
+    networks:
+      - app-network
+
+  signal-cli:
+    image: bbernhard/signal-cli-rest-api:latest
+    volumes:
+      - ./config/signal:/home/.local/share/signal-cli
+    ports:
+      - "8080:8080"
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
