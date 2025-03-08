@@ -5,7 +5,6 @@ jest.mock('../apis/graphql');
 
 describe('User Model', () => {
     describe('set_variable', () => {
-        console.log(User, User.set_variable)
         it('should throw an error for an invalid variable', async () => {
             await expect(User.set_variable('123', 'invalidVar', 'value')).rejects.toThrow('Invalid variable. Valid variables are: fname, fullname, location, email');
         });

@@ -76,7 +76,7 @@ describe('Script', () => {
         });
     });
 
-    describe(Script.get, () => {
+    describe('get', () => {
         const scriptInstance = new Script();
         afterEach(() => {
             jest.clearAllMocks();
