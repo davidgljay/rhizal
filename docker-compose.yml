@@ -12,6 +12,7 @@ services:
     environment:
       - HASURA_GRAPHQL_URL=http://hasura:8080/v1/graphql
       - HASURA_ADMIN_SECRET=${HASURA_ADMIN_SECRET}
+      - ACCOUNT_PHONE=${ACCOUNT_PHONE}
     depends_on:
       - signal-cli
     networks:
