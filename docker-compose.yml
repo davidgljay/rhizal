@@ -24,6 +24,8 @@ services:
       - ./config/signal:/home/.local/share/signal-cli
     ports:
       - "8080:8080"
+    environment:
+      - MODE=json-rpc
     networks:
       - app-network
 
