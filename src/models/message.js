@@ -1,5 +1,6 @@
 
 const { graphql } = require('../apis/graphql');
+const webSocketManager = require('../apis/signal');
 
 class Message {
     static async get(message_id) {
@@ -50,7 +51,9 @@ mutation CreateMessage($input: CreateMessageInput!) {
     }
 
     static async send(phone, text, attachment) {
-        //TODO: send a message via the signal API
+        if (phone == process.env.ACCOUNT_PHONE) {
+            webSocketManager.send([phone], text)
+        }
     }
 
 }
