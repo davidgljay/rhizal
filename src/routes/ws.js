@@ -28,7 +28,7 @@ Example payload from Signal API:
     envelope.syncMessage will be undefined if there is no message.
 */
 
-import { receive_message, recieve_message } from '../handlers/receive_message';
+import { receive_message } from '../handlers/receive_message';
 
 export async function receive_raw_message(msg) {
     if (!msg || !msg.envelope || !msg.envelope.syncMessage) {
