@@ -1,16 +1,17 @@
-const express = require('express');
-const bodyParser = require('body-parser');
-const routes = require('./routes/router');
+// const express = require('express');
+// const bodyParser = require('body-parser');
+// const routes = require('./routes/router');
 const WebSocket = require('ws');
+const { receive_raw_message } = require('./routes/ws');
 
-const app = express();
+// const app = express();
 const PORT = process.env.PORT || 3000;
 const phone = process.env.ACCOUNT_PHONE;
 
-app.use(bodyParser.json());
-app.use('/api', routes());
+// app.use(bodyParser.json());
+// app.use('/api', routes());
 
-console.log('Connecting to WebSocket... ', 'ws://signal-cli:8080/v1/receive/' + phone);
+console.log('Connecting to WebSocket for ' + phone + '... ');
 
 const ws = new WebSocket('ws://signal-cli:8080/v1/receive/' + phone);
 
@@ -27,9 +28,16 @@ ws.on('error', function error(err) {
 });
 
 ws.on('message', function incoming(data) {
-    console.log('WebSocket message received:', JSON.parse(data).envelope.syncMessage);
+  try {
+    console.log('Received WebSocket message:', JSON.parse(data));
+    receive_raw_message(JSON.parse(data));
+  }
+  catch (e) {
+    console.error('Error parsing WebSocket message:', e);
+    console.error('WebSocket message:', data);
+  }
 });
 
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
-});
+// app.listen(PORT, () => {
+//   console.log(`Server is running on http://localhost:${PORT}`);
+// });
