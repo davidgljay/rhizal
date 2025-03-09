@@ -1,0 +1,6 @@
+{
+    "watch": ["src"],
+    "ext": "js,json",
+    "ignore": ["dist"],
+    "exec": "yarn build && node dist/app.js"
+}
