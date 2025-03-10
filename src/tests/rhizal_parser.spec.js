@@ -4,7 +4,6 @@ const RhyzalParser = require('../helpers/rhizal_parser');
 describe('rhyzal_parser', () => {
 
     const test_yaml = `
-script:
     0:
         send:
             - Message with {{var1}} to {{var2}}!
@@ -44,7 +43,7 @@ script:
 
     describe('send', () => {
         it('should throw an error if the script is not initialized', () => {
-            const parser = new RhyzalParser('stuff and things', send_message, set_user_variable);
+            const parser = new RhyzalParser(null, send_message, set_user_variable);
             expect(() => parser.send(0, {})).toThrow('Script not initialized');
         });
 
@@ -75,7 +74,7 @@ script:
 
     describe ('receive', () => {
         it('should throw an error if the script is not initialized', () => {
-            const parser = new RhyzalParser('stuff and things', send_message, set_user_variable);
+            const parser = new RhyzalParser(null, send_message, set_user_variable);
             const set_user_variable = jest.fn();
             expect(() => parser.receive(0, {}, set_user_variable)).toThrow('Script not initialized');
         });

@@ -21,7 +21,7 @@ class RhyzalParser {
         catch (e) {
             throw new Error('Invalid yaml input ' + e);
         }
-        this.script = script_obj.script;
+        this.script = script_obj;
     }
 
     send(step, vars) {
@@ -37,18 +37,19 @@ class RhyzalParser {
             const messages = this.script[step].send;
 
             for (let i = 0; i < messages.length; i++) {
-                if (messages[i].match(/attach\(([^)]+)\)/)) {
+                //Send a message with an attachement
+                // if (messages[i].match(/attach\(([^)]+)\)/)) {
 
-                    const file = messages[i].match(/attach\(([^)]+)\)/)[1];
-                    //TODO: update to include user_phone number 
-                    this.send_message('', file);
-                } else {
+                //     const file = messages[i].match(/attach\(([^)]+)\)/)[1];
+                //     //TODO: update to include user_phone number and format properly 
+                //     this.send_message('', file);
+                // } else {
                     let message = messages[i];
                     for (const key in vars) {
                         message = message.replace(new RegExp(`{{${key}}}`, 'g'), vars[key]);
                     }
-                    this.send_message(message);
-                }
+                    this.send_message(vars.phone, message);
+                // }
             }
     }
 
