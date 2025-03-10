@@ -48,9 +48,9 @@ describe('Message', () => {
             delete mockMessageWithoutId.id;
             graphql.mockResolvedValue({ data: { createMessage: mockMessage } });
 
-            const result = await Message.create('user1', 'Hello, world!', '2023-10-01T00:00:00Z', ['user2', 'user3']);
+            const result = await Message.create('user1', ['user2', 'user3'], 'Hello, world!', '2023-10-01T00:00:00Z');
 
-            expect(graphql).toHaveBeenCalledWith(expect.any(String), { input: mockMessageWithoutId });
+            expect(graphql).toHaveBeenCalledWith({ query: expect.any(String), variables: mockMessageWithoutId });
             expect(result).toEqual(mockMessage);
         });
 

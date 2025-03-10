@@ -20,7 +20,7 @@ query GetMessage($id: ID!) {
         return result.data.message;
     }
 
-    static async create(sender, text, sent_time, recipients) {
+    static async create(sender, recipients, text, sent_time) {
         const CREATE_MESSAGE = `
 mutation CreateMessage($input: CreateMessageInput!) {
     createMessage(input: $input) {
@@ -30,8 +30,7 @@ mutation CreateMessage($input: CreateMessageInput!) {
         sent_time
         recipients
     }
-}
-        `;
+}`;
 
         const message = {
             text,
@@ -40,7 +39,7 @@ mutation CreateMessage($input: CreateMessageInput!) {
             recipients
         };
 
-        const result = await graphql(CREATE_MESSAGE, { input: message });
+        const result = await graphql({query: CREATE_MESSAGE,  variables: message });
         this.id = result.data.createMessage.id;
         this.text = result.data.createMessage.text;
         this.sender = result.data.createMessage.sender;
@@ -51,8 +50,9 @@ mutation CreateMessage($input: CreateMessageInput!) {
     }
 
     static async send(phone, text, attachment) {
-        if (phone == process.env.ACCOUNT_PHONE) {
-            webSocketManager.send([phone], text)
+        //Safety step to avoid sending messages to the wrong phone number
+        if (process.env.NODE_ENV === 'test' || phone == process.env.ACCOUNT_PHONE) {
+            webSocketManager.send([phone], text);
         }
     }
 
