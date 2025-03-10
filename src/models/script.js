@@ -14,8 +14,6 @@ class Script {
     }
 
     async init(name, user_id) {
-
-        try {
         const scriptData = await graphql({
             query: `
 query GetScript($name: String!) {
@@ -31,21 +29,14 @@ query GetScript($name: String!) {
             variables: { name }
         });
 
-        this.id = scriptData.data.script.id;
-        this.name = scriptData.data.script.name;
-        this.yaml = scriptData.data.script.yaml;
-        this.varsquery = scriptData.data.script.varsquery;
-        this.targetquery = scriptData.data.script.targetquery;
-        this.parser = new RhizalParser(this.yaml, Message.send_message, User.set_variable)
+        this.id = scriptData.data.GetScript.script.id;
+        this.name = scriptData.data.GetScript.script.name;
+        this.yaml = scriptData.data.GetScript.script.yaml;
+        this.varsquery = scriptData.data.GetScript.script.varsquery;
+        this.targetquery = scriptData.data.GetScript.script.targetquery;
+        this.parser = new RhizalParser(this.yaml, Message.send, User.set_variable)
         await this.get_vars(user_id);
         return 
-        } catch (error) {
-            if (error.message) {
-                throw new Error(error.message);
-            } else {
-                throw new Error('Unknown error getting script data');
-            }
-        }
     }
 
     async get_vars(user_id) {
@@ -82,6 +73,7 @@ query GetScript($name: String!) {
     }
 
     async send(step) {
+        console.log('sending message via parser')
        return await this.parser.send(step, this.vars);
     }
 

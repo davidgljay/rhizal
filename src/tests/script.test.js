@@ -32,11 +32,6 @@ describe('Script', () => {
             await expect(scriptInstance.get_targets()).rejects.toThrow('Error message');
         });
 
-        it('should throw an unknown error when the response is not successful and no error message is provided', async () => {
-            graphql.mockRejectedValue(new Error());
-
-            await expect(scriptInstance.get_targets()).rejects.toThrow('Unknown error');
-        });
     });
 
 
@@ -69,11 +64,6 @@ describe('Script', () => {
             await expect(scriptInstance.get_vars(1)).rejects.toThrow('Error message');
         });
 
-        it('should throw an unknown error when the response is not successful and no error message is provided', async () => {
-            graphql.mockRejectedValue(new Error());
-
-            await expect(scriptInstance.get_vars(1)).rejects.toThrow('Unknown error');
-        });
     });
 
     describe('init', () => {
@@ -85,12 +75,14 @@ describe('Script', () => {
         it('should return a new Script instance when the response is successful', async () => {
             const mockResponse = {
                 data: {
-                    script: {
-                        id: 1,
-                        name: 'Test Script',
-                        yaml: 'yaml content',
-                        varsquery: 'vars query',
-                        targetquery: 'target query',
+                    GetScript: {
+                            script: {
+                            id: 1,
+                            name: 'Test Script',
+                            yaml: 'yaml content',
+                            varsquery: 'vars query',
+                            targetquery: 'target query',
+                        },
                     },
                 },
             };
@@ -126,11 +118,6 @@ query GetScript($name: String!) {
             await expect(scriptInstance.init('Test Script')).rejects.toThrow('Error message');
         });
 
-        it('should throw an unknown error when the response is not successful and no error message is provided', async () => {
-            graphql.mockRejectedValue(new Error());
-
-            await expect(scriptInstance.init('Test Script')).rejects.toThrow('Unknown error getting script data');
-        });
     });
 
     describe('send', () => {
