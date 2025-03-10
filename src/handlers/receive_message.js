@@ -3,40 +3,40 @@ const Message = require('../models/message');
 const Script = require('../models/script');
 
 
-export function receive_message(sender, recipient, message, sent_time) {
+export async function receive_message(sender, recipients, message, sent_time) {
     if (!message) {
         return;
     }
-    Message.create(sender, message, sent_time, recipient);
-    const user = User.get(sender);
+    Message.create(sender, recipients, message, sent_time);
+    const user = await User.get(sender);
     if (!user) {
-        new_user(sender);
+        await new_user(sender);
         return;
     }
     if (user.step == 'done') {
-        no_script_message(user);
+        await no_script_message(user);
         return;
     }
-    script_message(user, message);
+    await script_message(user, message);
     return;
 }
 
-export function new_user(phone) {
-    const user = User.create(phone);
+export async function new_user(phone) {
+    const user = await User.create(phone);
     const script = new Script();
-    script.init('onboarding', user.id);
-    script.send('0')
+    await script.init('onboarding', user.id);
+    await script.send('0')
     return;
 }
 
-export function no_script_message(user) {
-    Message.send(user.phone, 'Thanks for letting me know, I\'ll pass your message on to an organizer who may get back to you.');
+export async function no_script_message(user) {
+    await Message.send(user.phone, 'Thanks for letting me know, I\'ll pass your message on to an organizer who may get back to you.');
     return;
 }
 
-export function script_message(user, message) {
+export async function script_message(user, message) {
     const script = new Script();
-    script.init(user.script, user.id);
-    script.receive(user.step, message);
+    await script.init(user.script, user.id);
+    await script.receive(user.step, message);
     return;
 }
