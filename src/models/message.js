@@ -49,10 +49,10 @@ mutation CreateMessage($input: CreateMessageInput!) {
         return result.data.createMessage;
     }
 
-    static async send(phone, text, attachment) {
+    static async send(to_phone, from_phone, text, attachment) {
         //Safety step to avoid sending messages to the wrong phone number
         if (process.env.NODE_ENV === 'test' || phone == process.env.ACCOUNT_PHONE) {
-            webSocketManager.send([phone], text);
+            webSocketManager.send([to_phone], from_phone, text);
         }
     }
 
