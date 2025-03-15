@@ -39,7 +39,7 @@ class WebSocketManager {
         });
     }
 
-    send(recipients, message) {
+    send(recipients, from_number, message) {
         if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
             console.error('WebSocket is not open');
             return;
@@ -48,7 +48,7 @@ class WebSocketManager {
             console.error('Recipients must be an array');
             return;
         }
-        this.ws.send(JSON.stringify({ recipients, message }));
+        this.ws.send(JSON.stringify({ recipients, from_number, message }));
     }
 }
 

@@ -76,20 +76,22 @@ describe('WebSocketManager', () => {
     it('should send message if WebSocket is open', () => {
         const recipients = ['recipient1', 'recipient2'];
         const message = 'test message';
+        const bot_phone = '+0987654321';
         webSocketManager.ws = mockWebSocketInstance;
 
-        webSocketManager.send(recipients, message);
+        webSocketManager.send(recipients, bot_phone, message);
 
-        expect(mockWebSocketInstance.send).toHaveBeenCalledWith(JSON.stringify({ recipients, message }));
+        expect(mockWebSocketInstance.send).toHaveBeenCalledWith(JSON.stringify({ recipients, from_number: bot_phone, message }));
     });
 
     it('should not send message if WebSocket is not open', () => {
         const recipients = ['recipient1', 'recipient2'];
         const message = 'test message';
+        const bot_phone = '+0987654321';
         webSocketManager.ws = { readyState: WebSocket.CLOSED };
         console.error = jest.fn();
 
-        webSocketManager.send(recipients, message);
+        webSocketManager.send(recipients, bot_phone, message);
 
         expect(console.error).toHaveBeenCalledWith('WebSocket is not open');
         expect(mockWebSocketInstance.send).not.toHaveBeenCalled();
@@ -98,10 +100,11 @@ describe('WebSocketManager', () => {
     it('should not send message if recipients is not an array', () => {
         const recipients = 'recipient1';
         const message = 'test message';
+        const bot_phone = '+0987654321';
         webSocketManager.ws = mockWebSocketInstance;
         console.error = jest.fn();
 
-        webSocketManager.send(recipients, message);
+        webSocketManager.send(recipients, bot_phone, message);
 
         expect(console.error).toHaveBeenCalledWith('Recipients must be an array');
         expect(mockWebSocketInstance.send).not.toHaveBeenCalled();
