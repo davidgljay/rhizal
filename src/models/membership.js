@@ -2,12 +2,15 @@ const { graphql } = require('../apis/graphql');
 
 class Membership {
 
-    constructor(id, phone, user_id, type, data = {}) {
+    constructor(id, phone, user_id, type, data = {}, step = null, current_script = null) {
         this.id = id;
         this.phone = phone;
         this.user_id = user_id;
         this.type = type;
+        this.step = step;
+        this.current_script = current_script;
         this.data = data;
+
     }
 
     static async get(user_phone, bot_phone) {
@@ -19,15 +22,14 @@ query GetMembershipFromPhoneNumbers($phone: String = "", $bot_phone: String = ""
       profile
       type
       name
+      step
+      current_script_id
       informal_name
-			intro {
+	  intro {
         text
       }
-      community {
-        id
-        name
-      }
-    	user {
+      community_id
+      user {
         id
         phone
       }
@@ -40,8 +42,8 @@ query GetMembershipFromPhoneNumbers($phone: String = "", $bot_phone: String = ""
             if (response.data.memberships.length === 0) {
                 return null;
             }
-            const { id, type, user: { id: user_id, phone } } = response.data.memberships[0];
-            return new Membership(id, phone, user_id, type, response.data.memberships[0]);
+            const { id, type, step, current_script_id, user: { id: user_id, phone } } = response.data.memberships[0];
+            return new Membership(id, phone, user_id, type, response.data.memberships[0], step, current_script_id);
         } catch (error) {
             console.error('Error getting membership:', error);
         }
