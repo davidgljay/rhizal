@@ -1,7 +1,7 @@
 const { graphql } = require('../apis/graphql');
 const RhizalParser = require('../helpers/rhizal_parser');
 const Message = require('./message');
-const User = require('./user');
+const Membership = require('./membership');
 
 class Script {
     constructor() {
@@ -34,7 +34,7 @@ query GetScript($name: String!) {
         this.yaml = scriptData.data.GetScript.script.yaml;
         this.varsquery = scriptData.data.GetScript.script.varsquery;
         this.targetquery = scriptData.data.GetScript.script.targetquery;
-        this.parser = new RhizalParser(this.yaml, Message.send, User.set_variable)
+        this.parser = new RhizalParser(this.yaml, Message.send, Membership.set_variable)
         await this.get_vars(user_id);
         return 
     }
