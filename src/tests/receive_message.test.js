@@ -1,11 +1,16 @@
-const User = require('../models/user');
+const Membership = require('../models/membership');
 const Message = require('../models/message');
 const Script = require('../models/script');
-const { new_user, no_script_message, script_message, receive_message  } = require('../handlers/receive_message');
+const Community = require('../models/community');
+const { new_member, no_script_message, script_message, receive_message  } = require('../handlers/receive_message');
 
-jest.mock('../models/user', () => {
+jest.mock('../models/membership', () => {
     return {
-        create: jest.fn((phone) => ({ id: '1', phone })),
+        create: jest.fn((phone) => ({ 
+            id: '1', 
+            phone,
+            set_variable: jest.fn(),
+        })),
         get: jest.fn()
     };
 });
@@ -17,6 +22,20 @@ jest.mock('../models/message', () => {
     };
 });
 
+
+
+jest.mock('../models/community', () => {
+    return jest.fn().mockImplementation((id, name, data) => {
+        return {
+            id,
+            name,
+            data
+        };
+    }); 
+});
+
+
+
 jest.mock('../models/script', () => {
     return jest.fn().mockImplementation(() => {
         return {
@@ -27,29 +46,33 @@ jest.mock('../models/script', () => {
     });
 });
 
-describe('new_user', () => {
+describe('new_member', () => {
     beforeEach(() => {
         jest.clearAllMocks();
     });
 
-    it('should create a new user with the given phone number', async () => {
+    it('should create a new member with the given phone number', async () => {
         const phone = '1234567890';
-        await new_user(phone);
-        expect(User.create).toHaveBeenCalledWith(phone);
+        const community = new Community('1', 'Test Community', { onboarding_id: 'onboarding_script' });
+        const membership = await new_member(phone, community);
+        expect(Membership.create).toHaveBeenCalledWith(phone, community.id);
+        expect(membership.set_variable).toHaveBeenCalledWith('step', '0');
+        expect(membership.set_variable).toHaveBeenCalledWith('current_script_id', community.data.onboarding_id);
     });
 
     it('should initialize and send the onboarding script', async () => {
         const phone = '1234567890';
+        const community = new Community('1', 'Test Community', { onboarding_id: 'onboarding_script' });
         const mockScriptInstance = {
             init: jest.fn(),
             send: jest.fn()
         };
         Script.mockImplementation(() => mockScriptInstance);
 
-        await new_user(phone);
+        await new_member(phone, community);
 
         expect(Script).toHaveBeenCalled();
-        expect(mockScriptInstance.init).toHaveBeenCalledWith('onboarding', '1');
+        expect(mockScriptInstance.init).toHaveBeenCalledWith('onboarding_script', '1');
         expect(mockScriptInstance.send).toHaveBeenCalledWith('0');
     });
 });
@@ -59,10 +82,10 @@ describe('no_script_message', () => {
         jest.clearAllMocks();
     });
 
-    it('should send a message to the user', async () => {
-        const user = { phone: '1234567890' };
-        await no_script_message(user);
-        expect(Message.send).toHaveBeenCalledWith(user.phone, 'Thanks for letting me know, I\'ll pass your message on to an organizer who may get back to you.');
+    it('should send a message to the member', async () => {
+        const member = { phone: '1234567890' };
+        await no_script_message(member);
+        expect(Message.send).toHaveBeenCalledWith(member.phone, 'Thanks for letting me know, I\'ll pass your message on to an organizer who may get back to you.');
     });
 });
 
@@ -71,8 +94,8 @@ describe('script_message', () => {
         jest.clearAllMocks();
     });
 
-    it('should initialize the user\'s script', async () => {
-        const user = { id: '1', script: 'test_script' };
+    it('should initialize the member\'s script', async () => {
+        const member = { id: '1', script: 'test_script' };
         const message = 'test message';
         const mockScriptInstance = {
             init: jest.fn(),
@@ -81,14 +104,14 @@ describe('script_message', () => {
         };
         Script.mockImplementation(() => mockScriptInstance);
 
-        await script_message(user, message);
+        await script_message(member, message);
 
         expect(Script).toHaveBeenCalled();
-        expect(mockScriptInstance.init).toHaveBeenCalledWith(user.script, user.id);
+        expect(mockScriptInstance.init).toHaveBeenCalledWith(member.script, member.id);
     });
 
-    it('should receive the user\'s message', async () => {
-        const user = { id: '1', script: 'test_script' };
+    it('should receive the member\'s message', async () => {
+        const member = { id: '1', script: 'test_script' };
         const message = 'test message';
         const mockScriptInstance = {
             init: jest.fn(),
@@ -96,9 +119,9 @@ describe('script_message', () => {
         };
         Script.mockImplementation(() => mockScriptInstance);
 
-        await script_message(user, message);
+        await script_message(member, message);
 
-        expect(mockScriptInstance.receive).toHaveBeenCalledWith(user.step, message);
+        expect(mockScriptInstance.receive).toHaveBeenCalledWith(member.step, message);
     });
 });
 
@@ -119,53 +142,74 @@ describe('receive_message', () => {
         const recipients = ['0987654321'];
         const message = 'test message';
         const sent_time = new Date();
+        Community.get = jest.fn(() => {
+            return {
+                id: "1",
+                name: 'Mock Community',
+                data: { onboarding_id: 'mock_onboarding_script' }
+            };
+        });
 
         await receive_message(sender, recipients, message, sent_time);
 
         expect(Message.create).toHaveBeenCalledWith(sender, recipients, message, sent_time);
     });
 
-    it('should get the user', async () => {
+    it('should get the member and a community', async () => {
+        const sender = '1234567890';
+        const recipients = ['0987654321'];
+        const message = 'test message';
+        const sent_time = new Date();
+        Community.get = jest.fn(() => {
+            return {
+                id: "1",
+                name: 'Mock Community',
+                data: { onboarding_id: 'mock_onboarding_script' }
+            };
+        });
+
+        await receive_message(sender, recipients, message, sent_time);
+
+        expect(Membership.get).toHaveBeenCalledWith(sender, "1");
+        expect(Community.get).toHaveBeenCalledWith(recipients[0]);
+    });
+
+    it('should create a new member if the member does not exist', async () => {
         const sender = '1234567890';
         const recipient = '0987654321';
         const message = 'test message';
         const sent_time = new Date();
+        Membership.get.mockReturnValue(null);
+        const mockCommunity = {
+            id: "1",
+            name: 'Mock Community',
+            data: { onboarding_id: 'mock_onboarding_script' }
+        }
+        Community.get = jest.fn(() => mockCommunity);
 
         await receive_message(sender, recipient, message, sent_time);
 
-        expect(User.get).toHaveBeenCalledWith(sender);
+        expect(Membership.create).toHaveBeenCalledWith(sender, mockCommunity.id);
     });
 
-    it('should create a new user if the user does not exist', async () => {
+    it('should send a message if the member\'s step is done', async () => {
         const sender = '1234567890';
         const recipient = '0987654321';
         const message = 'test message';
         const sent_time = new Date();
-        User.get.mockReturnValue(null);
-
-        await receive_message(sender, recipient, message, sent_time);
-
-        expect(User.get).toHaveBeenCalledWith(sender);
-    });
-
-    it('should send a message if the user\'s step is done', async () => {
-        const sender = '1234567890';
-        const recipient = '0987654321';
-        const message = 'test message';
-        const sent_time = new Date();
-        User.get.mockReturnValue({ step: 'done' });
+        Membership.get.mockReturnValue({ step: 'done' });
 
         await receive_message(sender, recipient, message, sent_time);
 
         expect(Message.send).toHaveBeenCalled();
     });
 
-    it('should process the user\'s message', async () => {
+    it('should process the member\'s message', async () => {
         const sender = '1234567890';
         const recipient = '0987654321';
         const message = 'test message';
         const sent_time = new Date();
-        User.get.mockReturnValue({ id: '1', step: 'step1', script: 'test_script' });
+        Membership.get.mockReturnValue({ id: '1', step: 'step1', script: 'test_script' });
 
         await receive_message(sender, recipient, message, sent_time);
 
