@@ -2,13 +2,19 @@ const { graphql } = require('../apis/graphql');
 
 class Membership {
 
-    constructor(id, phone, user_id, type, data = {}, step = null, current_script = null) {
+    constructor(data) {
+        const { id, phone, type, step, current_script_id } = data;
+        if (data.community) {
+            this.bot_phone = data.community.bot_phone;
+        }
+        if (data.user) {
+            this.user_id = data.user.id;
+            this.phone = data.user.phone;
+        }
         this.id = id;
-        this.phone = phone;
-        this.user_id = user_id;
         this.type = type;
         this.step = step;
-        this.current_script = current_script;
+        this.current_script = current_script_id;
         this.data = data;
 
     }
@@ -28,7 +34,10 @@ query GetMembershipFromPhoneNumbers($phone: String = "", $bot_phone: String = ""
 	  intro {
         text
       }
-      community_id
+      community {
+        id
+        bot_phone
+      }
       user {
         id
         phone
@@ -42,16 +51,15 @@ query GetMembershipFromPhoneNumbers($phone: String = "", $bot_phone: String = ""
             if (response.data.memberships.length === 0) {
                 return null;
             }
-            const { id, type, step, current_script_id, user: { id: user_id, phone } } = response.data.memberships[0];
-            return new Membership(id, phone, user_id, type, response.data.memberships[0], step, current_script_id);
+            return new Membership(response.data.memberships[0]);
         } catch (error) {
             console.error('Error getting membership:', error);
         }
     }
 
 
-    async set_variable( variable, value) {
-        const validVariables = ['name', 'informal_name', 'location', 'email', 'profile'];
+    async set_variable(variable, value) {
+        const validVariables = ['name', 'informal_name', 'location', 'email', 'profile', 'step', 'current_script_id'];
         if (!validVariables.includes(variable)) {
             throw new Error(`Invalid variable. Valid variables are: ${validVariables.join(', ')}`);
         }
@@ -66,6 +74,7 @@ mutation updateMembershipVariable($id: ID!, $variable: String!, $value: String!)
 }
 `;
             const variables = { id: this.id, value };
+            this[variable] = value;
             return await graphql(mutation, variables);
         } catch (error) {
             console.error(`Error updating membership ${variable}:`, error);
@@ -78,12 +87,20 @@ mutation updateMembershipVariable($id: ID!, $variable: String!, $value: String!)
         try {
             const createUserAndMembershipMutation = `
 mutation CreateUserAndMembership($phone:String!, $community_id:uuid!) {
-  insert_users_one(object: {phone: $phone, memberships: {data: {community_id: $community_id, type: "member"}}}) 
+  insert_memberships_one(object: {user: {data: {phone: $phone}}, community_id: $community_id, type: "member", step: 0}}}) 
   {
     id
-    phone
-    memberships {
-      id
+    type
+    step
+    current_script_id
+    user {
+        id
+        phone
+    }
+    community {
+        id
+        bot_phone
+        onboarding_script_id
     }
   }
 }
@@ -93,31 +110,38 @@ mutation CreateUserAndMembership($phone:String!, $community_id:uuid!) {
 mutation CreateMembership($user_id: uuid!, $community_id: uuid!) {
   insert_memberships_one(object: {user_id: $user_id, community_id: $community_id, type: "member"}) {
     id
+    type
+    step
+    current_script_id
+    user {
+        id
+        phone
+    }
+    community {
+        id
+        bot_phone
+        onboarding_script_id
+    }
   }
 }
 `;
 
 const userQuery = `
 query GetUser($phone: String!) {
-    user(phone: $phone) {
+    users(phone: $phone) {
         id
     }
 }
 `;
 
-            let id, user_id;
+            let mutationResults;
             const userQueryResults = await graphql(userQuery, { phone: user_phone });
             if (userQueryResults.data.users.length > 0) {
-                const mutationResults = await graphql(createMembershipMutation, { user_id: userQueryResults.data.users[0].id, community_id });
-                id = mutationResults.data.insert_memberships_one.id;
-                user_id = userQueryResults.data.users[0].id;
+                mutationResults = await graphql(createMembershipMutation, { user_id: userQueryResults.data.users[0].id, community_id });
             } else {
-                const mutationResults = await graphql(createUserAndMembershipMutation, { phone: user_phone, community_id });
-                id = mutationResults.data.insert_users_one.memberships[0].id;
-                user_id = mutationResults.data.insert_users_one.id;
-
+                mutationResults = await graphql(createUserAndMembershipMutation, { phone: user_phone, community_id });
             }
-            return new Membership(id, user_phone, user_id, 'member');
+            return new Membership(mutationResults.data.insert_memberships_one);
 
         } catch (error) {
             console.error('Error creating membership:', error);
