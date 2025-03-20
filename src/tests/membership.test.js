@@ -11,13 +11,14 @@ describe('Membership Model', () => {
 
     describe('set_variable', () => {
         it('should throw an error for an invalid variable', async () => {
-            await expect(Membership.set_variable('123', 'invalidVar', 'value')).rejects.toThrow('Invalid variable. Valid variables are: name, informal_name, location, email, profile');
+            const membership = new Membership('123', '1234567890', 'user_id', 'member');
+            await expect(membership.set_variable('invalidVar', 'value')).rejects.toThrow('Invalid variable. Valid variables are: name, informal_name, location, email, profile');
         });
 
         it('should call graphql with correct mutation and variables', async () => {
             graphql.mockResolvedValue({ data: { updateMembershipVariable: { id: '123', fname: 'John' } } });
-
-            await Membership.set_variable('123', 'informal_name', 'John');
+            const membership = new Membership('123', '1234567890', 'user_id', 'member');
+            await membership.set_variable('informal_name', 'John');
 
             const expectedQuery = `
 mutation updateMembershipVariable($id: ID!, $variable: String!, $value: String!) {
@@ -34,8 +35,9 @@ mutation updateMembershipVariable($id: ID!, $variable: String!, $value: String!)
         it('should log an error if graphql request fails', async () => {
             const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
             graphql.mockRejectedValue(new Error('GraphQL Error'));
+            const membership = new Membership('123', '1234567890', 'user_id', 'member');
 
-            await Membership.set_variable('123', 'informal_name', 'John');
+            await membership.set_variable('informal_name', 'John');
 
             expect(consoleSpy).toHaveBeenCalledWith('Error updating membership informal_name:', expect.any(Error));
             consoleSpy.mockRestore();

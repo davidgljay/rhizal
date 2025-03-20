@@ -50,7 +50,7 @@ query GetMembershipFromPhoneNumbers($phone: String = "", $bot_phone: String = ""
     }
 
 
-    static async set_variable(user_id, variable, value) {
+    async set_variable( variable, value) {
         const validVariables = ['name', 'informal_name', 'location', 'email', 'profile'];
         if (!validVariables.includes(variable)) {
             throw new Error(`Invalid variable. Valid variables are: ${validVariables.join(', ')}`);
@@ -65,7 +65,7 @@ mutation updateMembershipVariable($id: ID!, $variable: String!, $value: String!)
     }
 }
 `;
-            const variables = { id: user_id, value };
+            const variables = { id: this.id, value };
             return await graphql(mutation, variables);
         } catch (error) {
             console.error(`Error updating membership ${variable}:`, error);
