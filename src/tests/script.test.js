@@ -33,7 +33,6 @@ describe('Script', () => {
                 data: { targets: [{ id: 1, name: 'Target 1' }] },
             };
             graphql.mockResolvedValue(mockResponse);
-            console.log(scriptInstance)
 
             const data = await scriptInstance.get_targets();
 
