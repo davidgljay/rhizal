@@ -22,7 +22,7 @@ describe('Community Model', () => {
 
         graphql.mockResolvedValue(mockResponse);
 
-        const community = await new Community().get(bot_phone);
+        const community = await Community.get(bot_phone);
 
         expect(graphql).toHaveBeenCalledWith(expect.any(String), { bot_phone });
         expect(community).toEqual(new Community(1, 'Test Community', { id: 1, name: 'Test Community' }));
@@ -33,7 +33,7 @@ describe('Community Model', () => {
         const mockError = new Error('GraphQL error');
         graphql.mockResolvedValue({ errors: [mockError] });
 
-        await expect(new Community().get(bot_phone)).rejects.toThrow('GraphQL error');
+        await expect(Community.get(bot_phone)).rejects.toThrow('GraphQL error');
         expect(graphql).toHaveBeenCalledWith(expect.any(String), { bot_phone });
     });
 
@@ -42,7 +42,7 @@ describe('Community Model', () => {
         const mockError = new Error('Network error');
         graphql.mockRejectedValue(mockError);
 
-        await expect(new Community().get(bot_phone)).rejects.toThrow('Network error');
+        await expect(new Community.get(bot_phone)).rejects.toThrow('Network error');
         expect(graphql).toHaveBeenCalledWith(expect.any(String), { bot_phone });
     });
 });

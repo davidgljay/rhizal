@@ -7,7 +7,7 @@ class Community {
         this.data = data;
     }
 
-    async get(bot_phone) {
+    static async get(bot_phone) {
         const query = `
 query GetCommunities($bot_phone:String!) {
   communities(where: {bot_phone: {_eq: $bot_phone}}) {
