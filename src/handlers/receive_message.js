@@ -8,8 +8,8 @@ export async function receive_message(sender, recipients, message, sent_time) {
     if (!message) {
         return;
     }
-    Message.create(sender, recipients, message, sent_time);
-    const community = Community.get(recipients[0]);
+    await Message.create(sender, recipients, message, sent_time);
+    const community = await Community.get(recipients[0]);
     if (!community) {
         return;
     }
@@ -28,10 +28,8 @@ export async function receive_message(sender, recipients, message, sent_time) {
 
 export async function new_member(phone, community) {
     const membership = await Membership.create(phone, community.id);
-    await membership.set_variable('step', '0');
     await membership.set_variable('current_script_id', community.data.onboarding_id);
-    const script = new Script();
-    await script.init(community.data.onboarding_id, membership.id);
+    const script = await Script.init(membership);
     await script.send('0')
     return membership;
 }
@@ -41,9 +39,8 @@ export async function no_script_message(user) {
     return;
 }
 
-export async function script_message(user, message) {
-    const script = new Script();
-    await script.init(user.script, user.id);
-    await script.receive(user.step, message);
+export async function script_message(member, message) {
+    const script = await Script.init(member.current_script_id);
+    await script.receive(member.step, message);
     return;
 }

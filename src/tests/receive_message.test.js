@@ -34,16 +34,14 @@ jest.mock('../models/community', () => {
     }); 
 });
 
+const mockScriptSend = jest.fn();
+const mockScriptReceive = jest.fn();
 
-
-jest.mock('../models/script', () => {
-    return jest.fn().mockImplementation(() => {
-        return {
-            init: jest.fn(),
-            send: jest.fn(),
-            receive: jest.fn()
-        };
-    });
+Script.init = jest.fn().mockImplementation(() => {
+    return {
+        send: mockScriptSend,
+        receive: mockScriptReceive
+    };
 });
 
 describe('new_member', () => {
@@ -56,24 +54,17 @@ describe('new_member', () => {
         const community = new Community('1', 'Test Community', { onboarding_id: 'onboarding_script' });
         const membership = await new_member(phone, community);
         expect(Membership.create).toHaveBeenCalledWith(phone, community.id);
-        expect(membership.set_variable).toHaveBeenCalledWith('step', '0');
         expect(membership.set_variable).toHaveBeenCalledWith('current_script_id', community.data.onboarding_id);
     });
 
-    it('should initialize and send the onboarding script', async () => {
+    it('should initialize and send the appropriate message', async () => {
         const phone = '1234567890';
         const community = new Community('1', 'Test Community', { onboarding_id: 'onboarding_script' });
-        const mockScriptInstance = {
-            init: jest.fn(),
-            send: jest.fn()
-        };
-        Script.mockImplementation(() => mockScriptInstance);
 
         await new_member(phone, community);
 
-        expect(Script).toHaveBeenCalled();
-        expect(mockScriptInstance.init).toHaveBeenCalledWith('onboarding_script', '1');
-        expect(mockScriptInstance.send).toHaveBeenCalledWith('0');
+        expect(Script.init).toHaveBeenCalledWith({id: '1', phone: '1234567890', set_variable: expect.any(Function)});
+        expect(mockScriptSend).toHaveBeenCalledWith('0');
     });
 });
 
@@ -95,33 +86,22 @@ describe('script_message', () => {
     });
 
     it('should initialize the member\'s script', async () => {
-        const member = { id: '1', script: 'test_script' };
+        const member = { id: '1', current_script_id: '2', step: '0' };
         const message = 'test message';
-        const mockScriptInstance = {
-            init: jest.fn(),
-            receive: jest.fn(),
-            send: jest.fn()
-        };
-        Script.mockImplementation(() => mockScriptInstance);
 
         await script_message(member, message);
 
-        expect(Script).toHaveBeenCalled();
-        expect(mockScriptInstance.init).toHaveBeenCalledWith(member.script, member.id);
+        expect(Script.init).toHaveBeenCalledWith('2');
     });
 
     it('should receive the member\'s message', async () => {
-        const member = { id: '1', script: 'test_script' };
+        const member = { id: '1', current_script_id: '2', step: '0' };
         const message = 'test message';
-        const mockScriptInstance = {
-            init: jest.fn(),
-            receive: jest.fn()
-        };
-        Script.mockImplementation(() => mockScriptInstance);
 
         await script_message(member, message);
 
-        expect(mockScriptInstance.receive).toHaveBeenCalledWith(member.step, message);
+        expect(Script.init).toHaveBeenCalledWith('2');
+        expect(mockScriptReceive).toHaveBeenCalledWith(member.step, message);
     });
 });
 
@@ -129,12 +109,6 @@ describe('receive_message', () => {
     let mockScriptInstance;
     beforeEach(() => {
         jest.clearAllMocks();
-        mockScriptInstance = {
-            init: jest.fn(),
-            receive: jest.fn(),
-            send: jest.fn()
-        };
-        Script.mockImplementation(() => mockScriptInstance);
     });
 
     it('should log a message', async () => {
@@ -209,11 +183,11 @@ describe('receive_message', () => {
         const recipient = '0987654321';
         const message = 'test message';
         const sent_time = new Date();
-        Membership.get.mockReturnValue({ id: '1', step: 'step1', script: 'test_script' });
+        Membership.get.mockReturnValue({ id: '1', step: 'step1', current_script_id: 'test_script' });
 
         await receive_message(sender, recipient, message, sent_time);
 
-        expect(mockScriptInstance.init).toHaveBeenCalledWith('test_script', '1');
-        expect(mockScriptInstance.receive).toHaveBeenCalledWith('step1', message);
+        expect(Script.init).toHaveBeenCalledWith('test_script');
+        expect(mockScriptReceive).toHaveBeenCalledWith('step1', message);
     });
 });
