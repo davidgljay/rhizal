@@ -4,20 +4,20 @@ const Message = require('./message');
 const Membership = require('./membership');
 
 class Script {
-    constructor() {
-        this.id = '';
-        this.name = '';
-        this.yaml = '';
-        this.varsquery = '';
-        this.targetquery = '';
+    constructor({id, name, yaml, varsquery, targetquery}) {
+        this.id = id;
+        this.name = name;
+        this.yaml = yaml;
+        this.varsquery = varsquery;
+        this.targetquery = targetquery;
         this.parser = null;
     }
 
-    async init(name, user_id) {
+    static async init(id) {
         const scriptData = await graphql({
             query: `
-query GetScript($name: String!) {
-    script(name: $name) {
+query GetScript($id: UUID!) {
+    script(id: $id) {
         id
         name
         yaml
@@ -26,34 +26,33 @@ query GetScript($name: String!) {
     }
 }
 `,
-            variables: { name }
+            variables: { id }
         });
 
-        this.id = scriptData.data.GetScript.script.id;
-        this.name = scriptData.data.GetScript.script.name;
-        this.yaml = scriptData.data.GetScript.script.yaml;
-        this.varsquery = scriptData.data.GetScript.script.varsquery;
-        this.targetquery = scriptData.data.GetScript.script.targetquery;
-        this.parser = new RhizalParser(this.yaml, Message.send, Membership.set_variable)
-        await this.get_vars(user_id);
-        return 
+        const script = new Script(scriptData.data.script);
+        script.parser = new RhizalParser(this.yaml, Message.send, Membership.set_variable)
+        return script;
     }
 
-    async get_vars(user_id) {
-        try{
-            const varsData = await graphql({
-                query: this.varsquery,
-                variables: { user_id }
-            });
-            this.vars = varsData.data
-            return varsData.data;    
-        } catch (error) {
-            if (error.message) {
-                throw new Error(error.message);
-            } else {
-                throw new Error('Unknown error fetcthing vars data');
+    async get_vars(membership) {
+        if (!this.varsquery) {
+            console.log('varsquery not set')
+            this.vars = {
+                phone: membership.phone,
+                bot_phone: membership.bot_phone,
             }
+            return this.vars;
         }
+        const varsData = await graphql({
+            query: this.varsquery,
+            variables: { membership_id: membership.id }
+        });
+        this.vars = varsData.data
+        return {
+            phone: membership.phone,
+            bot_phone: membership.bot_phone,
+            ...varsData.data.vars[0]
+        };
     }
 
     async get_targets() {
@@ -73,7 +72,6 @@ query GetScript($name: String!) {
     }
 
     async send(step) {
-        console.log('sending message via parser')
        return await this.parser.send(step, this.vars);
     }
 

@@ -3,20 +3,37 @@ const Script = require('../models/script');
 
 jest.mock('../apis/graphql');
 
-describe('Script', () => {
-    describe('get_targets', () => {
-        const scriptInstance = new Script();
+const mockGetScriptResponse = {
+    data: {
+            script: {
+                id: 1,
+                name: 'Test Script',
+                yaml: 'yaml content',
+                varsquery: 'vars query',
+                targetquery: 'target query',
+            },
+    },
+};
 
-        afterEach(() => {
-            jest.clearAllMocks();
+describe('Script', () => {
+
+    afterEach(() => {
+        jest.clearAllMocks();
+    });
+
+    describe('get_targets', () => {
+        let scriptInstance;
+        beforeEach(async () => {
+            graphql.mockResolvedValueOnce(mockGetScriptResponse);
+            scriptInstance = await Script.init('1');
         });
 
         it('should return targets data when the response is successful', async () => {
-            scriptInstance.targetquery = 'target query';
             const mockResponse = {
                 data: { targets: [{ id: 1, name: 'Target 1' }] },
             };
             graphql.mockResolvedValue(mockResponse);
+            console.log(scriptInstance)
 
             const data = await scriptInstance.get_targets();
 
@@ -36,11 +53,13 @@ describe('Script', () => {
 
 
     describe('get_vars', () => {
-        const scriptInstance = new Script();
-
-        afterEach(() => {
-            jest.clearAllMocks();
+        let scriptInstance;
+        beforeEach(async () => {
+            graphql.mockResolvedValueOnce(mockGetScriptResponse);
+            scriptInstance = await Script.init('1');
         });
+
+
 
         it('should return vars data when the response is successful', async () => {
             scriptInstance.varsquery = 'vars query';
@@ -49,13 +68,24 @@ describe('Script', () => {
             };
             graphql.mockResolvedValue(mockResponse);
 
-            const data = await scriptInstance.get_vars(1);
+            const data = await scriptInstance.get_vars({id: 1, phone: 'member_phone', bot_phone: 'bot_phone'});
 
             expect(graphql).toHaveBeenCalledWith({
                 query: 'vars query',
-                variables: { user_id: 1 },
+                variables: { membership_id: 1 },
             });
-            expect(data).toEqual(mockResponse.data);
+            expect(data).toEqual({bot_phone: 'bot_phone', phone: 'member_phone', id: 1, name: 'Var 1' });
+        });
+
+        it('should return phone and bot_phone if no vars query is defined', async () => {
+            scriptInstance.varsquery = '';
+            console.log(scriptInstance.varsquery ? 'set' : 'not set')
+
+            const vars = await scriptInstance.get_vars({id: 1, phone: 'member_phone', bot_phone: 'bot_phone'});
+
+            expect(graphql).toHaveBeenCalledTimes(1);
+            expect(vars).toEqual({bot_phone: 'bot_phone', phone: 'member_phone' });
+            expect(scriptInstance.vars).toEqual({bot_phone: 'bot_phone', phone: 'member_phone' });
         });
 
         it('should throw an error when the response is not successful', async () => {
@@ -67,33 +97,27 @@ describe('Script', () => {
     });
 
     describe('init', () => {
-        const scriptInstance = new Script();
-        afterEach(() => {
-            jest.clearAllMocks();
-        });
 
         it('should return a new Script instance when the response is successful', async () => {
             const mockResponse = {
                 data: {
-                    GetScript: {
-                            script: {
+                        script: {
                             id: 1,
                             name: 'Test Script',
                             yaml: 'yaml content',
                             varsquery: 'vars query',
                             targetquery: 'target query',
                         },
-                    },
                 },
             };
             graphql.mockResolvedValue(mockResponse);
 
-            await scriptInstance.init('Test Script');
+            const scriptInstance = await Script.init('1');
 
             expect(graphql).toHaveBeenCalledWith({
                 query: `
-query GetScript($name: String!) {
-    script(name: $name) {
+query GetScript($id: UUID!) {
+    script(id: $id) {
         id
         name
         yaml
@@ -102,7 +126,7 @@ query GetScript($name: String!) {
     }
 }
 `,
-                variables: { name: 'Test Script' },
+                variables: { id: '1' },
             });
             expect(scriptInstance).toBeInstanceOf(Script);
             expect(scriptInstance.id).toBe(1);
@@ -115,14 +139,19 @@ query GetScript($name: String!) {
         it('should throw an error when the response is not successful', async () => {
             graphql.mockRejectedValue(new Error('Error message'));
 
-            await expect(scriptInstance.init('Test Script')).rejects.toThrow('Error message');
+            await expect(Script.init('1')).rejects.toThrow('Error message');
         });
 
     });
 
     describe('send', () => {
+        let scriptInstance;
+        beforeEach(async () => {
+            graphql.mockResolvedValueOnce(mockGetScriptResponse);
+            scriptInstance = await Script.init('1');
+        });
+
         it('should send a message via the parser', () => {
-            const scriptInstance = new Script();
             scriptInstance.parser = {
                 send: jest.fn(),
             };
@@ -137,8 +166,12 @@ query GetScript($name: String!) {
     })
 
     describe('receive', () => {
+        let scriptInstance;
+        beforeEach(async () => {
+            graphql.mockResolvedValueOnce(mockGetScriptResponse);
+            scriptInstance = await Script.init('1');
+        });
         it('should properly process a received message via the parser', () => {
-            const scriptInstance = new Script();
             scriptInstance.parser = {
                 receive: jest.fn(),
             };
