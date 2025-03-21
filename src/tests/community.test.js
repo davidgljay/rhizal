@@ -24,7 +24,7 @@ describe('Community Model', () => {
 
         const community = await Community.get(bot_phone);
 
-        expect(graphql).toHaveBeenCalledWith(expect.any(String), { bot_phone });
+        expect(graphql).toHaveBeenCalledWith(expect.stringContaining('query GetCommunities($bot_phone:String!)'), { bot_phone });
         expect(community).toEqual(new Community(1, 'Test Community', { id: 1, name: 'Test Community' }));
     });
 
