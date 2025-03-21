@@ -17,7 +17,7 @@ class RhyzalParser {
     constructor(yaml_script, send_message, set_variable) {
         let script_obj;
         this.send_message = send_message;
-        this.set_user_variable = set_variable;
+        this.set_variable = set_variable;
         try {
             script_obj = yaml.load(yaml_script);
         }
@@ -68,13 +68,13 @@ class RhyzalParser {
 
     evaluate_receive(script, vars) {
         switch(Object.keys(script)[0]) {
-            case 'user_status':
-                const new_status = script['user_status'];
-                this.set_user_variable(vars.user_id, 'status', new_status);
-                this.send(new_status, vars);
+            case 'step':
+                const new_step = script['step'];
+                this.set_variable(vars.id, 'step', new_step);
+                this.send(new_step, vars);
                 break;
             case 'set_variable':
-                this.set_user_variable(vars.user_id, script['set_variable']['variable'], script['set_variable']['value']);
+                this.set_variable(vars.id, script['set_variable']['variable'], script['set_variable']['value']);
                 break;
             case 'if':
                 if (this.evaluate_condition(script.if, vars)) {
