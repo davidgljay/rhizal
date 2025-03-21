@@ -36,11 +36,15 @@ jest.mock('../models/community', () => {
 
 const mockScriptSend = jest.fn();
 const mockScriptReceive = jest.fn();
+const mockGetVars = jest.fn();
+const mockScriptMessage = jest.fn();
 
 Script.init = jest.fn().mockImplementation(() => {
     return {
         send: mockScriptSend,
-        receive: mockScriptReceive
+        receive: mockScriptReceive,
+        get_vars: mockGetVars,
+        script_message: mockScriptMessage
     };
 });
 
@@ -60,10 +64,9 @@ describe('new_member', () => {
     it('should initialize and send the appropriate message', async () => {
         const phone = '1234567890';
         const community = new Community('1', 'Test Community', { onboarding_id: 'onboarding_script' });
-
         await new_member(phone, community);
 
-        expect(Script.init).toHaveBeenCalledWith({id: '1', phone: '1234567890', set_variable: expect.any(Function)});
+        expect(Script.init).toHaveBeenCalledWith('onboarding_script');
         expect(mockScriptSend).toHaveBeenCalledWith('0');
     });
 });
@@ -183,11 +186,17 @@ describe('receive_message', () => {
         const recipient = '0987654321';
         const message = 'test message';
         const sent_time = new Date();
+        Community.get.mockReturnValue({
+            id: "1",
+            name: 'Mock Community',
+            data: { onboarding_id: 'test_script' }
+        });
         Membership.get.mockReturnValue({ id: '1', step: 'step1', current_script_id: 'test_script' });
 
         await receive_message(sender, recipient, message, sent_time);
 
         expect(Script.init).toHaveBeenCalledWith('test_script');
+        expect(mockGetVars).toHaveBeenCalledWith({ id: '1', step: 'step1', current_script_id: 'test_script' }); 
         expect(mockScriptReceive).toHaveBeenCalledWith('step1', message);
     });
 });

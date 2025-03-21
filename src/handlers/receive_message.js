@@ -22,14 +22,16 @@ export async function receive_message(sender, recipients, message, sent_time) {
         await no_script_message(membership);
         return;
     }
-    await script_message(membership, message);
+    const script = await Script.init(community.data.onboarding_id);
+    await script.get_vars(membership);
+    await script.receive(membership.step, message);
     return;
 }
 
 export async function new_member(phone, community) {
     const membership = await Membership.create(phone, community.id);
     await membership.set_variable('current_script_id', community.data.onboarding_id);
-    const script = await Script.init(membership);
+    const script = await Script.init(community.data.onboarding_id);
     await script.send('0')
     return membership;
 }
