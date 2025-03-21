@@ -23,7 +23,7 @@ describe('Membership Model', () => {
             await membership.set_variable('informal_name', 'John');
 
             const expectedQuery = `
-mutation updateMembershipVariable($id: ID!, $variable: String!, $value: String!) {
+mutation updateMembershipVariable($id:uuid!, $value:String!) {
     updateMembershipVariable(id: $id, informal_name: $value) {
         id
         informal_name
@@ -31,7 +31,7 @@ mutation updateMembershipVariable($id: ID!, $variable: String!, $value: String!)
 }
 `
 
-            expect(graphql).toHaveBeenCalledWith(expectedQuery, { id: '123', value: 'John' });
+            expect(graphql).toHaveBeenCalledWith(expectedQuery, { id: '123', informal_name: 'John' });
         });
 
         it('should log an error if graphql request fails', async () => {

@@ -22,7 +22,7 @@ class Membership {
     static async get(user_phone, bot_phone) {
         try {
             const query = `
-query GetMembershipFromPhoneNumbers($phone: String = "", $bot_phone: String = "") {
+query GetMembershipFromPhoneNumbers($phone: String!, $bot_phone: String!) {
   memberships(where: {user:{phone: {_eq: $phone}}, community: {bot_phone: {_eq: $bot_phone}}}) {
       id
       profile
@@ -60,13 +60,22 @@ query GetMembershipFromPhoneNumbers($phone: String = "", $bot_phone: String = ""
 
     async set_variable(variable, value) {
         const validVariables = ['name', 'informal_name', 'location', 'email', 'profile', 'step', 'current_script_id'];
+        const variableTypes = {
+            name: 'String',
+            informal_name: 'String',
+            location: 'String',
+            email: 'String',
+            profile: 'String',
+            step: 'String',
+            current_script_id: 'uuid'
+        }
         if (!validVariables.includes(variable)) {
             throw new Error(`Invalid variable. Valid variables are: ${validVariables.join(', ')}`);
         }
     
         try {
             const mutation = `
-mutation updateMembershipVariable($id: ID!, $variable: String!, $value: String!) {
+mutation updateMembershipVariable($id:uuid!, $value:${variableTypes[variable]}!) {
     updateMembershipVariable(id: $id, ${variable}: $value) {
         id
         ${variable}
@@ -74,7 +83,8 @@ mutation updateMembershipVariable($id: ID!, $variable: String!, $value: String!)
 }
 `;
             this[variable] = value;
-            const variables = { id: this.id, value };
+            const variables = { id: this.id};
+            variables[variable] = value;
             return await graphql(mutation, variables);
         } catch (error) {
             console.error(`Error updating membership ${variable}:`, error);
