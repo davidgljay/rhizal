@@ -78,7 +78,6 @@ describe('Script', () => {
 
         it('should return phone and bot_phone if no vars query is defined', async () => {
             scriptInstance.varsquery = '';
-            console.log(scriptInstance.varsquery ? 'set' : 'not set')
 
             const vars = await scriptInstance.get_vars({id: 1, phone: 'member_phone', bot_phone: 'bot_phone'});
 

@@ -3,7 +3,7 @@ const { graphql } = require('../apis/graphql');
 class Membership {
 
     constructor(data) {
-        const { id, phone, type, step, current_script_id } = data;
+        const { id, type, step, current_script_id } = data;
         if (data.community) {
             this.bot_phone = data.community.bot_phone;
         }
@@ -14,7 +14,7 @@ class Membership {
         this.id = id;
         this.type = type;
         this.step = step;
-        this.current_script = current_script_id;
+        this.current_script_id = current_script_id;
         this.data = data;
 
     }
@@ -73,8 +73,8 @@ mutation updateMembershipVariable($id: ID!, $variable: String!, $value: String!)
     }
 }
 `;
-            const variables = { id: this.id, value };
             this[variable] = value;
+            const variables = { id: this.id, value };
             return await graphql(mutation, variables);
         } catch (error) {
             console.error(`Error updating membership ${variable}:`, error);

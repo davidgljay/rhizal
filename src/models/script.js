@@ -30,13 +30,12 @@ query GetScript($id: UUID!) {
         });
 
         const script = new Script(scriptData.data.script);
-        script.parser = new RhizalParser(this.yaml, Message.send, Membership.set_variable)
+        script.parser = new RhizalParser(script.yaml, Message.send, Membership.set_variable)
         return script;
     }
 
     async get_vars(membership) {
         if (!this.varsquery) {
-            console.log('varsquery not set')
             this.vars = {
                 phone: membership.phone,
                 bot_phone: membership.bot_phone,
@@ -47,7 +46,9 @@ query GetScript($id: UUID!) {
             query: this.varsquery,
             variables: { membership_id: membership.id }
         });
-        this.vars = varsData.data
+        this.vars = varsData.data.vars[0];
+        this.vars.phone = membership.phone;
+        this.vars.bot_phone = membership.bot_phone;
         return {
             phone: membership.phone,
             bot_phone: membership.bot_phone,
