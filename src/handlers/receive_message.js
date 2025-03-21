@@ -13,7 +13,7 @@ export async function receive_message(sender, recipients, message, sent_time) {
     if (!community) {
         return;
     }
-    let membership = await Membership.get(sender, community.id);
+    let membership = await Membership.get(sender, recipients[0]);
     if (!membership) {
         membership = await new_member(sender, community);
         return;
@@ -32,7 +32,8 @@ export async function new_member(phone, community) {
     const membership = await Membership.create(phone, community.id);
     await membership.set_variable('current_script_id', community.data.onboarding_id);
     const script = await Script.init(community.data.onboarding_id);
-    await script.send('0')
+    await script.get_vars(membership);
+    await script.send('0');
     return membership;
 }
 

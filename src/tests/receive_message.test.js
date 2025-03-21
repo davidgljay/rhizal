@@ -147,7 +147,7 @@ describe('receive_message', () => {
 
         await receive_message(sender, recipients, message, sent_time);
 
-        expect(Membership.get).toHaveBeenCalledWith(sender, "1");
+        expect(Membership.get).toHaveBeenCalledWith(sender, recipients[0]);
         expect(Community.get).toHaveBeenCalledWith(recipients[0]);
     });
 
