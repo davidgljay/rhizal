@@ -23,7 +23,7 @@ describe('graphql', () => {
         };
         fetch.mockResolvedValue(mockResponse);
 
-        const data = await graphql({ query: '{test}' });
+        const data = await graphql('{test}');
 
         expect(fetch).toHaveBeenCalledWith(HASURA_GRAPHQL_URL, {
             method: 'POST',
