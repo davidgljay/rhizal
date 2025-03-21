@@ -50,7 +50,7 @@ describe('Message', () => {
 
             const result = await Message.create('user1', ['user2', 'user3'], 'Hello, world!', '2023-10-01T00:00:00Z');
 
-            expect(graphql).toHaveBeenCalledWith({ query: expect.any(String), variables: mockMessageWithoutId });
+            expect(graphql).toHaveBeenCalledWith( expect.stringContaining('mutation CreateMessage($text:String!, $sender:String!, $sent_time:timestamptz!, $recipients:[String!]!)'), mockMessageWithoutId );
             expect(result).toEqual(mockMessage);
         });
 

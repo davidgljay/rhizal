@@ -22,8 +22,8 @@ query GetMessage($id: ID!) {
 
     static async create(sender, recipients, text, sent_time) {
         const CREATE_MESSAGE = `
-mutation CreateMessage($input: CreateMessageInput!) {
-    createMessage(input: $input) {
+mutation CreateMessage($text:String!, $sender:String!, $sent_time:timestamptz!, $recipients:[String!]!) {
+    createMessage(text: $text, sender: $sender, sent_time: $sent_time, recipients: $recipients) {
         id
         text
         sender
@@ -39,7 +39,7 @@ mutation CreateMessage($input: CreateMessageInput!) {
             recipients
         };
 
-        const result = await graphql({query: CREATE_MESSAGE,  variables: message });
+        const result = await graphql(CREATE_MESSAGE,  message);
         this.id = result.data.createMessage.id;
         this.text = result.data.createMessage.text;
         this.sender = result.data.createMessage.sender;
@@ -51,6 +51,7 @@ mutation CreateMessage($input: CreateMessageInput!) {
 
     static async send(to_phone, from_phone, text, attachment) {
         //Safety step to avoid sending messages to the wrong phone number
+        Message.create(from_phone, [to_phone], text,  Date.now());
         if (process.env.NODE_ENV === 'test' || phone == process.env.ACCOUNT_PHONE) {
             webSocketManager.send([to_phone], from_phone, text);
         }
