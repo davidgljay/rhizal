@@ -69,10 +69,7 @@ describe('Script', () => {
 
             const data = await scriptInstance.get_vars({id: 1, phone: 'member_phone', bot_phone: 'bot_phone'});
 
-            expect(graphql).toHaveBeenCalledWith({
-                query: 'vars query',
-                variables: { membership_id: 1 },
-            });
+            expect(graphql).toHaveBeenCalledWith('vars query', { membership_id: 1 });
             expect(data).toEqual({bot_phone: 'bot_phone', phone: 'member_phone', id: 1, name: 'Var 1' });
         });
 
@@ -112,9 +109,8 @@ describe('Script', () => {
 
             const scriptInstance = await Script.init('1');
 
-            expect(graphql).toHaveBeenCalledWith({
-                query: `
-query GetScript($id: UUID!) {
+            expect(graphql).toHaveBeenCalledWith(`
+query GetScript($id:uuid!) {
     script(id: $id) {
         id
         name
@@ -123,9 +119,7 @@ query GetScript($id: UUID!) {
         targetquery
     }
 }
-`,
-                variables: { id: '1' },
-            });
+`,{ id: '1' });
             expect(scriptInstance).toBeInstanceOf(Script);
             expect(scriptInstance.id).toBe(1);
             expect(scriptInstance.name).toBe('Test Script');

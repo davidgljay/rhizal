@@ -14,9 +14,8 @@ class Script {
     }
 
     static async init(id) {
-        const scriptData = await graphql({
-            query: `
-query GetScript($id: UUID!) {
+        const scriptData = await graphql(`
+query GetScript($id:uuid!) {
     script(id: $id) {
         id
         name
@@ -25,9 +24,8 @@ query GetScript($id: UUID!) {
         targetquery
     }
 }
-`,
-            variables: { id }
-        });
+`
+        ,{ id });
 
         const script = new Script(scriptData.data.script);
         script.parser = new RhizalParser(script.yaml, Message.send, Membership.set_variable)
@@ -42,10 +40,7 @@ query GetScript($id: UUID!) {
             }
             return this.vars;
         }
-        const varsData = await graphql({
-            query: this.varsquery,
-            variables: { membership_id: membership.id }
-        });
+        const varsData = await graphql(this.varsquery, { membership_id: membership.id });
         this.vars = varsData.data.vars[0];
         this.vars.phone = membership.phone;
         this.vars.bot_phone = membership.bot_phone;
