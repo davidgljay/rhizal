@@ -52,6 +52,9 @@ mutation CreateMessage($text:String!, $sender:String!, $sent_time:timestamptz!, 
     static async send(to_phone, from_phone, text, attachment) {
         //Safety step to avoid sending messages to the wrong phone number
         Message.create(from_phone, [to_phone], text,  Date.now());
+        if (process.env.NODE_ENV !== 'test') {
+            await new Promise(resolve => setTimeout(resolve, 2000));
+        }
         if (process.env.NODE_ENV === 'test' || phone == process.env.ACCOUNT_PHONE) {
             webSocketManager.send([to_phone], from_phone, text);
         }
