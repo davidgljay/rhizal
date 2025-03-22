@@ -196,7 +196,7 @@ describe('receive_message', () => {
         await receive_message(sender, recipient, message, sent_time);
 
         expect(Script.init).toHaveBeenCalledWith('test_script');
-        expect(mockGetVars).toHaveBeenCalledWith({ id: '1', step: 'step1', current_script_id: 'test_script' }); 
+        expect(mockGetVars).toHaveBeenCalledWith({ id: '1', step: 'step1', current_script_id: 'test_script' }, message); 
         expect(mockScriptReceive).toHaveBeenCalledWith('step1', message);
     });
 });

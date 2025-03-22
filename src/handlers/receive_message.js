@@ -15,7 +15,7 @@ export async function receive_message(sender, recipients, message, sent_time) {
     }
     let membership = await Membership.get(sender, recipients[0]);
     if (!membership) {
-        membership = await new_member(sender, community);
+        membership = await new_member(sender, community, message);
         return;
     }
     if (membership.step == 'done') {
@@ -23,16 +23,16 @@ export async function receive_message(sender, recipients, message, sent_time) {
         return;
     }
     const script = await Script.init(community.data.onboarding_id);
-    await script.get_vars(membership);
+    await script.get_vars(membership, message);
     await script.receive(membership.step, message);
     return;
 }
 
-export async function new_member(phone, community) {
+export async function new_member(phone, community, message) {
     const membership = await Membership.create(phone, community.id);
     await membership.set_variable('current_script_id', community.data.onboarding_id);
     const script = await Script.init(community.data.onboarding_id);
-    await script.get_vars(membership);
+    await script.get_vars(membership, message);
     await script.send('0');
     return membership;
 }
