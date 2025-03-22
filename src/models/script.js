@@ -32,12 +32,13 @@ query GetScript($id:uuid!) {
         return script;
     }
 
-    async get_vars(membership) {
+    async get_vars(membership, message) {
         if (!this.varsquery) {
             this.vars = {
                 id: membership.id,
                 phone: membership.phone,
                 bot_phone: membership.bot_phone,
+                message
             }
             return this.vars;
         }
@@ -46,12 +47,8 @@ query GetScript($id:uuid!) {
         this.vars.id = membership.id;
         this.vars.phone = membership.phone;
         this.vars.bot_phone = membership.bot_phone;
-        return {
-            id: membership.id,
-            phone: membership.phone,
-            bot_phone: membership.bot_phone,
-            ...varsData.data.vars[0]
-        };
+        this.vars.message = message;
+        return this.vars;
     }
 
     async get_targets() {
