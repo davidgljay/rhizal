@@ -1,7 +1,7 @@
 const { graphql } = require('../apis/graphql');
 
-class GroupThreads {
-    static async get_hashtag_group(signal_id, hashtag) {
+class GroupThread {
+    static async get_hashtag_group(signal_id, hashtags) {
         const query = `
 query getGroupThreads($signal_id: String!) {
     group_threads(where: {signal_id: {_eq: $signal_id}}) {
@@ -19,8 +19,8 @@ query getGroupThreads($signal_id: String!) {
         if  (results.data.group_threads.length === 0) {
             return [];
         }
-        const hashtags = results.data.group_threads[0].community.group_threads;
-        return hashtags.filter(ht => ht.hashtag === hashtag);
+        const group_threads = results.data.group_threads[0].community.group_threads;
+        return group_threads.filter(ht => hashtags.includes(ht.hashtag));
     }
 
     static async send_message(message, from_phone, signal_id) {
@@ -34,4 +34,4 @@ query getGroupThreads($signal_id: String!) {
     }
 }
 
-module.exports = GroupThreads;
+module.exports = GroupThread;
