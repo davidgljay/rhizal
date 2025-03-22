@@ -35,6 +35,7 @@ query GetScript($id:uuid!) {
     async get_vars(membership) {
         if (!this.varsquery) {
             this.vars = {
+                id: membership.id,
                 phone: membership.phone,
                 bot_phone: membership.bot_phone,
             }
@@ -42,9 +43,11 @@ query GetScript($id:uuid!) {
         }
         const varsData = await graphql(this.varsquery, { membership_id: membership.id });
         this.vars = varsData.data.vars[0];
+        this.vars.id = membership.id;
         this.vars.phone = membership.phone;
         this.vars.bot_phone = membership.bot_phone;
         return {
+            id: membership.id,
             phone: membership.phone,
             bot_phone: membership.bot_phone,
             ...varsData.data.vars[0]

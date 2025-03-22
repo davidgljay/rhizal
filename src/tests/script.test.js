@@ -79,8 +79,8 @@ describe('Script', () => {
             const vars = await scriptInstance.get_vars({id: 1, phone: 'member_phone', bot_phone: 'bot_phone'});
 
             expect(graphql).toHaveBeenCalledTimes(1);
-            expect(vars).toEqual({bot_phone: 'bot_phone', phone: 'member_phone' });
-            expect(scriptInstance.vars).toEqual({bot_phone: 'bot_phone', phone: 'member_phone' });
+            expect(vars).toEqual({id: 1, bot_phone: 'bot_phone', phone: 'member_phone' });
+            expect(scriptInstance.vars).toEqual({id:1, bot_phone: 'bot_phone', phone: 'member_phone' });
         });
 
         it('should throw an error when the response is not successful', async () => {
