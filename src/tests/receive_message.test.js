@@ -2,7 +2,8 @@ const Membership = require('../models/membership');
 const Message = require('../models/message');
 const Script = require('../models/script');
 const Community = require('../models/community');
-const { new_member, no_script_message, script_message, receive_message  } = require('../handlers/receive_message');
+const GroupThread = require('../models/group_thread');
+const { new_member, no_script_message, script_message, receive_message, receive_group_message  } = require('../handlers/receive_message');
 
 jest.mock('../models/membership', () => {
     return {
@@ -19,6 +20,13 @@ jest.mock('../models/message', () => {
     return {
         create: jest.fn(),
         send: jest.fn()
+    };
+});
+
+jest.mock('../models/group_thread', () => {
+    return {
+        get_hashtag_group: jest.fn(),
+        send_message: jest.fn()
     };
 });
 
@@ -198,5 +206,65 @@ describe('receive_message', () => {
         expect(Script.init).toHaveBeenCalledWith('test_script');
         expect(mockGetVars).toHaveBeenCalledWith({ id: '1', step: 'step1', current_script_id: 'test_script' }, message); 
         expect(mockScriptReceive).toHaveBeenCalledWith('step1', message);
+    });
+});
+
+describe('receive_group_message', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    it('should do nothing if no hashtags are found in the message', async () => {
+        const signal_id = 'signal123';
+        const from_phone = '1234567890';
+        const message = 'This is a message without hashtags';
+
+        await receive_group_message(signal_id, from_phone, message);
+
+        expect(GroupThread.get_hashtag_group).not.toHaveBeenCalled();
+        expect(GroupThread.send_message).not.toHaveBeenCalled();
+    });
+
+    it('should fetch group threads for hashtags in the message', async () => {
+        const signal_id = 'signal123';
+        const from_phone = '1234567890';
+        const message = 'This is a message with #hashtag1 and #hashtag2';
+        const mockThreads = [
+            { signal_id: 'group1' },
+            { signal_id: 'group2' }
+        ];
+        GroupThread.get_hashtag_group.mockResolvedValue(mockThreads);
+
+        await receive_group_message(signal_id, from_phone, message);
+
+        expect(GroupThread.get_hashtag_group).toHaveBeenCalledWith(signal_id, ['#hashtag1', '#hashtag2']);
+    });
+
+    it('should send the message to all matching group threads', async () => {
+        const signal_id = 'signal123';
+        const from_phone = '1234567890';
+        const message = 'This is a message with #hashtag1';
+        const mockThreads = [
+            { signal_id: 'group1' },
+            { signal_id: 'group2' }
+        ];
+        GroupThread.get_hashtag_group.mockResolvedValue(mockThreads);
+
+        await receive_group_message(signal_id, from_phone, message);
+
+        expect(GroupThread.send_message).toHaveBeenCalledWith(message, from_phone, 'group1');
+        expect(GroupThread.send_message).toHaveBeenCalledWith(message, from_phone, 'group2');
+    });
+
+    it('should handle no matching group threads gracefully', async () => {
+        const signal_id = 'signal123';
+        const from_phone = '1234567890';
+        const message = 'This is a message with #hashtag1';
+        GroupThread.get_hashtag_group.mockResolvedValue([]);
+
+        await receive_group_message(signal_id, from_phone, message);
+
+        expect(GroupThread.get_hashtag_group).toHaveBeenCalledWith(signal_id, ['#hashtag1']);
+        expect(GroupThread.send_message).not.toHaveBeenCalled();
     });
 });
