@@ -57,6 +57,10 @@ query GetMembershipFromPhoneNumbers($phone: String!, $bot_phone: String!) {
         }
     }
 
+    static async set_variable(id, variable, value) {
+        return new Membership({id}).set_variable(variable, value);
+    }
+
 
     async set_variable(variable, value) {
         const validVariables = ['name', 'informal_name', 'location', 'email', 'profile', 'step', 'current_script_id'];
@@ -117,7 +121,7 @@ mutation CreateUserAndMembership($phone:String!, $community_id:uuid!) {
 `;
 
             const createMembershipMutation = `
-mutation CreateMembership($user_id: uuid!, $community_id: uuid!) {
+mutation CreateMembership($user_id:uuid!, $community_id:uuid!) {
   insert_memberships_one(object: {user_id: $user_id, community_id: $community_id, type: "member"}) {
     id
     type
