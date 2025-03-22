@@ -69,7 +69,7 @@ class RhyzalParser {
     evaluate_receive(script, vars) {
         switch(Object.keys(script)[0]) {
             case 'step':
-                const new_step = script['step'];
+                const new_step = String(script['step']);
                 this.set_variable(vars.id, 'step', new_step);
                 this.send(new_step, vars);
                 break;

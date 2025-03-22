@@ -105,7 +105,7 @@ describe('rhyzal_parser', () => {
         it ('should update a user\'s status based on a condition', () => {
             const parser = new RhyzalParser(test_yaml, send_message, set_variable);
             parser.receive(0, {id: 1, var1: 'foo'});
-            expect(set_variable).toHaveBeenCalledWith(1,'step', 1);
+            expect(set_variable).toHaveBeenCalledWith(1,'step', "1");
         });
 
         it('should update a user\'s status differently if a different condition is met', () => {
@@ -120,7 +120,7 @@ describe('rhyzal_parser', () => {
         it('should set the user status', () => {
             const parser = new RhyzalParser(test_yaml, send_message, set_variable);
             parser.evaluate_receive({step: 0}, {id: 1});
-            expect(set_variable).toHaveBeenCalledWith(1, 'step', 0);
+            expect(set_variable).toHaveBeenCalledWith(1, 'step', "0");
         });
 
         it('should set the user profile', () => {
@@ -132,7 +132,7 @@ describe('rhyzal_parser', () => {
         it('should evaluate an if condition', () => {
             const parser = new RhyzalParser(test_yaml, send_message, set_variable);
             parser.evaluate_receive({if: 'regex(var1, /foo/)', then: [{step: 0}]}, {var1: 'foo', id: "1"});
-            expect(set_variable).toHaveBeenCalledWith("1", 'step', 0);
+            expect(set_variable).toHaveBeenCalledWith("1", 'step', "0");
         });
 
         it('should evaluate an if condition with an else', () => {
@@ -144,7 +144,7 @@ describe('rhyzal_parser', () => {
         it('should evaluate an if condition with an and', () => {
             const parser = new RhyzalParser(test_yaml, send_message, set_variable);
             parser.evaluate_receive({if: {and: ['regex(var1, /foo/)', 'regex(var2, /bar/)']}, then: [{step: 0}]}, {var1: 'foo', var2: 'bar', id: 1});
-            expect(set_variable).toHaveBeenCalledWith(1, 'step', 0);
+            expect(set_variable).toHaveBeenCalledWith(1, 'step', "0");
 
         });
 
@@ -158,9 +158,9 @@ describe('rhyzal_parser', () => {
         it('should evaluate an if condition with an or', () => {
             const parser = new RhyzalParser(test_yaml, send_message, set_variable);
             parser.evaluate_receive({if: {or: ['regex(var1, /foo/)', 'regex(var2, /bar/)']}, then: [{step: 0}]}, {var1: 'foo', var2: 'baz', id: 1});
-            expect(set_variable).toHaveBeenCalledWith(1,'step', 0);
+            expect(set_variable).toHaveBeenCalledWith(1,'step', "0");
             parser.evaluate_receive({if: {or: ['regex(var1, /foo/)', 'regex(var2, /bar/)']}, then: [{step: 0}]}, {var1: 'fuz', var2: 'bar', id: 1});
-            expect(set_variable).toHaveBeenCalledWith(1, 'step', 0);
+            expect(set_variable).toHaveBeenCalledWith(1, 'step', "0");
         });
 
         it ('shold evaluate an if condition with an or that is falsy', () => {
