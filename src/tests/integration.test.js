@@ -17,7 +17,7 @@ const testScript = `
     on_receive:
         if: regex(var1, /foo/)
         then:
-            - user_status: 1
+            - step: 2
             - set_variable:
                 variable: name
                 value: user_name
@@ -27,7 +27,6 @@ const testScript = `
     send:
         - Another message with no variables!
         - A second message to be sent a few seconds later.
-        - attach(filevar)
     on_receive:
         step: done
 `
@@ -59,17 +58,6 @@ describe('Integration Tests for receive_message Handler', () => {
         const senderNumber = '+1234567890';
         const recipientNumbers = ['+0987654321'];
         const sentTime = 1741644982;
-        const firstMessage = 'Welcome to the service!';
-        // Graphql should expect the following calls in the following order:
-        // 1. Create message
-        // 2. Get community
-        // 3. Get membership
-        // 4. Get user
-        // 5. Create membership or create membership and user
-        // 7. Update membership current_script_id
-        // 8. Get script
-        // 9. Send first message of script
-        // 10. Update membership step
 
         const mockGraphql = [
             {
@@ -80,12 +68,12 @@ describe('Integration Tests for receive_message Handler', () => {
                     sent_time: sentTime,
                     text: 'Hello'
                 },
-                response: { data: { createMessage: { id: "1" } } }
+                response: { data: { createMessage: { id: "message_1" } } }
             },
             {
                 query: `query GetCommunities($bot_phone:String!)`,
                 variables: { bot_phone: recipientNumbers[0] },
-                response: { data: { communities: [{ id: "1", name: 'Mock Community', onboarding_id: '2' }] } }
+                response: { data: { communities: [{ id: "community_1", name: 'Mock Community', onboarding_id: 'script_2' }] } }
             },
             {
                 query: `query GetMembershipFromPhoneNumbers($phone: String!, $bot_phone: String!)`,
@@ -99,22 +87,22 @@ describe('Integration Tests for receive_message Handler', () => {
             },
             {
                 query: `mutation CreateUserAndMembership($phone:String!, $community_id:uuid!)`,
-                variables: { phone: senderNumber, community_id: "1" },
-                response: { data: { insert_memberships_one: { id: "1", user: { id: "1", phone: senderNumber }, type: 'member', community: { bot_phone: recipientNumbers[0] } } } }
+                variables: { phone: senderNumber, community_id: "community_1" },
+                response: { data: { insert_memberships_one: { id: "membership_1", user: { id: "user_1", phone: senderNumber }, type: 'member', community: { bot_phone: recipientNumbers[0] } } } }
             },
             {
                 query: `mutation updateMembershipVariable($id:uuid!, $value:uuid!)`,
-                variables: { id: "1", current_script_id: "2" },
-                response: { data: { updateMembership: { id: "1" } } }
+                variables: { id: "membership_1", current_script_id: "script_2" },
+                response: { data: { updateMembership: { id: "membership_1" } } }
             },
             {
                 query: `query GetScript($id:uuid!)`,
-                variables: { id: "2" },
-                response: { data: { script: { id: "2", name: 'onboarding', yaml: testScript, varsquery: 'query testVarsQuery($membership_id:uuid!) {}' } } }
+                variables: { id: "script_2" },
+                response: { data: { script: { id: "script_2", name: 'onboarding', yaml: testScript, varsquery: 'query testVarsQuery($membership_id:uuid!) {}' } } }
             },
             {
                 query: `query testVarsQuery($membership_id:uuid!)`,
-                variables: { membership_id: "1" },
+                variables: { membership_id: "membership_1" },
                 response: { data: { vars: [{ name: 'var1' }] } }
             },
             {
@@ -125,7 +113,7 @@ describe('Integration Tests for receive_message Handler', () => {
                     sent_time: expect.any(Number),
                     text: 'Welcome to the service!'
                 },
-                response: { data: { createMessage: { id: "2" } } }
+                response: { data: { createMessage: { id: "message_2" } } }
             }
         ];
 
@@ -154,19 +142,154 @@ describe('Integration Tests for receive_message Handler', () => {
         expect(signal.send).toHaveBeenCalledWith([senderNumber], recipientNumbers[0], 'Welcome to the service!');
     });
 
-    xit('should send the next message in the script for an existing user', async () => {
-        const phoneNumber = '+1234567890';
-        const nextMessage = 'This is the next message in the script.';
-        const user = { id: 1, phoneNumber, scriptProgress: 1 };
+    it('should create a new membership for an existing users and send the first message of the script', async () => {
+        const senderNumber = '+1234567890';
+        const recipientNumbers = ['+0987654321'];
+        const sentTime = 1741644982;
 
-        getUserMock.mockResolvedValue(user);
-        updateUserMock.mockResolvedValue({ ...user, scriptProgress: 2 });
-        getScriptMessageMock.mockResolvedValue(nextMessage);
+        const mockGraphql = [
+            {
+                query: `mutation CreateMessage($text:String!, $sender:String!, $sent_time:timestamptz!, $recipients:[String!]!)`,
+                variables: {
+                    recipients: recipientNumbers,
+                    sender: senderNumber,
+                    sent_time: sentTime,
+                    text: 'Hello'
+                },
+                response: { data: { createMessage: { id: "message_1" } } }
+            },
+            {
+                query: `query GetCommunities($bot_phone:String!)`,
+                variables: { bot_phone: recipientNumbers[0] },
+                response: { data: { communities: [{ id: "community_1", name: 'Mock Community', onboarding_id: 'script_2' }] } }
+            },
+            {
+                query: `query GetMembershipFromPhoneNumbers($phone: String!, $bot_phone: String!)`,
+                variables: { phone: senderNumber, bot_phone: recipientNumbers[0] },
+                response: { data: { memberships: [] } }
+            },
+            {
+                query: `query GetUser($phone: String!)`,
+                variables: { phone: senderNumber },
+                response: { data: { users: [{id: "user_1"}] } }
+            },
+            {
+                query: `mutation CreateMembership($user_id:uuid!, $community_id:uuid!)`,
+                variables: { user_id: 'user_1', community_id: "community_1" },
+                response: { data: { insert_memberships_one: { id: "membership_1", user: { id: "user_1", phone: senderNumber }, type: 'member', community: { bot_phone: recipientNumbers[0] } } } }
+            },
+            {
+                query: `mutation updateMembershipVariable($id:uuid!, $value:uuid!)`,
+                variables: { id: "membership_1", current_script_id: "script_2" },
+                response: { data: { updateMembership: { id: "membership_1" } } }
+            },
+            {
+                query: `query GetScript($id:uuid!)`,
+                variables: { id: "script_2" },
+                response: { data: { script: { id: "script_2", name: 'onboarding', yaml: testScript, varsquery: 'query testVarsQuery($membership_id:uuid!) {}' } } }
+            },
+            {
+                query: `query testVarsQuery($membership_id:uuid!)`,
+                variables: { membership_id: "membership_1" },
+                response: { data: { vars: [{ name: 'var1' }] } }
+            },
+            {
+                query: `mutation CreateMessage($text:String!, $sender:String!, $sent_time:timestamptz!, $recipients:[String!]!)`,
+                variables: {
+                    recipients: [senderNumber],
+                    sender: recipientNumbers[0],
+                    sent_time: expect.any(Number),
+                    text: 'Welcome to the service!'
+                },
+                response: { data: { createMessage: { id: "message_2" } } }
+            }
+        ];
 
-        await receiveMessageHandler({ phoneNumber, message: 'Next' });
+        for (let i = 0; i < mockGraphql.length; i++) {
+            graphql.mockImplementationOnce((...args) => {
+                // console.log('graphql called with:', args);
+                return Promise.resolve(mockGraphql[i].response);
+            });
+            
+        }
 
-        expect(updateUserMock).toHaveBeenCalledTimes(1);
-        expect(signalApiMock).toHaveBeenCalledWith(phoneNumber, nextMessage);
-        expect(graphqlApiMock).toHaveBeenCalledWith(phoneNumber, nextMessage);
+        await receive_message(senderNumber, recipientNumbers, 'Hello', sentTime);
+
+        for (let i = 0; i < mockGraphql.length; i++) {
+            expect(graphql).toHaveBeenNthCalledWith(i + 1, expect.stringContaining(mockGraphql[i].query), mockGraphql[i].variables);
+        }
+        expect(graphql).toHaveBeenCalledTimes(mockGraphql.length);
+
+        expect(signal.send).toHaveBeenCalledWith([senderNumber], recipientNumbers[0], 'Welcome to the service!');
+    });
+
+    it('should send the next message in the script for an existing user', async () => {
+        const senderNumber = '+1234567890';
+        const recipientNumbers = ['+0987654321'];
+        const sentTime = 1741644982;
+
+        const mockGraphql = [
+            {
+                query: `mutation CreateMessage($text:String!, $sender:String!, $sent_time:timestamptz!, $recipients:[String!]!)`,
+                variables: {
+                    recipients: recipientNumbers,
+                    sender: senderNumber,
+                    sent_time: sentTime,
+                    text: 'Hello'
+                },
+                response: { data: { createMessage: { id: "message_1" } } }
+            },
+            {
+                query: `query GetCommunities($bot_phone:String!)`,
+                variables: { bot_phone: recipientNumbers[0] },
+                response: { data: { communities: [{ id: "community_1", name: 'Mock Community', onboarding_id: 'script_2' }] } }
+            },
+            {
+                query: `query GetMembershipFromPhoneNumbers($phone: String!, $bot_phone: String!)`,
+                variables: { phone: senderNumber, bot_phone: recipientNumbers[0] },
+                response: { data: { memberships: [{ id: "membership_1", current_script_id: "script_2", step: "0", user: { id: "user_1", phone: senderNumber }, type: 'member', community: { bot_phone: recipientNumbers[0] } } ] } }
+            },
+            {
+                query: `query GetScript($id:uuid!)`,
+                variables: { id: "script_2" },
+                response: { data: { script: { id: "script_2", name: 'onboarding', yaml: testScript, varsquery: 'query testVarsQuery($membership_id:uuid!) {}' } } }
+            },
+            {
+                query: `query testVarsQuery($membership_id:uuid!)`,
+                variables: { membership_id: "membership_1" },
+                response: { data: { vars: [{ var1: 'stuff', var2: 'things' }] } }
+            },
+            {
+                query: `mutation updateMembershipVariable($id:uuid!, $value:String!)`,
+                variables: { id: "membership_1", step: "1" },
+                response: { data: { updateMembership: { id: "membership_1" } } }
+            },
+            {
+                query: `mutation CreateMessage($text:String!, $sender:String!, $sent_time:timestamptz!, $recipients:[String!]!)`,
+                variables: {
+                    recipients: [senderNumber],
+                    sender: recipientNumbers[0],
+                    sent_time: expect.any(Number),
+                    text: 'Message with stuff to things!'
+                },
+                response: { data: { createMessage: { id: "message_2" } } }
+            }
+        ];
+
+        for (let i = 0; i < mockGraphql.length; i++) {
+            graphql.mockImplementationOnce((...args) => {
+                // console.log('graphql called with:', args);
+                return Promise.resolve(mockGraphql[i].response);
+            });
+            
+        }
+
+        await receive_message(senderNumber, recipientNumbers, 'Hello', sentTime);
+
+        for (let i = 0; i < mockGraphql.length; i++) {
+            expect(graphql).toHaveBeenNthCalledWith(i + 1, expect.stringContaining(mockGraphql[i].query), mockGraphql[i].variables);
+        }
+        expect(graphql).toHaveBeenCalledTimes(mockGraphql.length);
+        expect(signal.send).toHaveBeenCalledWith([senderNumber], recipientNumbers[0], 'Message with stuff to things!');
     });
 });
