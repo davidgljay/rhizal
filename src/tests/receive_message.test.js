@@ -23,9 +23,13 @@ jest.mock('../models/message', () => {
     };
 });
 
+
+
 jest.mock('../models/group_thread', () => {
     return {
-        get_hashtag_group: jest.fn(),
+        run_script: jest.fn(),
+        find_or_create_group_thread: jest.fn(),
+        leave_group: jest.fn(),
         send_message: jest.fn()
     };
 });
@@ -117,7 +121,6 @@ describe('script_message', () => {
 });
 
 describe('receive_message', () => {
-    let mockScriptInstance;
     beforeEach(() => {
         jest.clearAllMocks();
     });
@@ -210,61 +213,122 @@ describe('receive_message', () => {
 });
 
 describe('receive_group_message', () => {
-    beforeEach(() => {
+
+    afterEach(() => {
         jest.clearAllMocks();
+        jest.restoreAllMocks();
     });
 
-    it('should do nothing if no hashtags are found in the message', async () => {
-        const signal_id = 'signal123';
+    it('should handle messages when group_thread step is not "done"', async () => {
+        const group_id = 'test_group_id';
+        const base64_group_id = Buffer.from(group_id).toString('base64');
+        const message = 'test message';
         const from_phone = '1234567890';
-        const message = 'This is a message without hashtags';
+        const bot_phone = '0987654321';
+        const sender_name = 'Test Sender';
 
-        await receive_group_message(signal_id, from_phone, message);
+        const mockMembership = { data: { community: { id: 'community_id' } } };
+        const mockGroupThread = { step: '0' };
 
-        expect(GroupThread.get_hashtag_group).not.toHaveBeenCalled();
+        jest.spyOn(GroupThread, 'find_or_create_group_thread').mockResolvedValue(mockGroupThread);
+        jest.spyOn(Membership, 'get').mockResolvedValue(mockMembership);
+
+        await receive_group_message(group_id, message, from_phone, bot_phone, sender_name);
+
+        expect(Membership.get).toHaveBeenCalledWith(from_phone, bot_phone);
+        expect(GroupThread.find_or_create_group_thread).toHaveBeenCalledWith(base64_group_id, 'community_id');
+        expect(GroupThread.run_script).toHaveBeenCalledWith(mockGroupThread, mockMembership, message);
+    });
+
+    it('should return if there is no message and the group step is done', async () => {
+        const group_id = 'test_group_id';
+        const message = null;
+        const from_phone = '1234567890';
+        const bot_phone = '0987654321';
+        const sender_name = 'Test Sender';
+        const mockGroupThread = { step: 'done' };
+        const mockMembership = { data: { community: { id: 'community_id' } } };
+
+        jest.spyOn(Membership, 'get').mockResolvedValue(mockMembership);
+        jest.spyOn(GroupThread, 'find_or_create_group_thread').mockResolvedValue(mockGroupThread);
+
+        await receive_group_message(group_id, message, from_phone, bot_phone, sender_name);
+
+        expect(Membership.get).toHaveBeenCalled();
+        expect(GroupThread.find_or_create_group_thread).toHaveBeenCalled();
+        expect(GroupThread.run_script).not.toHaveBeenCalled();
         expect(GroupThread.send_message).not.toHaveBeenCalled();
     });
 
-    it('should fetch group threads for hashtags in the message', async () => {
-        const signal_id = 'signal123';
+    it('should return if there are no hashtags in the message', async () => {
+        const group_id = 'test_group_id';
+        const message = 'No hashtags here';
         const from_phone = '1234567890';
-        const message = 'This is a message with #hashtag1 and #hashtag2';
-        const mockThreads = [
-            { signal_id: 'group1' },
-            { signal_id: 'group2' }
-        ];
-        GroupThread.get_hashtag_group.mockResolvedValue(mockThreads);
+        const bot_phone = '0987654321';
+        const sender_name = 'Test Sender';
+        const mockGroupThread = { step: 'done' };
+        const mockMembership = { data: { community: { id: 'community_id' } } };
 
-        await receive_group_message(signal_id, from_phone, message);
+        jest.spyOn(Membership, 'get').mockResolvedValue(mockMembership);
+        jest.spyOn(GroupThread, 'find_or_create_group_thread').mockResolvedValue(mockGroupThread);
 
-        expect(GroupThread.get_hashtag_group).toHaveBeenCalledWith(signal_id, ['#hashtag1', '#hashtag2']);
-    });
+        await receive_group_message(group_id, message, from_phone, bot_phone, sender_name);
 
-    it('should send the message to all matching group threads', async () => {
-        const signal_id = 'signal123';
-        const from_phone = '1234567890';
-        const message = 'This is a message with #hashtag1';
-        const mockThreads = [
-            { signal_id: 'group1' },
-            { signal_id: 'group2' }
-        ];
-        GroupThread.get_hashtag_group.mockResolvedValue(mockThreads);
-
-        await receive_group_message(signal_id, from_phone, message);
-
-        expect(GroupThread.send_message).toHaveBeenCalledWith(message, from_phone, 'group1');
-        expect(GroupThread.send_message).toHaveBeenCalledWith(message, from_phone, 'group2');
-    });
-
-    it('should handle no matching group threads gracefully', async () => {
-        const signal_id = 'signal123';
-        const from_phone = '1234567890';
-        const message = 'This is a message with #hashtag1';
-        GroupThread.get_hashtag_group.mockResolvedValue([]);
-
-        await receive_group_message(signal_id, from_phone, message);
-
-        expect(GroupThread.get_hashtag_group).toHaveBeenCalledWith(signal_id, ['#hashtag1']);
+        expect(Membership.get).toHaveBeenCalled();
+        expect(GroupThread.find_or_create_group_thread).toHaveBeenCalled();
+        expect(GroupThread.run_script).not.toHaveBeenCalled();
         expect(GroupThread.send_message).not.toHaveBeenCalled();
+    });
+
+    it('should leave the group if the message contains the "leave" hashtag', async () => {
+        const group_id = 'test_group_id';
+        const base64_group_id = Buffer.from(group_id).toString('base64');
+        const message = '#leave';
+        const from_phone = '1234567890';
+        const bot_phone = '0987654321';
+        const sender_name = 'Test Sender';
+        const mockGroupThread = { step: 'done', community: {group_threads: [{group_id: '123', hashtag: '#test'}]} };
+
+        jest.spyOn(GroupThread, 'find_or_create_group_thread').mockResolvedValue(mockGroupThread);
+        jest.spyOn(GroupThread, 'leave_group').mockResolvedValue();
+        
+
+        await receive_group_message(group_id, message, from_phone, bot_phone, sender_name);
+
+        expect(GroupThread.leave_group).toHaveBeenCalledWith(base64_group_id, bot_phone);
+        expect(Membership.get).toHaveBeenCalled();
+        expect(GroupThread.find_or_create_group_thread).toHaveBeenCalled();
+        expect(GroupThread.run_script).not.toHaveBeenCalled();
+        expect(GroupThread.send_message).not.toHaveBeenCalled();
+    });
+
+    it('should relay messages to groups with matching hashtags', async () => {
+        const group_id = 'test_group_id';
+        const message = '#test_hashtag Message content';
+        const from_phone = '1234567890';
+        const bot_phone = '0987654321';
+        const sender_name = 'Test Sender';
+
+        const mockMembership = { data: { community: { id: 'community_id' } } };
+        const mockGroupThread = {
+            step: 'done',
+            community: {
+                group_threads: [
+                    { group_id: '1', hashtag: '#test_hashtag' },
+                    { group_id: '2', hashtag: '#other_hashtag' },
+                ],
+            },
+            hashtag: '#other_hashtag',
+        };
+
+        jest.spyOn(GroupThread, 'find_or_create_group_thread').mockResolvedValue(mockGroupThread);
+        jest.spyOn(Membership, 'get').mockResolvedValue(mockMembership);
+        jest.spyOn(GroupThread, 'send_message').mockResolvedValue();
+
+        await receive_group_message(group_id, message, from_phone, bot_phone, sender_name);
+
+        const expectedMessage = `Message relayed from ${from_phone}(${sender_name}) in #${mockGroupThread.hashtag}: ${message}`;
+        expect(GroupThread.send_message).toHaveBeenCalledWith(expectedMessage, bot_phone, '1');
+        expect(GroupThread.send_message).not.toHaveBeenCalledWith(expectedMessage, bot_phone, '2');
     });
 });

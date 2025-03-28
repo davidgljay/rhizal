@@ -7,6 +7,7 @@ const GroupThread = require('../models/group_thread');
 
 
 export async function receive_message(sender, recipients, message, sent_time) {
+    //TODO: Refactor from recipient to recipients
     if (!message) {
         return;
     }
@@ -50,16 +51,48 @@ export async function script_message(member, message) {
     return;
 }
 
-export async function receive_group_message(signal_id, from_phone, message) {
-    const hashtags = message.match(/#[\w]+/g);
-    if (!hashtags) {
+export async function receive_group_message(internal_group_id, message, from_phone, bot_phone, sender_name) {
+    const group_id = Buffer.from(internal_group_id).toString('base64');
+    const membership = await Membership.get(from_phone, bot_phone);
+    const community_id = membership.data.community.id;
+    const group_thread = await GroupThread.find_or_create_group_thread(group_id, community_id);
+
+
+    if (message && message.includes('#leave')) {
+        GroupThread.leave_group(group_id, bot_phone);
         return;
     }
-    const group_threads = await GroupThread.get_hashtag_group(signal_id, hashtags)
-    
-    for(const thread of group_threads) {
-        await GroupThread.send_message(message, from_phone, thread.signal_id);
+    if (group_thread.step !== 'done') {
+        GroupThread.run_script(group_thread, membership, message);
+        return;
+    }
+    if (!message) { //If there is no message, return.
+        return;
+    }
+    const hashtags = message.match(/#[\w]+/g);
+    if (!hashtags) { //Ignore all messages without a hashtag
+        return;
     }
 
+    //Relay message to groups whose hashtags are listed
+    const community_hashtags = group_thread.community.group_threads;
+    for (const ht of community_hashtags) {
+        if (hashtags.includes(ht.hashtag)) {
+            const expanded_message = `Message relayed from ${from_phone}(${sender_name}) in #${group_thread.hashtag}: ${message}`;
+            await GroupThread.send_message(expanded_message, bot_phone, ht.group_id);
+        }
+    }
+    // Thanks for inviting me to join! This is the Rhizal script. I'll completely ignore everything said in this group unless it contains a hashtag.
+    // If it does I'll route it to another group, then forget it.
+    // For example, writing a message with #leadership would route to the leadership group.
+    // To get you set up, what hashtag should others use to message this group? (e.g. #coolkids)
+    // You can always change this in the future by writing #name.
+    //
+    // Got it! I'll route messages with #hashtag to this group.
+    // 
+    // Hmm, it looks like that hashtag is already taken. Could you please choose another one?
+    //
+
+    //[{"envelope":{"source":"00fa3971-e783-4399-956b-8786549e32ff","sourceNumber":null,"sourceUuid":"00fa3971-e783-4399-956b-8786549e32ff","sourceName":"DJ","sourceDevice":1,"timestamp":1742794738464,"serverReceivedTimestamp":1742794738571,"serverDeliveredTimestamp":1742794752235,"dataMessage":{"timestamp":1742794738464,"message":null,"expiresInSeconds":0,"viewOnce":false,"groupInfo":{"groupId":"fPNM9lou0GB1fThpagjDTfJl6GaTd2LqDoGZ7e8vO5I=","type":"DELIVER"}}},"account":"+14155551212"}]
     return;
 }

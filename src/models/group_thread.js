@@ -4,27 +4,6 @@ const Script = require('./script');
 const webSocketManager = require('../apis/signal');
 
 class GroupThread {
-    static async get_hashtag_group(group_id, hashtags) {
-        const query = `
-query getGroupThreads($group_id: String!) {
-    group_threads(where: {group_id: {_eq: $group_id}}) {
-        community {
-            group_threads {
-                group_id
-                hashtag
-            }
-        }
-    }
-}`;
-
-        const variables = { group_id };
-        const results = await graphql(query, variables);
-        if  (results.data.group_threads.length === 0) {
-            return [];
-        }
-        const group_threads = results.data.group_threads[0].community.group_threads;
-        return group_threads.filter(ht => hashtags.includes(ht.hashtag));
-    }
 
     static async send_message(message, from_phone, group_id) {
         if (process.env.NODE_ENV === 'test' || phone == process.env.ACCOUNT_PHONE) {
@@ -33,37 +12,10 @@ query getGroupThreads($group_id: String!) {
     }
 
     static async recieve_group_message(group_id, message, from_phone, bot_phone, sender_name) {
-        const membership = await Membership.get(from_phone, bot_phone);
-        const community_id = membership.data.community.id;
-        const group_thread = await GroupThread.find_or_create_group_thread(group_id, community_id);
 
-        if (group_thread.step !== 'done') {
-            this.group_thread_script(group_thread, membership, message);
-            return;
-        }
-        if (!message) { //If there is no message, return.
-            return;
-        }
-        const hashtags = message.match(/#[\w]+/g);
-        if (!hashtags) { //Ignore all messages without a hashtag
-            return;
-        }
-        if (hashtags.includes('#leave')) {
-            this.leave_group(group_id, bot_phone);
-            return;
-        }
-
-        //Relay message to groups whose hashtags are listed
-        const community_hashtags = group_thread.community.group_threads;
-        for (const ht of community_hashtags) {
-            if (hashtags.includes(ht.hashtag)) {
-                const expanded_message = `Message relayed from ${from_phone}(${sender_name}) in #${group_thread.hashtag}: ${message}`;
-                await GroupThread.send_message(expanded_message, bot_phone, ht.group_id);
-            }
-        }
     }
 
-    static async group_thread_script(group_thread, membership, message) {
+    static async run_script(group_thread, membership, message) {
         const script = await Script.init(group_thread.community.group_script_id);
         await script.get_vars(membership, message);
         if (group_thread.step == '0') {
