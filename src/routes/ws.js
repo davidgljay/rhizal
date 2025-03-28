@@ -28,14 +28,17 @@ Example payload from Signal API:
     envelope.syncMessage will be undefined if there is no message.
 */
 
-import { receive_message } from '../handlers/receive_message';
+import { receive_message, receive_group_message } from '../handlers/receive_message';
 
 export async function receive_raw_message(msg) {
-    if (!msg || !msg.envelope || !msg.envelope.syncMessage) {
+    if (!msg || !msg.envelope || !msg.envelope.dataMessage) {
         return;
     }
-    const { source, timestamp } = msg.envelope;
-    const { destination, message} = msg.envelope.syncMessage.sentMessage;
-    console.log(`Received message from ${source} to ${destination} at ${timestamp}: ${message}`);
-    receive_message(source, destination, message, timestamp);
+    const { source, timestamp, account, sourceName, dataMessage: {message, groupInfo} } = msg.envelope;
+    if (groupInfo) { 
+        receive_group_message(groupInfo.groupId, message, source, account, sourceName);
+        return;
+    }
+    console.log(`Received message from ${source} to ${account} at ${timestamp}: ${message}`);
+    receive_message(source, account, message, timestamp);
 };
