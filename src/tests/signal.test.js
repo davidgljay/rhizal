@@ -2,8 +2,10 @@ const ACCOUNT_PHONE = '1234567890';
 process.env.ACCOUNT_PHONE = ACCOUNT_PHONE;
 const webSocketManager = require('../apis/signal');
 const WebSocket = require('ws');
+const fetch = require('node-fetch');
 
 jest.mock('ws');
+jest.mock('node-fetch');
 
 describe('WebSocketManager', () => {
     let mockWebSocketInstance;
@@ -108,5 +110,15 @@ describe('WebSocketManager', () => {
 
         expect(console.error).toHaveBeenCalledWith('Recipients must be an array');
         expect(mockWebSocketInstance.send).not.toHaveBeenCalled();
+    });
+
+    it('should leave group', async () => {
+        const group_id = 'test_group_id';
+        const bot_phone = '+0987654321';
+        fetch.mockResolvedValue({ ok: true });
+
+        await webSocketManager.leave_group(group_id, bot_phone);
+
+        expect(fetch).toHaveBeenCalledWith(`https://signal-cli:8080/v1/groups/${bot_phone}/${group_id}/quit`, { method: 'POST' });
     });
 });

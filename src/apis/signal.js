@@ -1,4 +1,5 @@
 const WebSocket = require('ws');
+const fetch = require('node-fetch');
 
 class WebSocketManager {
     constructor() {
@@ -39,7 +40,7 @@ class WebSocketManager {
         });
     }
 
-    send(recipients, from_number, message) {
+    async send(recipients, from_number, message) {
         if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
             console.error('WebSocket is not open');
             return;
@@ -48,7 +49,20 @@ class WebSocketManager {
             console.error('Recipients must be an array');
             return;
         }
-        this.ws.send(JSON.stringify({ recipients, from_number, message }));
+        await this.ws.send(JSON.stringify({ recipients, from_number, message }));
+    }
+
+    async leave_group(group_id, bot_number) {
+        const leave_endpoint = `https://signal-cli:8080/v1/groups/${bot_number}/${group_id}/quit`;
+        return await fetch(leave_endpoint, { method: 'POST' })
+            .then(response => {
+                if (!response.ok) {
+                    console.error('Error leaving group:', response.statusText);
+                }
+            })
+            .catch(error => {
+                console.error('Error leaving group:', error);
+            });
     }
 }
 
