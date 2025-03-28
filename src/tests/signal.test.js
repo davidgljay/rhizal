@@ -11,7 +11,6 @@ describe('WebSocketManager', () => {
     let mockWebSocketInstance;
 
     beforeEach(() => {
-
         mockWebSocketInstance = {
             on: jest.fn(),
             send: jest.fn(),
@@ -91,7 +90,8 @@ describe('WebSocketManager', () => {
         const message = 'test message';
         const bot_phone = '+0987654321';
         webSocketManager.ws = { readyState: WebSocket.CLOSED };
-        console.error = jest.fn();
+        jest.spyOn(console, 'error').mockImplementation(() => {}); 
+        
 
         webSocketManager.send(recipients, bot_phone, message);
 
