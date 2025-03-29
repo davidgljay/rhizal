@@ -63,7 +63,7 @@ export async function receive_group_message(internal_group_id, message, from_pho
         return;
     }
     if (group_thread.step !== 'done') {
-        GroupThread.run_script(group_thread, membership, message);
+        await GroupThread.run_script(group_thread, membership, message);
         return;
     }
     if (!message) { //If there is no message, return.
@@ -76,6 +76,9 @@ export async function receive_group_message(internal_group_id, message, from_pho
 
     //Relay message to groups whose hashtags are listed
     const community_hashtags = group_thread.community.group_threads;
+    if (!community_hashtags) {
+        return;
+    }
     for (const ht of community_hashtags) {
         if (hashtags.includes(ht.hashtag)) {
             const expanded_message = `Message relayed from ${from_phone}(${sender_name}) in #${group_thread.hashtag}: ${message}`;
