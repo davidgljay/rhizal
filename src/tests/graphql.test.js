@@ -23,7 +23,7 @@ describe('graphql', () => {
         };
         fetch.mockResolvedValue(mockResponse);
 
-        const data = await graphql('{test}');
+        const data = await graphql('{test}', {variables: { test: 'test' }});
 
         expect(fetch).toHaveBeenCalledWith(HASURA_GRAPHQL_URL, {
             method: 'POST',
@@ -31,7 +31,7 @@ describe('graphql', () => {
                 'Content-Type': 'application/json',
                 'x-hasura-admin-secret': HASURA_ADMIN_SECRET,
             },
-            body: '{test}',
+            body: "{\"query\":\"{test}\",\"variables\":{\"variables\":{\"test\":\"test\"}}}",
         });
         expect(data).toEqual({ data: { test: 'test' } });
     });

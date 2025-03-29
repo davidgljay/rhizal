@@ -9,7 +9,7 @@ export async function graphql(query, variables) {
             'Content-Type': 'application/json',
             'x-hasura-admin-secret': HASURA_ADMIN_SECRET,
         },
-        body: query
+        body: JSON.stringify({query, variables}),
     });
 
     const data = await response.json();
