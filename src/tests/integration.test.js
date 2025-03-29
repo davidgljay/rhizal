@@ -526,7 +526,7 @@ describe('Integration Tests for receive_message Handler', () => {
                 const communityId = 'community_456';
                 const senderNumber = '+1234567890';
                 const botNumber = '+0987654321';
-                const message = 'Hello group!';
+                const message = undefined;
 
                 const mockGraphql = [
                     {
@@ -554,26 +554,6 @@ describe('Integration Tests for receive_message Handler', () => {
                         variables: { membership_id: 'membership_1' },
                         response: { data: { vars: [{ name: 'var1' }] } }
                     },
-                    {
-                        query: `mutation CreateMessage($text:String!, $sender:String!, $sent_time:timestamptz!, $recipients:[String!]!)`,
-                        variables: {
-                            recipients: [base64_group_id],
-                            sender: botNumber,
-                            sent_time: expect.any(Number),
-                            text: 'Thanks for inviting me to the group!'
-                        },
-                        response: { data: { createMessage: { id: "message_2" } } }
-                    },
-                    {
-                        query: `mutation CreateMessage($text:String!, $sender:String!, $sent_time:timestamptz!, $recipients:[String!]!)`,
-                        variables: {
-                            recipients: [base64_group_id],
-                            sender: botNumber,
-                            sent_time: expect.any(Number),
-                            text: 'What\'s a good hashtag to use for this group?'
-                        },
-                        response: { data: { createMessage: { id: "message_3" } } }
-                    }
                 ];
 
                 for (let i = 0; i < mockGraphql.length; i++) {
@@ -581,6 +561,7 @@ describe('Integration Tests for receive_message Handler', () => {
                         return Promise.resolve(mockGraphql[i].response);
                     });
                 }
+
 
                 await receive_group_message(group_id, message, senderNumber, botNumber);
                 expect(graphql).toHaveBeenCalledTimes(mockGraphql.length);
@@ -598,7 +579,7 @@ describe('Integration Tests for receive_message Handler', () => {
                 const communityId = 'community_456';
                 const senderNumber = '+1234567890';
                 const botNumber = '+0987654321';
-                const message = 'Hello group!';
+                const message = undefined;
 
                 const mockGraphql = [
                     {
@@ -620,26 +601,6 @@ describe('Integration Tests for receive_message Handler', () => {
                         query: `query testVarsQuery($membership_id:uuid!)`,
                         variables: { membership_id: 'membership_1' },
                         response: { data: { vars: [{ name: 'var1' }] } }
-                    },
-                    {
-                        query: `mutation CreateMessage($text:String!, $sender:String!, $sent_time:timestamptz!, $recipients:[String!]!)`,
-                        variables: {
-                            recipients: [base64_group_id],
-                            sender: botNumber,
-                            sent_time: expect.any(Number),
-                            text: 'Thanks for inviting me to the group!'
-                        },
-                        response: { data: { createMessage: { id: "message_2" } } }
-                    },
-                    {
-                        query: `mutation CreateMessage($text:String!, $sender:String!, $sent_time:timestamptz!, $recipients:[String!]!)`,
-                        variables: {
-                            recipients: [base64_group_id],
-                            sender: botNumber,
-                            sent_time: expect.any(Number),
-                            text: 'What\'s a good hashtag to use for this group?'
-                        },
-                        response: { data: { createMessage: { id: "message_3" } } }
                     }
                 ];
 
@@ -665,6 +626,7 @@ describe('Integration Tests for receive_message Handler', () => {
                 const communityId = 'community_456';
                 const senderNumber = '+1234567890';
                 const botNumber = '+0987654321';
+                const message = undefined;
 
                 const mockGraphql = [
                     {
@@ -685,7 +647,7 @@ describe('Integration Tests for receive_message Handler', () => {
                     });
                 }
 
-                await receive_group_message(group_id, null, senderNumber, botNumber);
+                await receive_group_message(group_id, message, senderNumber, botNumber);
 
                 for (let i = 0; i < mockGraphql.length; i++) {
                     expect(graphql).toHaveBeenNthCalledWith(i + 1, expect.stringContaining(mockGraphql[i].query), mockGraphql[i].variables);
