@@ -26,6 +26,7 @@ describe('rhyzal_parser', () => {
 `;
 
     const set_variable = jest.fn();
+    const set_group_variable = jest.fn();
     const send_message = jest.fn();
 
     beforeEach(() => {
@@ -189,6 +190,45 @@ describe('rhyzal_parser', () => {
             expect(parser.evaluate_condition('var1', {var1: false})).toBe(false);
             expect(parser.evaluate_condition('var1', {var1: 1})).toBe(true);
             expect(parser.evaluate_condition('var1', {var1: 0})).toBe(false);
+        });
+    });
+
+    describe('set_group_variable', () => {
+        it('should set a group variable correctly', () => {
+            const set_group_variable = jest.fn();
+            const parser = new RhyzalParser(test_yaml, send_message, set_variable, set_group_variable);
+            parser.evaluate_receive({set_group_variable: {variable: 'group_name', value: 'test_group'}}, {group_id: 'group1'});
+            expect(set_group_variable).toHaveBeenCalledWith('group1', 'group_name', 'test_group');
+        });
+
+        it('should handle setting multiple group variables', () => {
+            const set_group_variable = jest.fn();
+            const parser = new RhyzalParser(test_yaml, send_message, set_variable, set_group_variable);
+            parser.evaluate_receive({set_group_variable: {variable: 'group_name', value: 'test_group'}}, {group_id: 'group1'});
+            parser.evaluate_receive({set_group_variable: {variable: 'group_status', value: 'active'}}, {group_id: 'group1'});
+            expect(set_group_variable).toHaveBeenCalledWith('group1', 'group_name', 'test_group');
+            expect(set_group_variable).toHaveBeenCalledWith('group1', 'group_status', 'active');
+        });
+
+        it('should throw an error if group_id is missing', () => {
+            const set_group_variable = jest.fn();
+            const parser = new RhyzalParser(test_yaml, send_message, set_variable, set_group_variable);
+            expect(() => parser.evaluate_receive({set_group_variable: {variable: 'group_name', value: 'test_group'}}, {}))
+                .toThrowError('Group ID not found in vars');
+        });
+
+        it('should handle setting variables with regex', () => {
+            const set_variable = jest.fn();
+            const parser = new RhyzalParser(test_yaml, send_message, set_variable, set_group_variable);
+            parser.evaluate_receive({set_variable: {variable: 'group_name', value: 'regex(var1, /foo/)'}}, { id: 'member_1', var1: 'foo'});
+            expect(set_variable).toHaveBeenCalledWith('member_1', 'group_name', 'foo');
+        });
+
+        it('should handle setting group variables with regex', () => {
+            const set_group_variable = jest.fn();
+            const parser = new RhyzalParser(test_yaml, send_message, set_variable, set_group_variable);
+            parser.evaluate_receive({set_group_variable: {variable: 'group_name', value: 'regex(var1, /foo/)'}}, {group_id: 'group1', var1: 'foo'});
+            expect(set_group_variable).toHaveBeenCalledWith('group1', 'group_name', 'foo');
         });
     });
 

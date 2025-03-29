@@ -14,10 +14,11 @@ The function parses the yaml script, replaces the variables in the messages, and
 */
 class RhyzalParser {
 
-    constructor(yaml_script, send_message, set_variable) {
+    constructor(yaml_script, send_message, set_variable, set_group_variable) {
         let script_obj;
         this.send_message = send_message;
         this.set_variable = set_variable;
+        this.set_group_variable = set_group_variable;
         try {
             script_obj = yaml.load(yaml_script);
         }
@@ -38,6 +39,12 @@ class RhyzalParser {
                 throw new Error('Step missing from script');
             }
             const messages = this.script[step].send;
+            let recipient = vars.phone;
+            let log_message = true;
+            if (vars.group_id) {
+                recipient = vars.group_id;
+                log_message = false;
+            };
 
             for (let i = 0; i < messages.length; i++) {
                 //Send a message with an attachement
@@ -51,12 +58,12 @@ class RhyzalParser {
                     for (const key in vars) {
                         message = message.replace(new RegExp(`{{${key}}}`, 'g'), vars[key]);
                     }
-                    this.send_message(vars.phone, vars.bot_phone, message);
+                    this.send_message(recipient, vars.bot_phone, message, log_message);
                 // }
             }
     }
 
-    receive(step, vars, message) {
+    receive(step, vars) {
         if (!this.script) {
             throw new Error('Script not initialized');
         }
@@ -70,11 +77,30 @@ class RhyzalParser {
         switch(Object.keys(script)[0]) {
             case 'step':
                 const new_step = String(script['step']);
-                this.set_variable(vars.id, 'step', new_step);
+                if (vars.group_id) {
+                    this.set_group_variable(vars.group_id, 'step', new_step);
+                } else {
+                    this.set_variable(vars.id, 'step', new_step);
+                }
                 this.send(new_step, vars);
                 break;
             case 'set_variable':
-                this.set_variable(vars.id, script['set_variable']['variable'], script['set_variable']['value']);
+                //TODO: add tests for this functionality
+                if (script['set_variable']['value'].includes('regex')) {
+                    this.set_variable(vars.id, script['set_variable']['variable'], this.regex_match(script['set_variable']['value'], vars));
+                } else {
+                    this.set_variable(vars.id, script['set_variable']['variable'], script['set_variable']['value']);
+                }
+                break;
+            case 'set_group_variable':
+                if (!vars.group_id) {
+                    throw new Error('Group ID not found in vars');
+                }
+                if (script['set_group_variable']['value'].includes('regex')) {
+                    this.set_group_variable(vars.group_id, script['set_group_variable']['variable'], this.regex_match(script['set_group_variable']['value'], vars));
+                } else {
+                    this.set_group_variable(vars.group_id, script['set_group_variable']['variable'], script['set_group_variable']['value']);
+                }
                 break;
             case 'if':
                 if (this.evaluate_condition(script.if, vars)) {
@@ -91,6 +117,16 @@ class RhyzalParser {
                 break;
         }
     };
+
+    regex_match(condition, vars) {
+        const [full, variable, match] = condition.match(/regex\(([^,]+), ([^)]+)\)/);
+        const regex_match = new RegExp((match.trim().slice(1, -1))).exec(vars[variable]);
+        if (regex_match) {
+            return regex_match[0];
+        } else {
+            return null;
+        }
+    }
 
     evaluate_condition(condition, vars) {
         // If the condition is a regex, evaluate it against a variable
@@ -109,16 +145,19 @@ class RhyzalParser {
             }
             return true;
         } else  if (condition.match(/regex\(([^)]+)\)/)) {
-            const matches = condition.match(/regex\(([^,]+),\s*([^)]+)\)/);
+            const matches = condition.match(/regex\(([^,]+), ([^)]+)\)/);
+            const variable = matches[1];
+            let match = matches[2];
+            if (!vars[variable]) {
+                throw new Error('Condition not found in vars for regex');
+            }
             if (matches) {
-                const var_name = matches[1];
-                let match = matches[2];
                 match.trim();
                 if (match.startsWith('/') && match.endsWith('/')) {
                     match = match.slice(1, -1); // Remove the leading and trailing slashes
-                    return new RegExp(match).test(vars[var_name]);
+                    return new RegExp(match).test(vars[variable]);
                 } else {
-                    return vars[var_name] == vars[match];
+                    return vars[variable] == vars[match];
                 }
             }
         } else {
