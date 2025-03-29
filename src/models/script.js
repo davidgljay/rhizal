@@ -2,6 +2,7 @@ const { graphql } = require('../apis/graphql');
 const RhizalParser = require('../helpers/rhizal_parser');
 const Message = require('./message');
 const Membership = require('./membership');
+const GroupThread = require('./group_thread');
 
 class Script {
     constructor({id, name, yaml, varsquery, targetquery}) {
@@ -28,7 +29,7 @@ query GetScript($id:uuid!) {
         ,{ id });
 
         const script = new Script(scriptData.data.script);
-        script.parser = new RhizalParser(script.yaml, Message.send, Membership.set_variable)
+        script.parser = new RhizalParser(script.yaml, Message.send, Membership.set_variable, GroupThread.set_variable)
         return script;
     }
 
@@ -68,7 +69,7 @@ query GetScript($id:uuid!) {
     }
 
     async send(step) {
-       return await this.parser.send(step, this.vars);
+        return await this.parser.send(step, this.vars);
     }
 
     async receive(step, message) {
@@ -76,5 +77,6 @@ query GetScript($id:uuid!) {
     }
 
 }
+
 
 module.exports = Script;
