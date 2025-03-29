@@ -17,11 +17,13 @@ Once a Rhizal bot is set up, organizers can use it to make announcements to ever
 Organizers can send out event invitations via Rhizal, and community members can RSVP with a simple yes or no.
 
 ## Security
-Rhizal is a being optimized for security but is still in early development. Not all security features have been implemented, and the codebase has not received the necessary review to be considered secure. At this stage, it should be used for light experimentation only.
+Rhizal is a being optimized for security but is still in early development. Not all security features have been implemented, and the codebase has not received the necessary review to be considered secure. At this stage, it should be used for light experimentation only. Rhizal retains data in the following ways:
 
-Messages are sent and received via bbernhard/signal-cli-rest-api, which implements signal-api to interact with the Signal network. They are then transmitted via a Docker network to Rhizal, which takes the following actions:
-* If the message is part of a one-on-one conversation with Rhizal (e.g. while a community member is onboarding or registering for an event) it is logged so that organizers can see it.
-* If a message is part of a group thread that Rhizal has been invited into it ignores the message unless it includes a hashtag for another group, in which case it routes the message and then forgets it.
+* If the message is part of a one-on-one conversation with Rhizal (e.g. while a community member is onboarding or registering for an event) it is logged so that organizers can see it. If someone messages Rhizal directly their phone number is also logged so that Rhizal can respond.
+* If a message is part of a group thread that Rhizal has been invited into it ignores the message unless it includes a hashtag for another group, in which case it routes the message and then forgets it. No information is collected about who is in the group or how frequently they communicate.
+
+Messages are sent and received via bbernhard/signal-cli-rest-api, which implements signal-cli to interact with the Signal network. They are then transmitted via a Docker network to Rhizal, which takes the following actions:
+
 
 ## Getting Started
 
