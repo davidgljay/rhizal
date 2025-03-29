@@ -49,9 +49,12 @@ mutation CreateMessage($text:String!, $sender:String!, $sent_time:timestamptz!, 
         return result.data.createMessage;
     }
 
-    static async send(to_phone, from_phone, text, attachment) {
+    static async send(to_phone, from_phone, text, log_message = true, attachment) {
         //Safety step to avoid sending messages to the wrong phone number
-        Message.create(from_phone, [to_phone], text,  Date.now());
+        if (log_message) {
+            Message.create(from_phone, [to_phone], text,  Date.now());
+        }
+
         if (process.env.NODE_ENV !== 'test') {
             await new Promise(resolve => setTimeout(resolve, 2000));
         }
