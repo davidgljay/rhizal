@@ -1,6 +1,4 @@
 const { graphql } = require('../apis/graphql');
-const Membership = require('./membership');
-const Script = require('./script');
 const webSocketManager = require('../apis/signal');
 
 class GroupThread {
@@ -11,14 +9,12 @@ class GroupThread {
         }
     }
 
-    static async recieve_group_message(group_id, message, from_phone, bot_phone, sender_name) {
-
-    }
-
     static async run_script(group_thread, membership, message) {
+        const Script = require('./script');
         const script = await Script.init(group_thread.community.group_script_id);
         await script.get_vars(membership, message);
-        if (group_thread.step == '0') {
+        script.vars.group_id = group_thread.group_id;
+        if (group_thread.step == '0' && !message) {
             await script.send('0');
             return;
         } else {
@@ -26,14 +22,17 @@ class GroupThread {
         }
     }
 
-    static async update_group_thread_variable(group_thread_id, variable, value) {
+    static async set_variable(group_id, variable, value) {
         const query = `
-mutation UpdateGroupThreadVariable($group_thread_id: uuid!, $variable: String!, $value: String!) {
-    update_group_threads_by_pk(pk_columns: $group_thread_id, _set: {[$variable]: $value}) {
-        id
-    }`;
+mutation UpdateGroupThreadVariable($group_id:String!, $value:String!) {
+  update_group_threads(where: {group_id: {_eq: $group_id}}, _set: {${variable}: $value}) {
+    returning {
+      id
+    }
+  }
+}`;
 
-        const variables = { group_thread_id, variable, value };
+        const variables = { group_id, value };
 
         return await graphql(query, variables);
     }
@@ -50,7 +49,6 @@ mutation UpdateGroupThreadVariable($group_thread_id: uuid!, $variable: String!, 
     }
 
     static async leave_group(group_id, bot_phone) {
-        console.log('Leaving group', group_id);
         await webSocketManager.leave_group(group_id, bot_phone);
     }
 

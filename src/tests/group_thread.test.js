@@ -32,7 +32,8 @@ Script.init = jest.fn().mockImplementation(() => {
         send: mockScriptSend,
         receive: mockScriptReceive,
         get_vars: mockGetVars,
-        script_message: mockScriptMessage
+        script_message: mockScriptMessage,
+        vars: {}
     };
 });
 
@@ -121,18 +122,18 @@ describe('GroupThread', () => {
 
     });
 
-    describe('update_group_thread_variable', () => {
+    describe('set_variable', () => {
         it('should make the expected graphql mutation', async () => {
-            const group_thread_id = 'test_group_thread_id';
+            const group_id = 'test_group_thread_id';
             const variable = 'test_variable';
             const value = 'test_value';
-            const variables = { group_thread_id, variable, value };
+            const variables = { group_id, value };
 
-            graphql.mockResolvedValueOnce({ data: { update_group_threads_by_pk: { id: group_thread_id } } });
+            graphql.mockResolvedValueOnce({ data: { update_group_threads: { returning: [{id:'456'}] } } });
 
-            const result = await GroupThread.update_group_thread_variable(group_thread_id, variable, value);
-            expect(result).toEqual({ data: { update_group_threads_by_pk: { id: group_thread_id } } });
-            expect(graphql).toHaveBeenCalledWith(expect.stringContaining('mutation UpdateGroupThreadVariable($group_thread_id: uuid!, $variable: String!, $value: String!)'), variables);
+            const result = await GroupThread.set_variable(group_id, variable, value);
+            expect(result).toEqual({ data: { update_group_threads: { returning: [{id: '456' }] } } });
+            expect(graphql).toHaveBeenCalledWith(expect.stringContaining('mutation UpdateGroupThreadVariable($group_id:String!, $value:String!)'), variables);
         });
 
         it('should handle errors gracefully', async () => {
@@ -142,7 +143,7 @@ describe('GroupThread', () => {
 
             graphql.mockRejectedValueOnce(new Error('GraphQL error'));
 
-            await expect(GroupThread.update_group_thread_variable(group_thread_id, variable, value)).rejects.toThrow('GraphQL error');
+            await expect(GroupThread.set_variable(group_thread_id, variable, value)).rejects.toThrow('GraphQL error');
             expect(graphql).toHaveBeenCalled();
         });
     });
@@ -151,7 +152,7 @@ describe('GroupThread', () => {
         it('should initialize the script and send step 0 if group_thread step is 0', async () => {
             const group_thread = { community: { group_script_id: 'script_id' }, step: '0' };
             const membership = { data: { id: 'membership_id' } };
-            const message = 'test message';
+            const message = undefined;
 
             await GroupThread.run_script(group_thread, membership, message);
 
@@ -177,7 +178,7 @@ describe('GroupThread', () => {
         it('should handle errors gracefully', async () => {
             const group_thread = { community: { group_script_id: 'script_id' }, step: '0' };
             const membership = { data: { id: 'membership_id' } };
-            const message = 'test message';
+            const message = undefined;
 
             mockScriptSend.mockRejectedValueOnce(new Error('Script error'));
 
