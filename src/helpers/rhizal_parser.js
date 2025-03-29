@@ -102,7 +102,7 @@ class RhyzalParser {
                     this.set_group_variable(vars.group_id, script['set_group_variable']['variable'], script['set_group_variable']['value']);
                 }
                 break;
-            case 'if':
+            case 'if': //TODO: add elif to support more complex logic
                 if (this.evaluate_condition(script.if, vars)) {
                     for (let i = 0; i < script.then.length; i++) {
                         this.evaluate_receive(script.then[i], vars);
