@@ -59,8 +59,18 @@ describe('rhyzal_parser', () => {
             const parser = new RhyzalParser(test_yaml, send_message, set_variable);
             parser.send(1, {phone: '+1234567890', bot_phone: '+0987654321'});
     
-            expect(send_message).toHaveBeenCalledWith('+1234567890', '+0987654321', message1);
-            expect(send_message).toHaveBeenCalledWith('+1234567890', '+0987654321', message2);
+            expect(send_message).toHaveBeenCalledWith('+1234567890', '+0987654321', message1, true);
+            expect(send_message).toHaveBeenCalledWith('+1234567890', '+0987654321', message2, true);
+        });
+
+        it('should send a message but not log it if it is going to a group', () => {
+            const message1 = 'Another message with no variables!';
+            const message2 = 'A second message to be sent a few seconds later.';
+            const parser = new RhyzalParser(test_yaml, send_message, set_variable);
+            parser.send(1, {group_id: '123', phone: '+1234567890', bot_phone: '+0987654321'});
+    
+            expect(send_message).toHaveBeenCalledWith('123', '+0987654321', message1, false);
+            expect(send_message).toHaveBeenCalledWith('123', '+0987654321', message2, false);
         });
     
         it ('should send the appropriate message with variables', () => {
@@ -68,7 +78,7 @@ describe('rhyzal_parser', () => {
             const vars = {var1: 'foo', var2: 'bar', phone: '+1234567890', bot_phone: '+0987654321'};
             const parser = new RhyzalParser(test_yaml, send_message, set_variable);
             parser.send(0, vars, send_message);
-            expect(send_message).toHaveBeenCalledWith('+1234567890', '+0987654321', message);
+            expect(send_message).toHaveBeenCalledWith('+1234567890', '+0987654321', message, true);
         });
 
     });
@@ -99,8 +109,8 @@ describe('rhyzal_parser', () => {
             parser.receive(0, {id: 1, var1: 'foo', phone: '+1234567890', bot_phone: '+0987654321'}, set_variable, send_message);
 
             expect(send_message).not.toHaveBeenCalledWith('Message with foo to bar!');
-            expect(send_message).toHaveBeenCalledWith('+1234567890', '+0987654321', 'Another message with no variables!');
-            expect(send_message).toHaveBeenCalledWith('+1234567890', '+0987654321', 'A second message to be sent a few seconds later.');
+            expect(send_message).toHaveBeenCalledWith('+1234567890', '+0987654321', 'Another message with no variables!', true);
+            expect(send_message).toHaveBeenCalledWith('+1234567890', '+0987654321', 'A second message to be sent a few seconds later.', true);
         });
 
         it ('should update a user\'s status based on a condition', () => {
