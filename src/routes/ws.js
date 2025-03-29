@@ -34,8 +34,8 @@ export async function receive_raw_message(msg) {
     if (!msg || !msg.envelope || !msg.envelope.dataMessage) {
         return;
     }
-    const { source, timestamp, account, sourceName, dataMessage: {message, groupInfo} } = msg.envelope;
-    if (groupInfo) { 
+    const { source, timestamp, account, sourceName, dataMessage: {message, groupInfo, type} } = msg.envelope;
+    if (groupInfo && type === 'DELIVER') { 
         receive_group_message(groupInfo.groupId, message, source, account, sourceName);
         return;
     }

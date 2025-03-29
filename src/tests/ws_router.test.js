@@ -75,4 +75,31 @@ describe('receive_raw_message', () => {
         );
     });
 
+    it('should call receive_group_message with correct parameters when a group joined', async () => {
+        const msg = {
+            envelope: {
+                source: '+11234567890',
+                timestamp: 1741473723341,
+                account: '+10987654321',
+                sourceName: 'Test User',
+                dataMessage: {
+                    groupInfo: {
+                        groupId: 'group123',
+                    },
+                    type: 'DELIVER',
+                },
+            },
+        };
+
+        await receive_raw_message(msg);
+
+        expect(receive_group_message).toHaveBeenCalledWith(
+            'group123',
+            undefined,
+            '+11234567890',
+            '+10987654321',
+            'Test User'
+        );
+    });
+
 });
