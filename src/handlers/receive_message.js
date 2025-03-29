@@ -81,7 +81,7 @@ export async function receive_group_message(internal_group_id, message, from_pho
     }
     for (const ht of community_hashtags) {
         if (hashtags.includes(ht.hashtag)) {
-            const expanded_message = `Message relayed from ${from_phone}(${sender_name}) in #${group_thread.hashtag}: ${message}`;
+            const expanded_message = `Message relayed from ${from_phone}(${sender_name}) in ${group_thread.hashtag}: ${message}`;
             await GroupThread.send_message(expanded_message, bot_phone, ht.group_id);
         }
     }
