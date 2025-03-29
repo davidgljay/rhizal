@@ -58,9 +58,7 @@ mutation CreateMessage($text:String!, $sender:String!, $sent_time:timestamptz!, 
         if (process.env.NODE_ENV !== 'test') {
             await new Promise(resolve => setTimeout(resolve, 2000));
         }
-        if (process.env.NODE_ENV === 'test' || phone == process.env.ACCOUNT_PHONE) {
-            webSocketManager.send([to_phone], from_phone, text);
-        }
+        webSocketManager.send([to_phone], from_phone, text);
     }
 
 }

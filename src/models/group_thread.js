@@ -4,9 +4,7 @@ const webSocketManager = require('../apis/signal');
 class GroupThread {
 
     static async send_message(message, from_phone, group_id) {
-        if (process.env.NODE_ENV === 'test' || phone == process.env.ACCOUNT_PHONE) {
-            await webSocketManager.send([group_id], from_phone, message);
-        }
+        await webSocketManager.send([group_id], from_phone, message);
     }
 
     static async run_script(group_thread, membership, message) {
