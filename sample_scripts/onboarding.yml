@@ -1,0 +1,26 @@
+0:
+  send:
+    - Nice to meet you! I'm Rhizal, a friendly, secure chatbot for community organizing on Signal.
+    - If you have this number then David Jay probably invited you to join my beta. He's the only one who can see messages you send me.
+    - I'm designed to help with things like onboarding people to a community, inviting people to events, and coordinating between Signal threads.
+    - You can read more about me at https://github.com/davidgljay/rhizal
+    - If you'd like, I can sign you up for the Rhizal beta. You'll get very ocassional updates as the platform develops, and will get on the waitlist to use Rhizal for your own communities.
+    - To get started, what's your name?
+  on_receive:
+    - set_group_variable:
+        variable: name
+        value: message
+    - step: 1
+1: 
+  send:
+    - Thanks {{name}}! If you'd like to sign up for the waitlist, please share a bit about a community you're invovled with that might benefit from help organizing on Signal. 
+  on_receive:
+    - set_group_variable:
+        variable: profile
+        value: message
+    - step: 2
+2:
+  send:
+    - Thanks for sharing! I'll let David know, he may be in touch.
+  on_receive:
+    - step: done
