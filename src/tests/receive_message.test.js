@@ -138,9 +138,15 @@ describe('receive_message', () => {
             };
         });
 
+        Membership.get = jest.fn(() => {
+            return {
+                id: "membership_1",
+                };
+        });
+
         await receive_message(sender, recipients, message, sent_time);
 
-        expect(Message.create).toHaveBeenCalledWith(sender, recipients, message, sent_time);
+        expect(Message.create).toHaveBeenCalledWith("1", "membership_1", message, sent_time, true);
     });
 
     it('should get the member and a community', async () => {

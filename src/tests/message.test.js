@@ -1,6 +1,8 @@
 const { graphql } = require('../apis/graphql');
 const Message = require('../models/message');
+const webSocketManager = require('../apis/signal');
 
+jest.mock('../apis/signal');
 jest.mock('../apis/graphql');
 
 describe('Message', () => {
@@ -81,6 +83,64 @@ describe('Message', () => {
             graphql.mockRejectedValue(new Error(errorMessage));
 
             await expect(Message.create('user1', 'Hello, world!', '2023-10-01T00:00:00Z', ['user2', 'user3'])).rejects.toThrow(errorMessage);
+        });
+    });
+
+    describe('send', () => {
+        it('should send a message via WebSocket and log it', async () => {
+            const mockCreate = jest.spyOn(Message, 'create').mockResolvedValue({});
+            const mockSend = jest.spyOn(webSocketManager, 'send').mockImplementation(() => {});
+
+            await Message.send('community_1', 'membership_1', 'to_phone', 'from_phone', 'Hello, world!', true);
+
+            expect(mockCreate).toHaveBeenCalledWith('community_1', 'membership_1', 'Hello, world!', expect.any(Number), false);
+            expect(mockSend).toHaveBeenCalledWith(['to_phone'], 'from_phone', 'Hello, world!');
+
+            mockCreate.mockRestore();
+            mockSend.mockRestore();
+        });
+
+        it('should send a message via WebSocket without logging it', async () => {
+            const mockCreate = jest.spyOn(Message, 'create');
+            const mockSend = jest.spyOn(webSocketManager, 'send').mockImplementation(() => {});
+
+            await Message.send('community_1', 'membership_1', 'to_phone', 'from_phone', 'Hello, world!', false);
+
+            expect(mockCreate).not.toHaveBeenCalled();
+            expect(mockSend).toHaveBeenCalledWith(['to_phone'], 'from_phone', 'Hello, world!');
+
+            mockCreate.mockRestore();
+            mockSend.mockRestore();
+        });
+
+        it('should delay sending the message in non-test environments', async () => {
+            const originalEnv = process.env.NODE_ENV;
+            process.env.NODE_ENV = 'production';
+
+            const mockSend = jest.spyOn(webSocketManager, 'send').mockImplementation(() => {});
+            const mockDelay = jest.spyOn(global, 'setTimeout');
+
+            await Message.send('community_1', 'membership_1', 'to_phone', 'from_phone', 'Hello, world!', false);
+
+            expect(mockDelay).toHaveBeenCalledWith(expect.any(Function), 2000);
+            expect(mockSend).toHaveBeenCalledWith(['to_phone'], 'from_phone', 'Hello, world!');
+
+            process.env.NODE_ENV = originalEnv;
+            mockSend.mockRestore();
+            mockDelay.mockRestore();
+        });
+
+        it('should not delay sending the message in test environments', async () => {
+            const mockSend = jest.spyOn(webSocketManager, 'send').mockImplementation(() => {});
+            const mockDelay = jest.spyOn(global, 'setTimeout');
+
+            await Message.send('community_1', 'membership_1', 'to_phone', 'from_phone', 'Hello, world!', false);
+
+            expect(mockDelay).not.toHaveBeenCalled();
+            expect(mockSend).toHaveBeenCalledWith(['to_phone'], 'from_phone', 'Hello, world!');
+
+            mockSend.mockRestore();
+            mockDelay.mockRestore();
         });
     });
 });

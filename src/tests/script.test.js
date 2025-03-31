@@ -63,24 +63,24 @@ describe('Script', () => {
         it('should return vars data when the response is successful', async () => {
             scriptInstance.varsquery = 'vars query';
             const mockResponse = {
-                data: { vars: [{ id: 1, name: 'Var 1' }] },
+                data: { vars: [{ id: '123', name: 'Var 1' }] },
             };
             graphql.mockResolvedValue(mockResponse);
 
-            const data = await scriptInstance.get_vars({id: 1, phone: 'member_phone', bot_phone: 'bot_phone'});
+            const data = await scriptInstance.get_vars({id: '123', phone: 'member_phone', bot_phone: 'bot_phone', community_id:'456'}, 'message');
 
-            expect(graphql).toHaveBeenCalledWith('vars query', { membership_id: 1 });
-            expect(data).toEqual({bot_phone: 'bot_phone', phone: 'member_phone', id: 1, name: 'Var 1' });
+            expect(graphql).toHaveBeenCalledWith('vars query', { membership_id: "123" });
+            expect(data).toEqual({bot_phone: 'bot_phone', phone: 'member_phone', id: "123", message: 'message', name: 'Var 1', community_id: '456' });
         });
 
         it('should return phone and bot_phone if no vars query is defined', async () => {
             scriptInstance.varsquery = '';
 
-            const vars = await scriptInstance.get_vars({id: 1, phone: 'member_phone', bot_phone: 'bot_phone'});
+            const vars = await scriptInstance.get_vars({id: '123', phone: 'member_phone', bot_phone: 'bot_phone', community_id:'456'}, 'message');
 
             expect(graphql).toHaveBeenCalledTimes(1);
-            expect(vars).toEqual({id: 1, bot_phone: 'bot_phone', phone: 'member_phone' });
-            expect(scriptInstance.vars).toEqual({id:1, bot_phone: 'bot_phone', phone: 'member_phone' });
+            expect(vars).toEqual({id: '123', bot_phone: 'bot_phone', phone: 'member_phone', community_id: '456', message: 'message' });
+            expect(scriptInstance.vars).toEqual({id: '123', bot_phone: 'bot_phone', phone: 'member_phone', community_id: '456', message: 'message' });
         });
 
         it('should throw an error when the response is not successful', async () => {

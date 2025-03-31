@@ -6,6 +6,7 @@ class Membership {
         const { id, type, step, current_script_id } = data;
         if (data.community) {
             this.bot_phone = data.community.bot_phone;
+            this.community_id = data.community.id;
         }
         if (data.user) {
             this.user_id = data.user.id;
@@ -16,7 +17,6 @@ class Membership {
         this.step = step;
         this.current_script_id = current_script_id;
         this.data = data;
-
     }
 
     static async get(user_phone, bot_phone) {
@@ -101,7 +101,17 @@ mutation updateMembershipVariable($id:uuid!, $value:${variableTypes[variable]}!)
         try {
             const createUserAndMembershipMutation = `
 mutation CreateUserAndMembership($phone:String!, $community_id:uuid!) {
-  insert_memberships_one(object: {user: {data: {phone: $phone}}, community_id: $community_id, type: "member", step: 0}}}) 
+  insert_memberships_one(
+    object: {
+        user: {
+            data: {phone: $phone}
+        }, 
+        community_id: $community_id, 
+        type: "member", 
+        step: 0}
+        }
+    }
+    ) 
   {
     id
     type

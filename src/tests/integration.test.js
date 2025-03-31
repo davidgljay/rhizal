@@ -102,16 +102,7 @@ describe('Integration Tests for receive_message Handler', () => {
             const sentTime = 1741644982;
 
             const mockGraphql = [
-                {
-                    query: `mutation CreateMessage($text:String!, $sender:String!, $sent_time:timestamptz!, $recipients:[String!]!)`,
-                    variables: {
-                        recipients: recipientNumbers,
-                        sender: senderNumber,
-                        sent_time: sentTime,
-                        text: 'Hello'
-                    },
-                    response: { data: { createMessage: { id: "message_1" } } }
-                },
+
                 {
                     query: `query GetCommunities($bot_phone:String!)`,
                     variables: { bot_phone: recipientNumbers[0] },
@@ -130,7 +121,7 @@ describe('Integration Tests for receive_message Handler', () => {
                 {
                     query: `mutation CreateUserAndMembership($phone:String!, $community_id:uuid!)`,
                     variables: { phone: senderNumber, community_id: "community_1" },
-                    response: { data: { insert_memberships_one: { id: "membership_1", user: { id: "user_1", phone: senderNumber }, type: 'member', community: { bot_phone: recipientNumbers[0] } } } }
+                    response: { data: { insert_memberships_one: { id: "membership_1", user: { id: "user_1", phone: senderNumber }, type: 'member', community: { id: 'community_1', bot_phone: recipientNumbers[0] } } } }
                 },
                 {
                     query: `mutation updateMembershipVariable($id:uuid!, $value:uuid!)`,
@@ -146,16 +137,27 @@ describe('Integration Tests for receive_message Handler', () => {
                     query: `query testVarsQuery($membership_id:uuid!)`,
                     variables: { membership_id: "membership_1" },
                     response: { data: { vars: [{ name: 'var1' }] } }
+                },                {
+                    query: `mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $sent_time: timestamptz!)`,
+                    variables: {
+                        community_id: 'community_1',
+                        membership_id: 'membership_1',
+                        sent_time: expect.any(Number),
+                        text: 'Welcome to the service!',
+                        from_user: false
+                    },
+                    response: { data: { insert_messages_one: { id: "message_2", membership: {id: 'membership_1', user: {phone: '+1234567890'}}, community: { id: 'community_1', bot_phone: '+0987654321'} } } }
                 },
                 {
-                    query: `mutation CreateMessage($text:String!, $sender:String!, $sent_time:timestamptz!, $recipients:[String!]!)`,
+                    query: `mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $sent_time: timestamptz!)`,
                     variables: {
-                        recipients: [senderNumber],
-                        sender: recipientNumbers[0],
-                        sent_time: expect.any(Number),
-                        text: 'Welcome to the service!'
+                        community_id: 'community_1',
+                        membership_id: 'membership_1',
+                        from_user: true,
+                        sent_time: sentTime,
+                        text: 'Hello'
                     },
-                    response: { data: { createMessage: { id: "message_2" } } }
+                    response: { data: { insert_messages_one: { id: "message_1", membership: {id: 'membership_1', user: {phone: '+1234567890'}}, community: { id: 'community_1', bot_phone: '+0987654321'} } } }
                 }
             ];
 
@@ -169,12 +171,6 @@ describe('Integration Tests for receive_message Handler', () => {
 
             await receive_message(senderNumber, recipientNumbers, 'Hello', sentTime);
 
-            expect(Message.create).toHaveBeenCalledWith(
-                senderNumber,
-                recipientNumbers,
-                'Hello',
-                sentTime
-            );
             for (let i = 0; i < mockGraphql.length; i++) {
                 expect(graphql).toHaveBeenNthCalledWith(i + 1, expect.stringContaining(mockGraphql[i].query), mockGraphql[i].variables);
             }
@@ -190,16 +186,7 @@ describe('Integration Tests for receive_message Handler', () => {
             const sentTime = 1741644982;
 
             const mockGraphql = [
-                {
-                    query: `mutation CreateMessage($text:String!, $sender:String!, $sent_time:timestamptz!, $recipients:[String!]!)`,
-                    variables: {
-                        recipients: recipientNumbers,
-                        sender: senderNumber,
-                        sent_time: sentTime,
-                        text: 'Hello'
-                    },
-                    response: { data: { createMessage: { id: "message_1" } } }
-                },
+
                 {
                     query: `query GetCommunities($bot_phone:String!)`,
                     variables: { bot_phone: recipientNumbers[0] },
@@ -213,12 +200,12 @@ describe('Integration Tests for receive_message Handler', () => {
                 {
                     query: `query GetUser($phone: String!)`,
                     variables: { phone: senderNumber },
-                    response: { data: { users: [{id: "user_1"}] } }
+                    response: { data: { users: [{id: 'user_1'}] } }
                 },
                 {
                     query: `mutation CreateMembership($user_id:uuid!, $community_id:uuid!)`,
                     variables: { user_id: 'user_1', community_id: "community_1" },
-                    response: { data: { insert_memberships_one: { id: "membership_1", user: { id: "user_1", phone: senderNumber }, type: 'member', community: { bot_phone: recipientNumbers[0] } } } }
+                    response: { data: { insert_memberships_one: { id: "membership_1", user: { id: "user_1", phone: senderNumber }, type: 'member', community: { id: 'community_1', bot_phone: recipientNumbers[0] } } } }
                 },
                 {
                     query: `mutation updateMembershipVariable($id:uuid!, $value:uuid!)`,
@@ -234,16 +221,27 @@ describe('Integration Tests for receive_message Handler', () => {
                     query: `query testVarsQuery($membership_id:uuid!)`,
                     variables: { membership_id: "membership_1" },
                     response: { data: { vars: [{ name: 'var1' }] } }
+                },                {
+                    query: `mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $sent_time: timestamptz!)`,
+                    variables: {
+                        community_id: 'community_1',
+                        membership_id: 'membership_1',
+                        sent_time: expect.any(Number),
+                        text: 'Welcome to the service!',
+                        from_user: false
+                    },
+                    response: { data: { insert_messages_one: { id: "message_2", membership: {id: 'membership_1', user: {phone: '+1234567890'}}, community: { id: 'community_1', bot_phone: '+0987654321'} } } }
                 },
                 {
-                    query: `mutation CreateMessage($text:String!, $sender:String!, $sent_time:timestamptz!, $recipients:[String!]!)`,
+                    query: `mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $sent_time: timestamptz!)`,
                     variables: {
-                        recipients: [senderNumber],
-                        sender: recipientNumbers[0],
-                        sent_time: expect.any(Number),
-                        text: 'Welcome to the service!'
+                        community_id: 'community_1',
+                        membership_id: 'membership_1',
+                        from_user: true,
+                        sent_time: sentTime,
+                        text: 'Hello'
                     },
-                    response: { data: { createMessage: { id: "message_2" } } }
+                    response: { data: { insert_messages_one: { id: "message_1", membership: {id: 'membership_1', user: {phone: '+1234567890'}}, community: { id: 'community_1', bot_phone: '+0987654321'} } } }
                 }
             ];
 
@@ -272,16 +270,6 @@ describe('Integration Tests for receive_message Handler', () => {
 
             const mockGraphql = [
                 {
-                    query: `mutation CreateMessage($text:String!, $sender:String!, $sent_time:timestamptz!, $recipients:[String!]!)`,
-                    variables: {
-                        recipients: recipientNumbers,
-                        sender: senderNumber,
-                        sent_time: sentTime,
-                        text: 'Hello'
-                    },
-                    response: { data: { createMessage: { id: "message_1" } } }
-                },
-                {
                     query: `query GetCommunities($bot_phone:String!)`,
                     variables: { bot_phone: recipientNumbers[0] },
                     response: { data: { communities: [] } }
@@ -309,16 +297,6 @@ describe('Integration Tests for receive_message Handler', () => {
 
             const mockGraphql = [
                 {
-                    query: `mutation CreateMessage($text:String!, $sender:String!, $sent_time:timestamptz!, $recipients:[String!]!)`,
-                    variables: {
-                        recipients: recipientNumbers,
-                        sender: senderNumber,
-                        sent_time: sentTime,
-                        text: 'Hello'
-                    },
-                    response: { data: { createMessage: { id: "message_1" } } }
-                },
-                {
                     query: `query GetCommunities($bot_phone:String!)`,
                     variables: { bot_phone: recipientNumbers[0] },
                     response: { data: { communities: [{ id: "community_1", name: 'Mock Community', onboarding_id: 'script_2' }] } }
@@ -326,7 +304,18 @@ describe('Integration Tests for receive_message Handler', () => {
                 {
                     query: `query GetMembershipFromPhoneNumbers($phone: String!, $bot_phone: String!)`,
                     variables: { phone: senderNumber, bot_phone: recipientNumbers[0] },
-                    response: { data: { memberships: [{ id: "membership_1", current_script_id: "script_2", step: "0", user: { id: "user_1", phone: senderNumber }, type: 'member', community: { bot_phone: recipientNumbers[0] } } ] } }
+                    response: { data: { memberships: [{ id: "membership_1", current_script_id: "script_2", step: "0", user: { id: "user_1", phone: senderNumber }, type: 'member', community: { id: 'community_1', bot_phone: recipientNumbers[0] } } ] } }
+                },
+                {
+                    query: `mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $sent_time: timestamptz!)`,
+                    variables: {
+                        community_id: 'community_1',
+                        membership_id: 'membership_1',
+                        from_user: true,
+                        sent_time: sentTime,
+                        text: 'Hello'
+                    },
+                    response: { data: { insert_messages_one: { id: "message_1", membership: {id: 'membership_1', user: {phone: '+1234567890'}}, community: { id: 'community_1', bot_phone: '+0987654321'} } } }
                 },
                 {
                     query: `query GetScript($id:uuid!)`,
@@ -344,14 +333,15 @@ describe('Integration Tests for receive_message Handler', () => {
                     response: { data: { updateMembership: { id: "membership_1" } } }
                 },
                 {
-                    query: `mutation CreateMessage($text:String!, $sender:String!, $sent_time:timestamptz!, $recipients:[String!]!)`,
+                    query: `mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $sent_time: timestamptz!)`,
                     variables: {
-                        recipients: [senderNumber],
-                        sender: recipientNumbers[0],
+                        community_id: 'community_1',
+                        membership_id: 'membership_1',
                         sent_time: expect.any(Number),
-                        text: 'Message with stuff to things!'
+                        text: 'Message with stuff to things!',
+                        from_user: false
                     },
-                    response: { data: { createMessage: { id: "message_2" } } }
+                    response: { data: { insert_messages_one: { id: "message_2", membership: {id: 'membership_1', user: {phone: '+1234567890'}}, community: { id: 'community_1', bot_phone: '+0987654321'} } } }
                 }
             ];
 
@@ -360,7 +350,6 @@ describe('Integration Tests for receive_message Handler', () => {
                     // console.log('graphql called with:', args);
                     return Promise.resolve(mockGraphql[i].response);
                 });
-                
             }
 
             await receive_message(senderNumber, recipientNumbers, 'Hello', sentTime);
@@ -379,16 +368,6 @@ describe('Integration Tests for receive_message Handler', () => {
 
             const mockGraphql = [
                 {
-                    query: `mutation CreateMessage($text:String!, $sender:String!, $sent_time:timestamptz!, $recipients:[String!]!)`,
-                    variables: {
-                        recipients: recipientNumbers,
-                        sender: senderNumber,
-                        sent_time: sentTime,
-                        text: 'yes'
-                    },
-                    response: { data: { createMessage: { id: "message_1" } } }
-                },
-                {
                     query: `query GetCommunities($bot_phone:String!)`,
                     variables: { bot_phone: recipientNumbers[0] },
                     response: { data: { communities: [{ id: "community_1", name: 'Mock Community', onboarding_id: 'script_2' }] } }
@@ -396,7 +375,18 @@ describe('Integration Tests for receive_message Handler', () => {
                 {
                     query: `query GetMembershipFromPhoneNumbers($phone: String!, $bot_phone: String!)`,
                     variables: { phone: senderNumber, bot_phone: recipientNumbers[0] },
-                    response: { data: { memberships: [{ id: "membership_1", current_script_id: "script_2", step: "1", user: { id: "user_1", phone: senderNumber }, type: 'member', community: { bot_phone: recipientNumbers[0] } } ] } }
+                    response: { data: { memberships: [{ id: "membership_1", current_script_id: "script_2", step: "1", user: { id: "user_1", phone: senderNumber }, type: 'member', community: { id: 'community_1', bot_phone: recipientNumbers[0] } } ] } }
+                },
+                {
+                    query: `mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $sent_time: timestamptz!)`,
+                    variables: {
+                        community_id: 'community_1',
+                        membership_id: 'membership_1',
+                        from_user: true,
+                        sent_time: sentTime,
+                        text: 'yes'
+                    },
+                    response: { data: { insert_messages_one: { id: "message_1", membership: {id: 'membership_1', user: {phone: '+1234567890'}}, community: { id: 'community_1', bot_phone: '+0987654321'} } } }
                 },
                 {
                     query: `query GetScript($id:uuid!)`,
@@ -414,24 +404,26 @@ describe('Integration Tests for receive_message Handler', () => {
                     response: { data: { updateMembership: { id: "membership_1" } } }
                 },
                 {
-                    query: `mutation CreateMessage($text:String!, $sender:String!, $sent_time:timestamptz!, $recipients:[String!]!)`,
+                    query: `mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $sent_time: timestamptz!)`,
                     variables: {
-                        recipients: [senderNumber],
-                        sender: recipientNumbers[0],
+                        community_id: 'community_1',
+                        membership_id: 'membership_1',
                         sent_time: expect.any(Number),
-                        text: 'Another message with no variables!'
+                        text: 'Another message with no variables!',
+                        from_user: false
                     },
-                    response: { data: { createMessage: { id: "message_2" } } }
+                    response: { data: { insert_messages_one: { id: "message_2", membership: {id: 'membership_1', user: {phone: '+1234567890'}}, community: { id: 'community_1', bot_phone: '+0987654321'} } } }
                 },
                 {
-                    query: `mutation CreateMessage($text:String!, $sender:String!, $sent_time:timestamptz!, $recipients:[String!]!)`,
+                    query: `mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $sent_time: timestamptz!)`,
                     variables: {
-                        recipients: [senderNumber],
-                        sender: recipientNumbers[0],
+                        community_id: 'community_1',
+                        membership_id: 'membership_1',
                         sent_time: expect.any(Number),
-                        text: 'A second message to be sent a few seconds later.'
+                        text: 'A second message to be sent a few seconds later.',
+                        from_user: false
                     },
-                    response: { data: { createMessage: { id: "message_3" } } }
+                    response: { data: { insert_messages_one: { id: "message_3", membership: {id: 'membership_1', user: {phone: '+1234567890'}}, community: { id: 'community_1', bot_phone: '+0987654321'} } } }
                 },
                 {
                     query: `mutation updateMembershipVariable($id:uuid!, $value:String!)`,
@@ -456,22 +448,12 @@ describe('Integration Tests for receive_message Handler', () => {
             expect(signal.send).toHaveBeenCalledWith([senderNumber], recipientNumbers[0], 'A second message to be sent a few seconds later.');
         });
 
-        it('should implement logic based on a didfferent variable in the script', async () => {
+        it('should implement logic based on a different variable in the script', async () => {
             const senderNumber = '+1234567890';
             const recipientNumbers = ['+0987654321'];
             const sentTime = 1741644982;
 
             const mockGraphql = [
-                {
-                    query: `mutation CreateMessage($text:String!, $sender:String!, $sent_time:timestamptz!, $recipients:[String!]!)`,
-                    variables: {
-                        recipients: recipientNumbers,
-                        sender: senderNumber,
-                        sent_time: sentTime,
-                        text: 'no'
-                    },
-                    response: { data: { createMessage: { id: "message_1" } } }
-                },
                 {
                     query: `query GetCommunities($bot_phone:String!)`,
                     variables: { bot_phone: recipientNumbers[0] },
@@ -481,6 +463,17 @@ describe('Integration Tests for receive_message Handler', () => {
                     query: `query GetMembershipFromPhoneNumbers($phone: String!, $bot_phone: String!)`,
                     variables: { phone: senderNumber, bot_phone: recipientNumbers[0] },
                     response: { data: { memberships: [{ id: "membership_1", current_script_id: "script_2", step: "1", user: { id: "user_1", phone: senderNumber }, type: 'member', community: { bot_phone: recipientNumbers[0] } } ] } }
+                },
+                {
+                    query: `mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $sent_time: timestamptz!)`,
+                    variables: {
+                        community_id: 'community_1',
+                        membership_id: 'membership_1',
+                        from_user: true,
+                        sent_time: sentTime,
+                        text: 'no'
+                    },
+                    response: { data: { insert_messages_one: { id: "message_1", membership: {id: 'membership_1', user: {phone: '+1234567890'}}, community: { id: 'community_1', bot_phone: '+0987654321'} } } }
                 },
                 {
                     query: `query GetScript($id:uuid!)`,

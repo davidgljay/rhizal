@@ -11,7 +11,6 @@ export async function receive_message(sender, recipients, message, sent_time) {
     if (!message) {
         return;
     }
-    await Message.create(sender, recipients, message, sent_time);
     const community = await Community.get(recipients[0]);
     if (!community) {
         return;
@@ -19,8 +18,10 @@ export async function receive_message(sender, recipients, message, sent_time) {
     let membership = await Membership.get(sender, recipients[0]);
     if (!membership) {
         membership = await new_member(sender, community, message);
+        await Message.create(community.id, membership.id, message, sent_time, true);
         return;
     }
+    await Message.create(community.id, membership.id, message, sent_time, true);
     if (membership.step == 'done') {
         await no_script_message(membership);
         return;

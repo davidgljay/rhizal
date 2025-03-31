@@ -39,7 +39,8 @@ query GetScript($id:uuid!) {
                 id: membership.id,
                 phone: membership.phone,
                 bot_phone: membership.bot_phone,
-                message
+                message,
+                community_id: membership.community_id
             }
             return this.vars;
         }
@@ -49,6 +50,7 @@ query GetScript($id:uuid!) {
         this.vars.phone = membership.phone;
         this.vars.bot_phone = membership.bot_phone;
         this.vars.message = message;
+        this.vars.community_id = membership.community_id;
         return this.vars;
     }
 

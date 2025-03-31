@@ -54,25 +54,24 @@ mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_i
             text,
             sent_time
         };
-
         const result = await graphql(CREATE_MESSAGE,  message);
         const { id, membership, community } = result.data.insert_messages_one;
         this.id = id;
         this.text = text;
         this.from_user = from_user;
         this.sent_time = sent_time;
-        this.membership_id = membership.id;
-        this.community_id = community.id;
+        this.membership_id = membership_id;
+        this.community_id = community_id;
         this.bot_phone = community.bot_phone;
         this.phone = membership.user.phone;
 
         return result.data.insert_messages_one;
     }
 
-    static async send(to_phone, from_phone, text, log_message = true, attachment) {
+    static async send(community_id, membership_id, to_phone, from_phone, text, log_message = true, attachment) {
         //Safety step to avoid sending messages to the wrong phone number
         if (log_message) {
-            Message.create(from_phone, [to_phone], text,  Date.now());
+            await Message.create(community_id, membership_id, text, Date.now(), false);
         }
 
         if (process.env.NODE_ENV !== 'test') {

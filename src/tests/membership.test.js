@@ -136,4 +136,6 @@ mutation updateMembershipVariable($id:uuid!, $value:String!) {
         });
     });
 
+
+
 });
