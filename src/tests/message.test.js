@@ -15,9 +15,18 @@ describe('Message', () => {
             const mockMessage = {
                 id: '1',
                 text: 'Hello, world!',
-                sender: 'user1',
-                sent_time: '2023-10-01T00:00:00Z',
-                recipients: ['user2', 'user3']
+                from_user: true,
+                membership: {
+                    id: '2',
+                    user: {
+                        phone: 'user1'
+                    }
+                },
+                community: {
+                    id: '3',
+                    bot_phone: 'bot_phone'
+                },
+                sent_time: '2023-10-01T00:00:00Z'
             };
             graphql.mockResolvedValue({ data: { message: mockMessage } });
 
@@ -40,17 +49,30 @@ describe('Message', () => {
             const mockMessage = {
                 id: '1',
                 text: 'Hello, world!',
-                sender: 'user1',
                 sent_time: '2023-10-01T00:00:00Z',
-                recipients: ['user2', 'user3']
+                from_user: true,
+                membership: {
+                    id: '2',
+                    user: {
+                        phone: 'user1'
+                    }
+                },
+                community: {
+                    id: '3',
+                    bot_phone: 'bot_phone'
+                }
             };
-            const mockMessageWithoutId = mockMessage;
-            delete mockMessageWithoutId.id;
-            graphql.mockResolvedValue({ data: { createMessage: mockMessage } });
+            const messageVars = {
+                community_id: 'community_1',
+                from_user: true,
+                membership_id: 'membership_1',
+                text: 'Hello, world!',
+                sent_time: '2023-10-01T00:00:00Z'
+            }
+            graphql.mockResolvedValue({ data: { insert_messages_one: mockMessage } });
+            const result = await Message.create('community_1', 'membership_1', 'Hello, world!', '2023-10-01T00:00:00Z', true);
 
-            const result = await Message.create('user1', ['user2', 'user3'], 'Hello, world!', '2023-10-01T00:00:00Z');
-
-            expect(graphql).toHaveBeenCalledWith( expect.stringContaining('mutation CreateMessage($text:String!, $sender:String!, $sent_time:timestamptz!, $recipients:[String!]!)'), mockMessageWithoutId );
+            expect(graphql).toHaveBeenCalledWith( expect.stringContaining('mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $sent_time: timestamptz!)'), messageVars );
             expect(result).toEqual(mockMessage);
         });
 

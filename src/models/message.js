@@ -9,9 +9,18 @@ query GetMessage($id: ID!) {
     message(id: $id) {
         id
         text
-        sender
+        from_user
         sent_time
-        recipients
+        membership {
+            id
+            user {
+                phone
+            }
+        }
+        community {
+            id
+            bot_phone
+        }
     }
 }
         `;
@@ -20,33 +29,44 @@ query GetMessage($id: ID!) {
         return result.data.message;
     }
 
-    static async create(sender, recipients, text, sent_time) {
+    static async create(community_id, membership_id, text, sent_time, from_user) {
         const CREATE_MESSAGE = `
-mutation CreateMessage($text:String!, $sender:String!, $sent_time:timestamptz!, $recipients:[String!]!) {
-    createMessage(text: $text, sender: $sender, sent_time: $sent_time, recipients: $recipients) {
-        id
-        text
-        sender
-        sent_time
-        recipients
+mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $sent_time: timestamptz!) {
+  insert_messages_one(object: {community_id: $community_id, from_user: $from_user, membership_id: $membership_id, text: $text, sent_time: $sent_time}) {
+    id
+    membership {
+      id
+      user {
+        phone
+      }
     }
+    community {
+      id
+      bot_phone
+    }
+  }
 }`;
 
         const message = {
+            community_id,
+            from_user,
+            membership_id,
             text,
-            sender,
-            sent_time,
-            recipients
+            sent_time
         };
 
         const result = await graphql(CREATE_MESSAGE,  message);
-        this.id = result.data.createMessage.id;
-        this.text = result.data.createMessage.text;
-        this.sender = result.data.createMessage.sender;
-        this.sent_time = result.data.createMessage.sent_time;
-        this.recipients = result.data.createMessage.recipients;
+        const { id, membership, community } = result.data.insert_messages_one;
+        this.id = id;
+        this.text = text;
+        this.from_user = from_user;
+        this.sent_time = sent_time;
+        this.membership_id = membership.id;
+        this.community_id = community.id;
+        this.bot_phone = community.bot_phone;
+        this.phone = membership.user.phone;
 
-        return result.data.createMessage;
+        return result.data.insert_messages_one;
     }
 
     static async send(to_phone, from_phone, text, log_message = true, attachment) {
