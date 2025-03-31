@@ -28,13 +28,14 @@ describe('receive_raw_message', () => {
             envelope: {
                 source: '+11234567890',
                 timestamp: 1741473723341,
-                account: '+10987654321',
+
                 sourceName: 'Test User',
                 dataMessage: {
                     message: 'Test message',
                     type: 'DELIVER',
                 },
             },
+            account: '+10987654321'
         };
 
         await receive_raw_message(msg);
@@ -52,7 +53,6 @@ describe('receive_raw_message', () => {
             envelope: {
                 source: '+11234567890',
                 timestamp: 1741473723341,
-                account: '+10987654321',
                 sourceName: 'Test User',
                 dataMessage: {
                     groupInfo: {
@@ -62,6 +62,7 @@ describe('receive_raw_message', () => {
                     type: 'DELIVER',
                 },
             },
+            account: '+10987654321'
         };
 
         await receive_raw_message(msg);
@@ -80,7 +81,6 @@ describe('receive_raw_message', () => {
             envelope: {
                 source: '+11234567890',
                 timestamp: 1741473723341,
-                account: '+10987654321',
                 sourceName: 'Test User',
                 dataMessage: {
                     groupInfo: {
@@ -89,6 +89,7 @@ describe('receive_raw_message', () => {
                     type: 'DELIVER',
                 },
             },
+            account: '+10987654321',
         };
 
         await receive_raw_message(msg);
