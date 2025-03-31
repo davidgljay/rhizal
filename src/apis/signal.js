@@ -4,6 +4,7 @@ const fetch = require('node-fetch');
 class WebSocketManager {
     constructor() {
         this.ws = null;
+        //TODO: Handle multiple accounts
         this.account_phone = process.env.ACCOUNT_PHONE;
     }
 
