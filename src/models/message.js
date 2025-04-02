@@ -1,8 +1,11 @@
 
 const { graphql } = require('../apis/graphql');
-const webSocketManager = require('../apis/signal');
+const Signal = require('../apis/signal');
 
 class Message {
+
+    static messageQueue = Promise.resolve();
+
     static async get(message_id) {
         const GET_MESSAGE = `
 query GetMessage($id: ID!) {
@@ -52,7 +55,7 @@ mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_i
             from_user,
             membership_id,
             text,
-            sent_time
+            sent_time: new Date(sent_time).toISOString()
         };
         const result = await graphql(CREATE_MESSAGE,  message);
         const { id, membership, community } = result.data.insert_messages_one;
@@ -69,15 +72,24 @@ mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_i
     }
 
     static async send(community_id, membership_id, to_phone, from_phone, text, log_message = true, attachment) {
-        //Safety step to avoid sending messages to the wrong phone number
-        if (log_message) {
-            await Message.create(community_id, membership_id, text, Date.now(), false);
-        }
+        // Add the message to the queue
+        Message.messageQueue = Message.messageQueue.then(async () => {
+            // Safety step to avoid sending messages to the wrong phone number
+            if (log_message) {
+                await Message.create(community_id, membership_id, text, Date.now(), false);
+            }
 
-        if (process.env.NODE_ENV !== 'test') {
-            await new Promise(resolve => setTimeout(resolve, 2000));
-        }
-        webSocketManager.send([to_phone], from_phone, text);
+            if (process.env.NODE_ENV !== 'test') {
+                console.log('Pausing before sending message', new Date());
+                await new Promise(resolve => setTimeout(resolve, 2000)); // 20-second delay
+            }
+
+            Signal.send([to_phone], from_phone, text);
+        }).catch(err => {
+            console.error('Error sending message:', err);
+        });
+        // Return the message queue promise
+        return Message.messageQueue;
     }
 
 }
