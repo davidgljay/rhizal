@@ -161,7 +161,7 @@ describe('Integration Tests for receive_message Handler', () => {
                 },
                 {
                     query: `mutation updateMembershipVariable($id:uuid!, $value:uuid!)`,
-                    variables: { id: "membership_1", current_script_id: "script_2" },
+                    variables: { id: "membership_1", value: "script_2" },
                     response: { data: { updateMembership: { id: "membership_1" } } }
                 },
                 {
@@ -245,7 +245,7 @@ describe('Integration Tests for receive_message Handler', () => {
                 },
                 {
                     query: `mutation updateMembershipVariable($id:uuid!, $value:uuid!)`,
-                    variables: { id: "membership_1", current_script_id: "script_2" },
+                    variables: { id: "membership_1", value: "script_2" },
                     response: { data: { updateMembership: { id: "membership_1" } } }
                 },
                 {
@@ -365,7 +365,7 @@ describe('Integration Tests for receive_message Handler', () => {
                 },
                 {
                     query: `mutation updateMembershipVariable($id:uuid!, $value:String!)`,
-                    variables: { id: "membership_1", step: "1" },
+                    variables: { id: "membership_1", value: "1" },
                     response: { data: { updateMembership: { id: "membership_1" } } }
                 },
                 {
@@ -436,7 +436,7 @@ describe('Integration Tests for receive_message Handler', () => {
                 },
                 {
                     query: `mutation updateMembershipVariable($id:uuid!, $value:String!)`,
-                    variables: { id: "membership_1", step: "2" },
+                    variables: { id: "membership_1", value: "2" },
                     response: { data: { updateMembership: { id: "membership_1" } } }
                 },
                 {
@@ -463,7 +463,7 @@ describe('Integration Tests for receive_message Handler', () => {
                 },
                 {
                     query: `mutation updateMembershipVariable($id:uuid!, $value:String!)`,
-                    variables: { id: "membership_1", name: "user_name" },
+                    variables: { id: "membership_1", value: "user_name" },
                     response: { data: { updateMembership: { id: "membership_1" } } }
                 }
             ];
@@ -523,7 +523,7 @@ describe('Integration Tests for receive_message Handler', () => {
                 },
                 {
                     query: `mutation updateMembershipVariable($id:uuid!, $value:String!)`,
-                    variables: { id: "membership_1", step: "done" },
+                    variables: { id: "membership_1", value: "done" },
                     response: { data: { updateMembership: { id: "membership_1" } } }
                 }
             ];
