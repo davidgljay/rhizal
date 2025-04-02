@@ -1,0 +1,86 @@
+{
+    "0": {
+        "send": [
+            "Thanks for inviting me to join! This is the Rhizal script. I'll completely ignore everything said in this group unless it contains a hashtag.",
+            "If it does I'll route it to another group, then forget it.",
+            "For example, writing a message with #leadership would route to the leadership group.",
+            "To get you set up, what hashtag should others use to message this group? (e.g. #coolkids)",
+            "You can always change this in the future by writing #name."
+        ],
+        "on_receive": {
+            "if": "regex(message, /#\\w+/)",
+            "then": [
+                {
+                    "set_group_variable": {
+                        "variable": "hashtag",
+                        "value": "regex(message, /#\\w+/)"
+                    }
+                },
+                {
+                    "step": 1
+                }
+            ],
+            "else": [
+                {
+                    "step": 2
+                }
+            ]
+        }
+    },
+    "1": {
+        "send": [
+            "Got it! I'll route messages with {{hashtag}} to this group."
+        ],
+        "on_receive": {
+            "step": "done"
+        }
+    },
+    "2": {
+        "send": [
+            "I don't see a hashtag in that response, please include a word with the # character."
+        ],
+        "on_receive": {
+            "if": "regex(message, /#\\w+/)",
+            "then": [
+                {
+                    "set_group_variable": {
+                        "variable": "hashtag",
+                        "value": "regex(message, /#\\w+/)"
+                    }
+                },
+                {
+                    "step": 1
+                }
+            ],
+            "else": [
+                {
+                    "step": 3
+                }
+            ]
+        }
+    },
+    "3": {
+        "send": [
+            "Hmm, it looks like that hashtag is already taken. Could you please choose another one?"
+        ],
+        "on_receive": {
+            "if": "regex(message, /#\\w+/)",
+            "then": [
+                {
+                    "set_group_variable": {
+                        "variable": "hashtag",
+                        "value": "regex(message, /#\\w+/)"
+                    }
+                },
+                {
+                    "step": 1
+                }
+            ],
+            "else": [
+                {
+                    "step": 2
+                }
+            ]
+        }
+    }
+}
