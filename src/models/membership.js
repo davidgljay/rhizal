@@ -37,6 +37,7 @@ query GetMembershipFromPhoneNumbers($phone: String!, $bot_phone: String!) {
       community {
         id
         bot_phone
+        onboarding_id
       }
       user {
         id
@@ -108,10 +109,8 @@ mutation CreateUserAndMembership($phone:String!, $community_id:uuid!) {
         }, 
         community_id: $community_id, 
         type: "member", 
-        step: 0}
-        }
-    }
-    ) 
+        step: "0"
+        }) 
   {
     id
     type
@@ -124,7 +123,7 @@ mutation CreateUserAndMembership($phone:String!, $community_id:uuid!) {
     community {
         id
         bot_phone
-        onboarding_script_id
+        onboarding_id
     }
   }
 }
@@ -132,7 +131,7 @@ mutation CreateUserAndMembership($phone:String!, $community_id:uuid!) {
 
             const createMembershipMutation = `
 mutation CreateMembership($user_id:uuid!, $community_id:uuid!) {
-  insert_memberships_one(object: {user_id: $user_id, community_id: $community_id, type: "member"}) {
+  insert_memberships_one(object: {user_id: $user_id, community_id: $community_id, type: "member", step: "0"}) {
     id
     type
     step
@@ -144,7 +143,7 @@ mutation CreateMembership($user_id:uuid!, $community_id:uuid!) {
     community {
         id
         bot_phone
-        onboarding_script_id
+        onboarding_id
     }
   }
 }
@@ -152,9 +151,9 @@ mutation CreateMembership($user_id:uuid!, $community_id:uuid!) {
 
 const userQuery = `
 query GetUser($phone: String!) {
-    users(phone: $phone) {
-        id
-    }
+  users(where: {phone: {_eq: $phone}}) {
+    id
+  }
 }
 `;
 
