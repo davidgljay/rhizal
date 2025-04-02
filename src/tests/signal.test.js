@@ -74,51 +74,90 @@ describe('WebSocketManager', () => {
         expect(console.error).toHaveBeenCalledWith('WebSocket message:', invalidMessageData);
     });
 
-    it('should send message if WebSocket is open', () => {
+   describe('send', () => {
+    it('should send message using fetch if recipients is an array', async () => {
         const recipients = ['recipient1', 'recipient2'];
         const message = 'test message';
         const bot_phone = '+0987654321';
-        webSocketManager.ws = mockWebSocketInstance;
-
-        webSocketManager.send(recipients, bot_phone, message);
-
-        expect(mockWebSocketInstance.send).toHaveBeenCalledWith(JSON.stringify({ recipients, from_number: bot_phone, message }));
+        const mockResponse = { ok: true };
+        fetch.mockResolvedValue(mockResponse);
+    
+        await webSocketManager.send(recipients, bot_phone, message);
+    
+        expect(fetch).toHaveBeenCalledWith('http://signal-cli:8080/v2/send/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                recipients,
+                number: bot_phone,
+                message,
+            }),
+        });
     });
-
-    it('should not send message if WebSocket is not open', () => {
+    
+    it('should log an error if fetch fails while sending message', async () => {
         const recipients = ['recipient1', 'recipient2'];
         const message = 'test message';
         const bot_phone = '+0987654321';
-        webSocketManager.ws = { readyState: WebSocket.CLOSED };
-        jest.spyOn(console, 'error').mockImplementation(() => {}); 
-        
-
-        webSocketManager.send(recipients, bot_phone, message);
-
-        expect(console.error).toHaveBeenCalledWith('WebSocket is not open');
-        expect(mockWebSocketInstance.send).not.toHaveBeenCalled();
-    });
-
-    it('should not send message if recipients is not an array', () => {
-        const recipients = 'recipient1';
-        const message = 'test message';
-        const bot_phone = '+0987654321';
-        webSocketManager.ws = mockWebSocketInstance;
+        const errorMessage = 'Network error';
+        fetch.mockRejectedValue(new Error(errorMessage));
         console.error = jest.fn();
-
-        webSocketManager.send(recipients, bot_phone, message);
-
-        expect(console.error).toHaveBeenCalledWith('Recipients must be an array');
-        expect(mockWebSocketInstance.send).not.toHaveBeenCalled();
+    
+        await webSocketManager.send(recipients, bot_phone, message);
+    
+        expect(console.error).toHaveBeenCalledWith('Error sending message:', expect.any(Error));
     });
-
-    it('should leave group', async () => {
-        const group_id = 'test_group_id';
+    
+    it('should log an error if fetch response is not ok', async () => {
+        const recipients = ['recipient1', 'recipient2'];
+        const message = 'test message';
         const bot_phone = '+0987654321';
-        fetch.mockResolvedValue({ ok: true });
+        const mockResponse = { ok: false, statusText: 'Bad Request' };
+        fetch.mockResolvedValue(mockResponse);
+        console.error = jest.fn();
+    
+        await webSocketManager.send(recipients, bot_phone, message);
+    
+        expect(console.error).toHaveBeenCalledWith('Error sending message:', 'Bad Request');
+    });
+});
 
-        await webSocketManager.leave_group(group_id, bot_phone);
+    describe('leaving group', () => {
+        it('should leave group using fetch', async () => {
+            const group_id = 'test_group_id';
+            const bot_phone = '+0987654321';
+            const mockResponse = { ok: true };
+            fetch.mockResolvedValue(mockResponse);
 
-        expect(fetch).toHaveBeenCalledWith(`https://signal-cli:8080/v1/groups/${bot_phone}/${group_id}/quit`, { method: 'POST' });
+            await webSocketManager.leave_group(group_id, bot_phone);
+
+            expect(fetch).toHaveBeenCalledWith(`https://signal-cli:8080/v1/groups/${bot_phone}/${group_id}/quit`, { method: 'POST' });
+        });
+
+        it('should log an error if fetch fails while leaving group', async () => {
+            const group_id = 'test_group_id';
+            const bot_phone = '+0987654321';
+            const errorMessage = 'Network error';
+            fetch.mockRejectedValue(new Error(errorMessage));
+            console.error = jest.fn();
+
+            await webSocketManager.leave_group(group_id, bot_phone);
+
+            expect(console.error).toHaveBeenCalledWith('Error leaving group:', expect.any(Error));
+        });
+
+        it('should log an error if fetch response is not ok while leaving group', async () => {
+            const group_id = 'test_group_id';
+            const bot_phone = '+0987654321';
+            const mockResponse = { ok: false, statusText: 'Bad Request' };
+            fetch.mockResolvedValue(mockResponse);
+            console.error = jest.fn();
+
+            await webSocketManager.leave_group(group_id, bot_phone);
+
+            expect(console.error).toHaveBeenCalledWith('Error leaving group:', 'Bad Request');
+        });
     });
 });

@@ -42,15 +42,31 @@ class WebSocketManager {
     }
 
     async send(recipients, from_number, message) {
-        if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-            console.error('WebSocket is not open');
-            return;
-        }
         if (!Array.isArray(recipients)) {
             console.error('Recipients must be an array');
             return;
         }
-        await this.ws.send(JSON.stringify({ recipients, from_number, message }));
+        const send_endpoint = `http://signal-cli:8080/v2/send/`;
+        const body = {
+            recipients,
+            number: from_number,
+            message
+        };
+        await fetch(send_endpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(body)
+        })
+            .then(response => {
+                if (!response.ok) {
+                    console.error('Error sending message:', response.statusText);
+                }
+            })
+            .catch(error => {
+                console.error('Error sending message:', error);
+            });
     }
 
     async leave_group(group_id, bot_number) {
