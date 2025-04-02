@@ -94,8 +94,10 @@ class RhyzalParser {
                 //TODO: add tests for setting variable with regex
                 if (script['set_variable']['value'].includes('regex')) {
                     await this.set_variable(vars.id, script['set_variable']['variable'], this.regex_match(script['set_variable']['value'], vars));
+                    vars[script['set_variable']['variable']] = this.regex_match(script['set_variable']['value'], vars);
                 } else {
                     await this.set_variable(vars.id, script['set_variable']['variable'], script['set_variable']['value']);
+                    vars[script['set_variable']['variable']] = script['set_variable']['value'];
                 }
                 break;
             case 'set_group_variable':

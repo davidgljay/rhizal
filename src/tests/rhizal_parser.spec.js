@@ -178,6 +178,30 @@ describe('rhyzal_parser', () => {
             expect(set_variable).toHaveBeenCalledWith("1", 'name', 'user_name');
         });
 
+        it('should set a variable both my making a call to set_variable and by setting vars', async () => {
+            const parser = new RhyzalParser(test_json, send_message, set_variable);
+            let vars = { id: "1", var1: 'foo', var2: 'bar'};
+            await parser.evaluate_receive({set_variable: {variable: 'name', value: 'user_name'}}, vars);
+            expect(set_variable).toHaveBeenCalledWith("1", 'name', 'user_name');
+            expect(vars.name).toBe('user_name');
+        });
+
+        it('should set a variable with regex', async () => {
+            const parser = new RhyzalParser(test_json, send_message, set_variable);
+            let vars = { id: "1", var1: 'foo', var2: 'bar'};
+            await parser.evaluate_receive({set_variable: {variable: 'name', value: 'regex(var1, /foo/)'}}, vars);
+            expect(set_variable).toHaveBeenCalledWith("1", 'name', 'foo');
+            expect(vars.name).toBe('foo');
+        });
+
+        it('should set a variable with regex and set the vars', async () => {
+            const parser = new RhyzalParser(test_json, send_message, set_variable);
+            let vars = { id: "1", var1: 'foo', var2: 'bar'};
+            await parser.evaluate_receive({set_variable: {variable: 'name', value: 'regex(var1, /foo/)'}}, vars);
+            expect(set_variable).toHaveBeenCalledWith("1", 'name', 'foo');
+            expect(vars.name).toBe('foo');
+        });
+
         it('should evaluate an if condition', async () => {
             const parser = new RhyzalParser(test_json, send_message, set_variable);
             await parser.evaluate_receive({if: 'regex(var1, /foo/)', then: [{step: 0}]}, {var1: 'foo', id: "1"});
