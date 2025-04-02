@@ -13,7 +13,7 @@ export async function graphql(query, variables) {
     });
 
     const data = await response.json();
-    if (!response.ok) {
+    if (!response.ok || data.errors) {
         throw new Error(data.errors ? data.errors[0].message : 'Unknown error');
     }
 
