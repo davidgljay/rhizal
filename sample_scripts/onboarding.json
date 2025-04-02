@@ -12,7 +12,7 @@
       {
         "set_variable": {
           "variable": "name",
-          "value": "message"
+          "value": "regex(message, '^[a-zA-Z ]+$')"
         }
       },
       {
@@ -28,7 +28,7 @@
       {
         "set_variable": {
           "variable": "profile",
-          "value": "message"
+          "value": "regex(message, '^[a-zA-Z ]+$')"
         }
       },
       {
