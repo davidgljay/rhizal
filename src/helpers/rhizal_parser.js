@@ -28,7 +28,7 @@ class RhyzalParser {
         this.script = script_obj;
     }
 
-    send(step, vars) {
+    async send(step, vars) {
             if (!this.script) {
                 throw new Error('Script not initialized');
             }
@@ -58,12 +58,12 @@ class RhyzalParser {
                     for (const key in vars) {
                         message = message.replace(new RegExp(`{{${key}}}`, 'g'), vars[key]);
                     }
-                    this.send_message(community_id, id, recipient, vars.bot_phone, message, log_message);
+                    await this.send_message(community_id, id, recipient, vars.bot_phone, message, log_message);
                 // }
             }
     }
 
-    receive(step, vars) {
+    async receive(step, vars) {
         if (!this.script) {
             throw new Error('Script not initialized');
         }
@@ -72,30 +72,30 @@ class RhyzalParser {
         }
         if (Array.isArray(this.script[step].on_receive)) {
             for (let i = 0; i < this.script[step].on_receive.length; i++) {
-                this.evaluate_receive(this.script[step].on_receive[i], vars);
+                await this.evaluate_receive(this.script[step].on_receive[i], vars);
             }
         } else {
-            this.evaluate_receive([this.script[step].on_receive], vars);
+            await this.evaluate_receive(this.script[step].on_receive, vars);
         }
     }
 
-    evaluate_receive(script, vars) {
+    async evaluate_receive(script, vars) {
         switch(Object.keys(script)[0]) {
             case 'step':
                 const new_step = String(script['step']);
                 if (vars.group_id) {
-                    this.set_group_variable(vars.group_id, 'step', new_step);
+                    await this.set_group_variable(vars.group_id, 'step', new_step);
                 } else {
-                    this.set_variable(vars.id, 'step', new_step);
+                    await this.set_variable(vars.id, 'step', new_step);
                 }
-                this.send(new_step, vars);
+                await this.send(new_step, vars);
                 break;
             case 'set_variable':
                 //TODO: add tests for setting variable with regex
                 if (script['set_variable']['value'].includes('regex')) {
-                    this.set_variable(vars.id, script['set_variable']['variable'], this.regex_match(script['set_variable']['value'], vars));
+                    await this.set_variable(vars.id, script['set_variable']['variable'], this.regex_match(script['set_variable']['value'], vars));
                 } else {
-                    this.set_variable(vars.id, script['set_variable']['variable'], script['set_variable']['value']);
+                    await this.set_variable(vars.id, script['set_variable']['variable'], script['set_variable']['value']);
                 }
                 break;
             case 'set_group_variable':
@@ -103,9 +103,9 @@ class RhyzalParser {
                     throw new Error('Group ID not found in vars');
                 }
                 if (script['set_group_variable']['value'].includes('regex')) {
-                    this.set_group_variable(vars.group_id, script['set_group_variable']['variable'], this.regex_match(script['set_group_variable']['value'], vars));
+                    await this.set_group_variable(vars.group_id, script['set_group_variable']['variable'], this.regex_match(script['set_group_variable']['value'], vars));
                 } else {
-                    this.set_group_variable(vars.group_id, script['set_group_variable']['variable'], script['set_group_variable']['value']);
+                    await this.set_group_variable(vars.group_id, script['set_group_variable']['variable'], script['set_group_variable']['value']);
                 }
                 break;
             case 'if': //TODO: add elif to support more complex logic
@@ -113,19 +113,19 @@ class RhyzalParser {
                     if (script.then) {
                         if (Array.isArray(script.then)) {
                             for (let i = 0; i < script.then.length; i++) {
-                                this.evaluate_receive(script.then[i], vars);
+                                await this.evaluate_receive(script.then[i], vars);
                             }
                         } else {
-                            this.evaluate_receive([script.then], vars);
+                            await this.evaluate_receive([script.then], vars);
                         }
                     } 
                 } else if (script.else) {
                     if (Array.isArray(script.else)) {
                         for (let i = 0; i < script.else.length; i++) {
-                            this.evaluate_receive(script.else[i], vars);
+                            await this.evaluate_receive(script.else[i], vars);
                         }
                     } else {
-                        this.evaluate_receive([script.else], vars);
+                        await this.evaluate_receive([script.else], vars);
                     }
                 }
                 break;
