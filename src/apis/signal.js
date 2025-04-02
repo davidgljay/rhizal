@@ -81,6 +81,28 @@ class WebSocketManager {
                 console.error('Error leaving group:', error);
             });
     }
+
+    async show_typing_indicator(to_phone, from_phone) {
+        const typing_endpoint = `http://signal-cli:8080/v1/typing-indicator/${from_phone}`;
+        const body = {
+            recipient: to_phone
+        };
+        await fetch(typing_endpoint, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(body)
+        })
+            .then(response => {
+                if (!response.ok) {
+                    console.error('Error sending typing indicator:', response.statusText);
+                }
+            })
+            .catch(error => {
+                console.error('Error sending typing indicator:', error);
+            });
+    }
 }
 
 const webSocketManager = new WebSocketManager();

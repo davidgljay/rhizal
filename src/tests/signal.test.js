@@ -160,4 +160,47 @@ describe('WebSocketManager', () => {
             expect(console.error).toHaveBeenCalledWith('Error leaving group:', 'Bad Request');
         });
     });
+
+    describe('show typing indicator', () => {
+        it('should send typing indicator using fetch', async () => {
+            const number = 'test_number';
+            const to_phone = '+0987654321';
+            const mockResponse = { ok: true };
+            fetch.mockResolvedValue(mockResponse);
+
+            await webSocketManager.show_typing_indicator(number, to_phone);
+
+            expect(fetch).toHaveBeenCalledWith(`http://signal-cli:8080/v1/typing-indicator/${number}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ recipient: to_phone }),
+            });
+        });
+
+        it('should log an error if fetch fails while sending typing indicator', async () => {
+            const number = 'test_number';
+            const to_phone = '+0987654321';
+            const errorMessage = 'Network error';
+            fetch.mockRejectedValue(new Error(errorMessage));
+            console.error = jest.fn();
+
+            await webSocketManager.show_typing_indicator(number, to_phone);
+
+            expect(console.error).toHaveBeenCalledWith('Error sending typing indicator:', expect.any(Error));
+        });
+
+        it('should log an error if fetch response is not ok while sending typing indicator', async () => {
+            const number = 'test_number';
+            const to_phone = '+0987654321';
+            const mockResponse = { ok: false, statusText: 'Bad Request' };
+            fetch.mockResolvedValue(mockResponse);
+            console.error = jest.fn();
+
+            await webSocketManager.show_typing_indicator(number, to_phone);
+
+            expect(console.error).toHaveBeenCalledWith('Error sending typing indicator:', 'Bad Request');
+        });
+    });
 });

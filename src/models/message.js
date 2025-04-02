@@ -78,7 +78,7 @@ mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_i
             if (log_message) {
                 await Message.create(community_id, membership_id, text, Date.now(), false);
             }
-
+            Signal.show_typing_indicator(to_phone, from_phone);
             if (process.env.NODE_ENV !== 'test') {
                 await new Promise(resolve => setTimeout(resolve, 2000)); 
             }
