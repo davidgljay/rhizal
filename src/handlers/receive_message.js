@@ -6,16 +6,15 @@ const GroupThread = require('../models/group_thread');
 
 
 
-export async function receive_message(sender, recipients, message, sent_time) {
-    //TODO: Refactor from recipient to recipients
+export async function receive_message(sender, recipient, message, sent_time) {
     if (!message) {
         return;
     }
-    const community = await Community.get(recipients[0]);
+    const community = await Community.get(recipient);
     if (!community) {
         return;
     }
-    let membership = await Membership.get(sender, recipients[0]);
+    let membership = await Membership.get(sender, recipient);
     if (!membership) {
         membership = await new_member(sender, community, message);
         await Message.create(community.id, membership.id, message, sent_time, true);
