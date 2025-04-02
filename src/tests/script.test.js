@@ -5,13 +5,13 @@ jest.mock('../apis/graphql');
 
 const mockGetScriptResponse = {
     data: {
-            script: {
+            scripts: [{
                 id: 1,
                 name: 'Test Script',
-                yaml: 'yaml content',
+                script_json: '{"json": "json content"}',
                 varsquery: 'vars query',
                 targetquery: 'target query',
-            },
+            }],
     },
 };
 
@@ -96,13 +96,13 @@ describe('Script', () => {
         it('should return a new Script instance when the response is successful', async () => {
             const mockResponse = {
                 data: {
-                        script: {
+                        scripts: [{
                             id: 1,
                             name: 'Test Script',
-                            yaml: 'yaml content',
+                            script_json: '{"json": "json content"}',
                             varsquery: 'vars query',
                             targetquery: 'target query',
-                        },
+                        }],
                 },
             };
             graphql.mockResolvedValue(mockResponse);
@@ -111,19 +111,19 @@ describe('Script', () => {
 
             expect(graphql).toHaveBeenCalledWith(`
 query GetScript($id:uuid!) {
-    script(id: $id) {
+    scripts(where: {id: {_eq:$id}}) {
         id
         name
-        yaml
-        varsquery
-        targetquery
+        script_json
+        vars_query
+        targets_query
     }
 }
 `,{ id: '1' });
             expect(scriptInstance).toBeInstanceOf(Script);
             expect(scriptInstance.id).toBe(1);
             expect(scriptInstance.name).toBe('Test Script');
-            expect(scriptInstance.yaml).toBe('yaml content');
+            expect(scriptInstance.script_json).toBe('{"json": "json content"}');
             expect(scriptInstance.varsquery).toBe('vars query');
             expect(scriptInstance.targetquery).toBe('target query');
         });

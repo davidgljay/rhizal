@@ -5,31 +5,30 @@ const Membership = require('./membership');
 const GroupThread = require('./group_thread');
 
 class Script {
-    constructor({id, name, yaml, varsquery, targetquery}) {
+    constructor({id, name, script_json, varsquery, targetquery}) {
         this.id = id;
         this.name = name;
-        this.yaml = yaml;
+        this.script_json = script_json;
         this.varsquery = varsquery;
         this.targetquery = targetquery;
-        this.parser = null;
+        this.parser = new RhizalParser(script_json, Message.send, Membership.set_variable, GroupThread.set_variable);
     }
 
     static async init(id) {
         const scriptData = await graphql(`
 query GetScript($id:uuid!) {
-    script(id: $id) {
+    scripts(where: {id: {_eq:$id}}) {
         id
         name
-        yaml
-        varsquery
-        targetquery
+        script_json
+        vars_query
+        targets_query
     }
 }
 `
         ,{ id });
 
-        const script = new Script(scriptData.data.script);
-        script.parser = new RhizalParser(script.yaml, Message.send, Membership.set_variable, GroupThread.set_variable)
+        const script = new Script(scriptData.data.scripts[0]);
         return script;
     }
 
