@@ -14,13 +14,13 @@ The function parses the yaml script, replaces the variables in the messages, and
 */
 class RhyzalParser {
 
-    constructor(yaml_script, send_message, set_variable, set_group_variable) {
+    constructor(script_json, send_message, set_variable, set_group_variable) {
         let script_obj;
         this.send_message = send_message;
         this.set_variable = set_variable;
         this.set_group_variable = set_group_variable;
         try {
-            script_obj = yaml.load(yaml_script);
+            script_obj = JSON.parse(script_json);
         }
         catch (e) {
             throw new Error('Invalid yaml input ' + e);
@@ -46,7 +46,6 @@ class RhyzalParser {
                 recipient = vars.group_id;
                 log_message = false;
             };
-
             for (let i = 0; i < messages.length; i++) {
                 //Send a message with an attachement
                 // if (messages[i].match(/attach\(([^)]+)\)/)) {
@@ -71,7 +70,13 @@ class RhyzalParser {
         if (!this.script[step]) {
             throw new Error('Step missing from script');
         }
-        this.evaluate_receive(this.script[step].on_receive, vars);
+        if (Array.isArray(this.script[step].on_receive)) {
+            for (let i = 0; i < this.script[step].on_receive.length; i++) {
+                this.evaluate_receive(this.script[step].on_receive[i], vars);
+            }
+        } else {
+            this.evaluate_receive([this.script[step].on_receive], vars);
+        }
     }
 
     evaluate_receive(script, vars) {
@@ -86,7 +91,7 @@ class RhyzalParser {
                 this.send(new_step, vars);
                 break;
             case 'set_variable':
-                //TODO: add tests for this functionality
+                //TODO: add tests for setting variable with regex
                 if (script['set_variable']['value'].includes('regex')) {
                     this.set_variable(vars.id, script['set_variable']['variable'], this.regex_match(script['set_variable']['value'], vars));
                 } else {
@@ -105,18 +110,27 @@ class RhyzalParser {
                 break;
             case 'if': //TODO: add elif to support more complex logic
                 if (this.evaluate_condition(script.if, vars)) {
-                    for (let i = 0; i < script.then.length; i++) {
-                        this.evaluate_receive(script.then[i], vars);
-                    }
-                } else {
-                    if (script.else) {
+                    if (script.then) {
+                        if (Array.isArray(script.then)) {
+                            for (let i = 0; i < script.then.length; i++) {
+                                this.evaluate_receive(script.then[i], vars);
+                            }
+                        } else {
+                            this.evaluate_receive([script.then], vars);
+                        }
+                    } 
+                } else if (script.else) {
+                    if (Array.isArray(script.else)) {
                         for (let i = 0; i < script.else.length; i++) {
                             this.evaluate_receive(script.else[i], vars);
                         }
+                    } else {
+                        this.evaluate_receive([script.else], vars);
                     }
                 }
                 break;
         }
+
     };
 
     regex_match(condition, vars) {
