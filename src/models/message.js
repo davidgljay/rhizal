@@ -80,10 +80,8 @@ mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_i
             }
 
             if (process.env.NODE_ENV !== 'test') {
-                console.log('Pausing before sending message', new Date());
-                await new Promise(resolve => setTimeout(resolve, 2000)); // 20-second delay
+                await new Promise(resolve => setTimeout(resolve, 2000)); 
             }
-
             Signal.send([to_phone], from_phone, text);
         }).catch(err => {
             console.error('Error sending message:', err);
