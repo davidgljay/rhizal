@@ -125,7 +125,7 @@ class RhyzalParser {
                             await this.evaluate_receive(script.else[i], vars);
                         }
                     } else {
-                        await this.evaluate_receive([script.else], vars);
+                        await this.evaluate_receive(script.else, vars);
                     }
                 }
                 break;
