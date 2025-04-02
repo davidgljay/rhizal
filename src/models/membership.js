@@ -81,15 +81,15 @@ query GetMembershipFromPhoneNumbers($phone: String!, $bot_phone: String!) {
         try {
             const mutation = `
 mutation updateMembershipVariable($id:uuid!, $value:${variableTypes[variable]}!) {
-    updateMembershipVariable(id: $id, ${variable}: $value) {
-        id
-        ${variable}
+  update_memberships(where: {id: {_eq: $id}}, _set: {${variable}: $value}) {
+    returning {
+      id
     }
+  }
 }
 `;
             this[variable] = value;
-            const variables = { id: this.id};
-            variables[variable] = value;
+            const variables = { id: this.id, value};
             return await graphql(mutation, variables);
         } catch (error) {
             console.error(`Error updating membership ${variable}:`, error);

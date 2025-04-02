@@ -18,20 +18,21 @@ describe('Membership Model', () => {
 
         it('should call graphql with correct mutation and variables', async () => {
             const memberData = { id: '123', phone: '1234567890', user_id: 'user_id', type: 'member', community: {bot_phone: 'bot_phone'} };
-            graphql.mockResolvedValue({ data: { updateMembershipVariable: { id: '123', fname: 'John' } } });
+            graphql.mockResolvedValue({ data: { updateMembershipVariable: { id: '123', informal_name: 'John' } } });
             const membership = new Membership(memberData);
             await membership.set_variable('informal_name', 'John');
 
             const expectedQuery = `
 mutation updateMembershipVariable($id:uuid!, $value:String!) {
-    updateMembershipVariable(id: $id, informal_name: $value) {
-        id
-        informal_name
+  update_memberships(where: {id: {_eq: $id}}, _set: {informal_name: $value}) {
+    returning {
+      id
     }
+  }
 }
 `
 
-            expect(graphql).toHaveBeenCalledWith(expectedQuery, { id: '123', informal_name: 'John' });
+            expect(graphql).toHaveBeenCalledWith(expectedQuery, { id: '123', value: 'John' });
         });
 
         it('should log an error if graphql request fails', async () => {
