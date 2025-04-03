@@ -3,12 +3,12 @@ A lightweight, AI-free chatbot for people whose Signal threads get too big and u
 
 ## Core Features
 ### Message Routing
-Is a Signal thread getting too big an unweildly? Break it up into multiple, smaller conversations. If you invite Rhyzal to these conversations, it will let you relay messages between them using hashtags. 
+Is a Signal thread getting too big an unweildly? Break it up into multiple, smaller conversations. If you invite Rhizal to these conversations, it will let you relay messages between them using hashtags. 
 
 Say you are preparing for an event, and you have one thread focused on planning and one focused on promotion. Someone in the planning group could write "Curious if #promotion knows how many people we're expecting", and the message would be relayed. Someone in promotion could then respond "#planning we're expecting about 500 as of now."
 
 ### Onboarding
-In addition to relaying messages, people can message a community's Rhyzal bot directly. When they do, it will onboard them, letting them know about the community and collecting information that could be useful to organizers.
+In addition to relaying messages, people can message a community's Rhizal bot directly. When they do, it will onboard them, letting them know about the community and collecting information that could be useful to organizers.
 
 ### Announcements
 Once a Rhizal bot is set up, organizers can use it to make announcements to everyone who has onboarded.
