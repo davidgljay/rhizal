@@ -19,7 +19,7 @@ Organizers can send out event invitations via Rhizal, and community members can 
 ## Security
 Rhizal is a being optimized for security but is still in early development. Not all security features have been implemented, and the codebase has not received the necessary review to be considered secure. At this stage, it should be used for light experimentation only. Rhizal retains data in the following ways:
 
-* If the message is part of a one-on-one conversation with Rhizal (e.g. while a community member is onboarding or registering for an event) it is logged so that organizers can see it. If someone messages Rhizal directly their phone number is also logged so that Rhizal can respond.
+* If the message is part of a one-on-one conversation with Rhizal (e.g. while a community member is onboarding or registering for an event) it is logged so that organizers can see it. If someone messages Rhizal directly their phone number is also logged so that Rhizal can respond. Implementers of Rhizal can easily swap out where this data is logged to meet their security requirements.
 * If a message is part of a group thread that Rhizal has been invited into it ignores the message unless it includes a hashtag for another group, in which case it routes the message and then forgets it. No information is collected about who is in the group or how frequently they communicate.
 
 Messages are sent and received via bbernhard/signal-cli-rest-api, which implements signal-cli to interact with the Signal network. They are then transmitted via a Docker network to Rhizal. Logged messages and associated data are stored in Hasura for now, though this can be easily swapped for any graphQL interface via environment variables.
