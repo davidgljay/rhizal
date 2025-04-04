@@ -43,6 +43,7 @@ query GetGroupThread($group_id: String!) {
         id
         group_id
         step
+        hashtag
         community {
             id
             group_script_id
@@ -60,6 +61,7 @@ mutation CreateGroupThread($community_id: uuid!, $group_id: String!) {
 	id
     group_id
     step
+    hashtag
     community {
       group_script_id
       group_threads {
