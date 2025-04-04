@@ -203,4 +203,61 @@ describe('WebSocketManager', () => {
             expect(console.error).toHaveBeenCalledWith('Error sending typing indicator:', 'Bad Request');
         });
     });
+
+    describe('emoji-reaction', () => {
+        it('should send emoji reaction using fetch', async () => {
+            const to_phone = '+0987654321';
+            const from_phone = 'test_number';
+            const message_timestamp = 123456789;
+            const emoji = '👍';
+            const group_id = 'test_group_id';
+            const mockResponse = { ok: true };
+            fetch.mockResolvedValue(mockResponse);
+
+            await webSocketManager.emoji_reaction(to_phone, from_phone, message_timestamp, emoji, group_id);
+
+            expect(fetch).toHaveBeenCalledWith(`http://signal-cli:8080/v1/reactions/${from_phone}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    reaction: emoji,
+                    recipient: group_id || to_phone,
+                    target_author: to_phone,
+                    timestamp: message_timestamp,
+                }),
+            });
+        });
+
+        it('should log an error if fetch fails while sending emoji reaction', async () => {
+            const to_phone = '+0987654321';
+            const from_phone = 'test_number';
+            const message_timestamp = '2023-10-01T00:00:00Z';
+            const emoji = '👍';
+            const group_id = 'test_group_id';
+            const errorMessage = 'Network error';
+            fetch.mockRejectedValue(new Error(errorMessage));
+            console.error = jest.fn();
+
+            await webSocketManager.emoji_reaction(to_phone, from_phone, message_timestamp, emoji, group_id);
+
+            expect(console.error).toHaveBeenCalledWith('Error sending emoji reaction:', expect.any(Error));
+        });
+
+        it('should log an error if fetch response is not ok while sending emoji reaction', async () => {
+            const to_phone = '+0987654321';
+            const from_phone = 'test_number';
+            const message_timestamp = '2023-10-01T00:00:00Z';
+            const emoji = '👍';
+            const group_id = 'test_group_id';
+            const mockResponse = { ok: false, statusText: 'Bad Request' };
+            fetch.mockResolvedValue(mockResponse);
+            console.error = jest.fn();
+
+            await webSocketManager.emoji_reaction(to_phone, from_phone, message_timestamp, emoji, group_id);
+
+            expect(console.error).toHaveBeenCalledWith('Error sending emoji reaction:', 'Bad Request');
+        });
+    });
 });

@@ -103,6 +103,31 @@ class WebSocketManager {
                 console.error('Error sending typing indicator:', error);
             });
     }
+
+    async emoji_reaction(to_phone, from_phone, message_timestamp, emoji, group_id) {
+        const reaction_endpoint = `http://signal-cli:8080/v1/reactions/${from_phone}`;
+        const body = {
+            reaction: emoji,
+            recipient: group_id ? group_id : to_phone,
+            target_author: to_phone,
+            timestamp: message_timestamp
+        };
+        await fetch(reaction_endpoint, {
+            method: 'POST',
+            headers: {
+            'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(body)
+        })
+            .then(response => {
+            if (!response.ok) {
+                console.error('Error sending emoji reaction:', response.statusText);
+            }
+            })
+            .catch(error => {
+            console.error('Error sending emoji reaction:', error);
+            });
+    }
 }
 
 const webSocketManager = new WebSocketManager();
