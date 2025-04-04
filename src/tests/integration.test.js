@@ -107,7 +107,8 @@ const testScript = JSON.stringify(script);
 const groupTestScript = JSON.stringify(groupScript);
 
 jest.mock('../apis/signal', () => ({
-    send: jest.fn()
+    send: jest.fn(),
+    show_typing_indicator: jest.fn(),
 }));
 jest.mock('../apis/graphql', () => ({
     graphql: jest.fn()
@@ -598,8 +599,10 @@ describe('Integration Tests for receive_message Handler', () => {
                     expect(graphql).toHaveBeenNthCalledWith(i + 1, expect.stringContaining(mockGraphql[i].query), mockGraphql[i].variables);
                 }
 
-                expect(signal.send).toHaveBeenCalledWith([base64_group_id], botNumber, 'Thanks for inviting me to the group!');
-                expect(signal.send).toHaveBeenCalledWith([base64_group_id], botNumber, 'What\'s a good hashtag to use for this group?');
+                const send_group_id = 'group.' + base64_group_id;
+
+                expect(signal.send).toHaveBeenCalledWith([send_group_id], botNumber, 'Thanks for inviting me to the group!');
+                expect(signal.send).toHaveBeenCalledWith([send_group_id], botNumber, 'What\'s a good hashtag to use for this group?');
             });
 
             it('should not create a new group thread if one already exists', async () => {
@@ -645,8 +648,9 @@ describe('Integration Tests for receive_message Handler', () => {
                     expect(graphql).toHaveBeenNthCalledWith(i + 1, expect.stringContaining(mockGraphql[i].query), mockGraphql[i].variables);
                 }
                 expect(graphql).toHaveBeenCalledTimes(mockGraphql.length);
-                expect(signal.send).toHaveBeenCalledWith([base64_group_id], botNumber, 'Thanks for inviting me to the group!');
-                expect(signal.send).toHaveBeenCalledWith([base64_group_id], botNumber, 'What\'s a good hashtag to use for this group?');
+                const send_group_id = 'group.' + base64_group_id;
+                expect(signal.send).toHaveBeenCalledWith([send_group_id], botNumber, 'Thanks for inviting me to the group!');
+                expect(signal.send).toHaveBeenCalledWith([send_group_id], botNumber, 'What\'s a good hashtag to use for this group?');
             });
 
             it('should take no action if the group thread step is done and no message is included', async () => {
@@ -778,7 +782,10 @@ describe('Integration Tests for receive_message Handler', () => {
                     expect(graphql).toHaveBeenNthCalledWith(i + 1, expect.stringContaining(mockGraphql[i].query), mockGraphql[i].variables);
                 }
                 expect(graphql).toHaveBeenCalledTimes(mockGraphql.length);
-                expect(signal.send).toHaveBeenCalledWith([base64_group_id], botNumber, 'Thanks for the hashtag!');
+
+                const send_group_id = 'group.' + base64_group_id;
+
+                expect(signal.send).toHaveBeenCalledWith([send_group_id], botNumber, 'Thanks for the hashtag!');
             });
 
             it('should respond properly if the the user fails to send a hashtag', async () => {
@@ -829,7 +836,8 @@ describe('Integration Tests for receive_message Handler', () => {
                     expect(graphql).toHaveBeenNthCalledWith(i + 1, expect.stringContaining(mockGraphql[i].query), mockGraphql[i].variables);
                 }
                 expect(graphql).toHaveBeenCalledTimes(mockGraphql.length);
-                expect(signal.send).toHaveBeenCalledWith([base64_group_id], botNumber, 'I don\'t see a hashtag in that response, please include a word with the # character.');
+                const send_group_id = 'group.' + base64_group_id;
+                expect(signal.send).toHaveBeenCalledWith([send_group_id], botNumber, 'I don\'t see a hashtag in that response, please include a word with the # character.');
             });
 
             it('should not relay a message if no hashtags exist in the community', async () => {
@@ -901,7 +909,7 @@ describe('Integration Tests for receive_message Handler', () => {
                     expect(graphql).toHaveBeenNthCalledWith(i + 1, expect.stringContaining(mockGraphql[i].query), mockGraphql[i].variables);
                 }
                 expect(graphql).toHaveBeenCalledTimes(mockGraphql.length);
-                expect(signal.send).toHaveBeenCalledWith(['group_2'], botNumber, 'Message relayed from +1234567890(Test User) in #groupHash: Lets send this to #anotherGroupHashtag');
+                expect(signal.send).toHaveBeenCalledWith(['group.group_2'], botNumber, 'Message relayed from +1234567890(Test User) in #groupHash: Lets send this to #anotherGroupHashtag');
             });
 
             it('should not relay a hashtag if the group is not in the community', async () => {

@@ -43,7 +43,7 @@ class RhyzalParser {
             let recipient = vars.phone;
             let log_message = true;
             if (vars.group_id) {
-                recipient = vars.group_id;
+                recipient = 'group.' + vars.group_id;
                 log_message = false;
             };
             for (let i = 0; i < messages.length; i++) {

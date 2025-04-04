@@ -77,8 +77,8 @@ describe('rhyzal_parser', () => {
             const parser = new RhyzalParser(test_json, send_message, set_variable);
             await parser.send(1, {group_id: '789', phone: '+1234567890', bot_phone: '+0987654321', community_id: '123', id: '456'});
     
-            expect(send_message).toHaveBeenCalledWith('123', '456', '789', '+0987654321', message1, false);
-            expect(send_message).toHaveBeenCalledWith('123', '456', '789', '+0987654321', message2, false);
+            expect(send_message).toHaveBeenCalledWith('123', '456', 'group.789', '+0987654321', message1, false);
+            expect(send_message).toHaveBeenCalledWith('123', '456', 'group.789', '+0987654321', message2, false);
         });
     
         it ('should send the appropriate message with variables', async () => {
