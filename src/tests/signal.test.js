@@ -168,7 +168,7 @@ describe('WebSocketManager', () => {
             const mockResponse = { ok: true };
             fetch.mockResolvedValue(mockResponse);
 
-            await webSocketManager.show_typing_indicator(number, to_phone);
+            await webSocketManager.show_typing_indicator(to_phone, number);
 
             expect(fetch).toHaveBeenCalledWith(`http://signal-cli:8080/v1/typing-indicator/${number}`, {
                 method: 'PUT',
