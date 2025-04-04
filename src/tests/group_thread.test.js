@@ -43,19 +43,6 @@ describe('GroupThread', () => {
         jest.restoreAllMocks();
     });
 
-    describe('send_message', () => {
-
-        it('should send a message', async () => {
-            await GroupThread.send_message('Hello', '1234567890', 'test_group_id');
-
-            expect(webSocketManager.send).toHaveBeenCalledWith(
-                ['test_group_id'],
-                '1234567890',
-                'Hello'
-            );
-        });
-    });
-
     describe('leave_group', () => {
         it('should leave a group', async () => {
             await GroupThread.leave_group('test_group_id', '1234567890');

@@ -82,20 +82,9 @@ export async function receive_group_message(internal_group_id, message, from_pho
     for (const ht of community_hashtags) {
         if (hashtags.includes(ht.hashtag)) {
             const expanded_message = `Message relayed from ${from_phone}(${sender_name}) in ${group_thread.hashtag}: ${message}`;
-            await GroupThread.send_message(expanded_message, bot_phone, ht.group_id);
+            await Message.send(null, null, 'group.' + ht.group_id, bot_phone, expanded_message, false);
         }
     }
-    // Thanks for inviting me to join! This is the Rhizal script. I'll completely ignore everything said in this group unless it contains a hashtag.
-    // If it does I'll route it to another group, then forget it.
-    // For example, writing a message with #leadership would route to the leadership group.
-    // To get you set up, what hashtag should others use to message this group? (e.g. #coolkids)
-    // You can always change this in the future by writing #name.
-    //
-    // Got it! I'll route messages with #hashtag to this group.
-    // 
-    // Hmm, it looks like that hashtag is already taken. Could you please choose another one?
-    //
 
-    //[{"envelope":{"source":"00fa3971-e783-4399-956b-8786549e32ff","sourceNumber":null,"sourceUuid":"00fa3971-e783-4399-956b-8786549e32ff","sourceName":"DJ","sourceDevice":1,"timestamp":1742794738464,"serverReceivedTimestamp":1742794738571,"serverDeliveredTimestamp":1742794752235,"dataMessage":{"timestamp":1742794738464,"message":null,"expiresInSeconds":0,"viewOnce":false,"groupInfo":{"groupId":"fPNM9lou0GB1fThpagjDTfJl6GaTd2LqDoGZ7e8vO5I=","type":"DELIVER"}}},"account":"+14155551212"}]
     return;
 }

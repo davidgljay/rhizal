@@ -1,11 +1,8 @@
 const { graphql } = require('../apis/graphql');
-const webSocketManager = require('../apis/signal');
+const Signal = require('../apis/signal');
 
 class GroupThread {
 
-    static async send_message(message, from_phone, group_id) {
-        await webSocketManager.send([group_id], from_phone, message);
-    }
 
     static async run_script(group_thread, membership, message) {
         const Script = require('./script');
@@ -35,19 +32,8 @@ mutation UpdateGroupThreadVariable($group_id:String!, $value:String!) {
         return await graphql(query, variables);
     }
 
-    static async send_message(message, from_phone, group_id) {
-        const payload = {
-            message,
-            group_id,
-        };
-        if (process.env.NODE_ENV === 'test' || phone == process.env.ACCOUNT_PHONE) {
-
-            webSocketManager.send([group_id], from_phone, message);
-        }
-    }
-
     static async leave_group(group_id, bot_phone) {
-        await webSocketManager.leave_group(group_id, bot_phone);
+        await Signal.leave_group(group_id, bot_phone);
     }
 
     static async find_or_create_group_thread(group_id, community_id) {
@@ -70,7 +56,7 @@ query GetGroupThread($group_id: String!) {
 
         const CREATE_GROUP_THREAD = `
 mutation CreateGroupThread($community_id: uuid!, $group_id: String!) {
-  insert_group_threads_one(object: {community_id: $community_id, group_id: $group_id, step: 0}) {
+  insert_group_threads_one(object: {community_id: $community_id, group_id: $group_id, step: "0"}) {
 	id
     group_id
     step
