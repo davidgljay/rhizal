@@ -109,6 +109,7 @@ const groupTestScript = JSON.stringify(groupScript);
 jest.mock('../apis/signal', () => ({
     send: jest.fn(),
     show_typing_indicator: jest.fn(),
+    emoji_reaction: jest.fn(),
 }));
 jest.mock('../apis/graphql', () => ({
     graphql: jest.fn()

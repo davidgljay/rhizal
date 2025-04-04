@@ -72,7 +72,8 @@ describe('receive_raw_message', () => {
             'Group test message',
             '+11234567890',
             '+10987654321',
-            'Test User'
+            'Test User',
+            expect.any(Number)
         );
     });
 
@@ -99,7 +100,8 @@ describe('receive_raw_message', () => {
             undefined,
             '+11234567890',
             '+10987654321',
-            'Test User'
+            'Test User',
+            expect.any(Number)
         );
     });
 

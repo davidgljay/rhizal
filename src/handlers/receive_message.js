@@ -3,6 +3,7 @@ const Message = require('../models/message');
 const Script = require('../models/script');
 const Community = require('../models/community');
 const GroupThread = require('../models/group_thread');
+const Signal = require('../apis/signal');
 
 
 
@@ -51,7 +52,7 @@ export async function script_message(member, message) {
     return;
 }
 
-export async function receive_group_message(internal_group_id, message, from_phone, bot_phone, sender_name) {
+export async function receive_group_message(internal_group_id, message, from_phone, bot_phone, sender_name, sent_time) {
     const group_id = Buffer.from(internal_group_id).toString('base64');
     const membership = await Membership.get(from_phone, bot_phone);
     const community_id = membership.data.community.id;
@@ -83,6 +84,7 @@ export async function receive_group_message(internal_group_id, message, from_pho
         if (hashtags.includes(ht.hashtag)) {
             const expanded_message = `Message relayed from ${from_phone}(${sender_name}) in ${group_thread.hashtag}: ${message}`;
             await Message.send(null, null, 'group.' + ht.group_id, bot_phone, expanded_message, false);
+            await Signal.emoji_reaction(from_phone, bot_phone, sent_time, '✉️', group_thread.id );
         }
     }
 

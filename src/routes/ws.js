@@ -36,7 +36,7 @@ export async function receive_raw_message(msg) {
     }
     const { envelope: {source, timestamp, sourceName, dataMessage: {message, groupInfo}}, account } = msg;
     if (groupInfo) { 
-        receive_group_message(groupInfo.groupId, message, source, account, sourceName);
+        receive_group_message(groupInfo.groupId, message, source, account, sourceName, timestamp);
         return;
     }
     console.log(`Received message from ${source} to ${account} at ${timestamp}: ${message}`);

@@ -3,6 +3,7 @@ const Message = require('../models/message');
 const Script = require('../models/script');
 const Community = require('../models/community');
 const GroupThread = require('../models/group_thread');
+const Signal = require('../apis/signal');
 const { new_member, no_script_message, script_message, receive_message, receive_group_message  } = require('../handlers/receive_message');
 
 jest.mock('../models/membership', () => {
@@ -23,6 +24,11 @@ jest.mock('../models/message', () => {
     };
 });
 
+jest.mock('../apis/signal', () => ({
+    send: jest.fn(),
+    show_typing_indicator: jest.fn(),
+    emoji_reaction: jest.fn(),
+}));
 
 
 jest.mock('../models/group_thread', () => {
