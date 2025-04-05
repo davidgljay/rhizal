@@ -4,7 +4,8 @@ const Script = require('../models/script');
 const Community = require('../models/community');
 const GroupThread = require('../models/group_thread');
 const Signal = require('../apis/signal');
-const { new_member, no_script_message, script_message, receive_message, receive_group_message  } = require('../handlers/receive_message');
+const { graphql } = require('../apis/graphql');
+const { new_member, no_script_message, receive_message, receive_group_message  } = require('../handlers/receive_message');
 
 jest.mock('../models/membership', () => {
     return {
@@ -13,6 +14,7 @@ jest.mock('../models/membership', () => {
             phone,
             set_variable: jest.fn(),
         })),
+        set_variable: jest.fn(),
         get: jest.fn()
     };
 });
@@ -52,41 +54,84 @@ jest.mock('../models/community', () => {
     }); 
 });
 
+jest.mock('../apis/graphql', () => ({
+    graphql: jest.fn()
+}));
+
 const mockScriptSend = jest.fn();
 const mockScriptReceive = jest.fn();
 const mockGetVars = jest.fn();
 const mockScriptMessage = jest.fn();
 
-Script.init = jest.fn().mockImplementation(() => {
-    return {
-        send: mockScriptSend,
-        receive: mockScriptReceive,
-        get_vars: mockGetVars,
-        script_message: mockScriptMessage
-    };
+jest.mock('../models/script', () => {
+    return jest.fn().mockImplementation(() => {
+        return {
+            send: mockScriptSend,
+            receive: mockScriptReceive,
+            get_vars: mockGetVars,
+            message: mockScriptMessage,
+        };
+    });
 });
+
+
+
+
 describe('receive_message', () => {
     describe('new_member', () => {
+
+        const phone = '1234567890';
+        const community = {
+            id: 'community_1',
+            name: 'Test Community',
+            bot_phone: '0987654321',
+            onboarding: {
+                id: 'onboarding_script',
+                name: 'Onboarding Script',
+                script_json: '{"0": {"send": ["Welcome to Test Community! Please reply with your name."]}}',
+                vars_query: 'vars query',
+                targets_query: 'target query',
+            }
+        }
+        const user = { id: 'user_1', phone: '1234567890' };
+
+        const mockMembership = {
+            id: 'membership_1',
+            user: {
+                phone: '1234567890',
+            },
+            community: {
+                id: 'community_1',
+                bot_phone: '0987654321',
+            },
+            step: '0',
+            current_script_id: 'onboarding_script',
+            set_variable: jest.fn(),
+        };
+
         beforeEach(() => {
             jest.clearAllMocks();
         });
 
-        it('should create a new member with the given phone number', async () => {
-            const phone = '1234567890';
-            const community = new Community('1', 'Test Community', { onboarding_id: 'onboarding_script' });
-            const membership = await new_member(phone, community);
-            expect(Membership.create).toHaveBeenCalledWith(phone, community.id);
-            expect(membership.set_variable).toHaveBeenCalledWith('current_script_id', community.data.onboarding_id);
-        });
+        it('should create a new member and send a message', async () => {
 
-        it('should initialize and send the appropriate message', async () => {
-            const phone = '1234567890';
-            const community = new Community('1', 'Test Community', { onboarding_id: 'onboarding_script' });
-            await new_member(phone, community);
+            Membership.create.mockReturnValue(mockMembership);
+            Message.send.mockReturnValue(Promise.resolve());
 
-            expect(Script.init).toHaveBeenCalledWith('onboarding_script');
+            await new_member(phone, community, "message", user);
+            expect(Membership.create).toHaveBeenCalledWith(phone, community, user);
             expect(mockScriptSend).toHaveBeenCalledWith('0');
         });
+
+        it('should create a new member and a new user and send a message', async () => {
+            Membership.create.mockReturnValue(mockMembership);
+            Message.send.mockReturnValue(Promise.resolve());
+
+            await new_member(phone, community, "message", null);
+            expect(Membership.create).toHaveBeenCalledWith(phone, community, null);
+            expect(mockScriptSend).toHaveBeenCalledWith("0");
+        });
+
     });
 
     describe('no_script_message', () => {
@@ -95,38 +140,54 @@ describe('receive_message', () => {
         });
 
         it('should send a message to the member', async () => {
-            const member = { phone: '1234567890' };
-            await no_script_message(member);
-            expect(Message.send).toHaveBeenCalledWith(member.phone, 'Thanks for letting me know, I\'ll pass your message on to an organizer who may get back to you.');
+            const membership = { user: {phone: '1234567890' }, community: { id: 'community_1', bot_phone: '0987654321' }, id: 'membership_1' };
+            await no_script_message(membership);
+            expect(Message.send).toHaveBeenCalledWith('community_1', 'membership_1', "1234567890", "0987654321", 'Thanks for letting me know, I\'ll pass your message on to an organizer who may get back to you.', true);
         });
     });
 
-    describe('script_message', () => {
-        beforeEach(() => {    
-            jest.clearAllMocks();
-        });
-
-        it('should initialize the member\'s script', async () => {
-            const member = { id: '1', current_script_id: '2', step: '0' };
-            const message = 'test message';
-
-            await script_message(member, message);
-
-            expect(Script.init).toHaveBeenCalledWith('2');
-        });
-
-        it('should receive the member\'s message', async () => {
-            const member = { id: '1', current_script_id: '2', step: '0' };
-            const message = 'test message';
-
-            await script_message(member, message);
-
-            expect(Script.init).toHaveBeenCalledWith('2');
-            expect(mockScriptReceive).toHaveBeenCalledWith(member.step, message);
-        });
-    });
 
     describe('receive_message', () => {
+        const mockQueryResponse = {
+            data: {
+                communities: [
+                    {
+                        id: 'community_1',
+                        name: 'Test Community',
+                        bot_phone: '0987654321',
+                        onboarding: {
+                            id: 'onboarding_script',
+                            name: 'Onboarding Script',
+                            script_json: '{"0": {"send": ["Welcome to Test Community! Please reply with your name."], "on_receive": [{"step": "done"}]}}',
+                            vars_query: 'vars query',
+                            targets_query: 'target query',
+                        }
+                    }
+                ],
+                memberships: [
+                    {
+                        id: 'membership_1',
+                        user: {
+                            phone: '1234567890',
+                        },
+                        community: {
+                            id: 'community_1',
+                            bot_phone: '0987654321',
+                        },
+                        step: '0',
+                        current_script_id: 'onboarding_script',
+                        set_variable: jest.fn(),
+                    }
+                ],
+                users: [
+                    {
+                        id: 'user_1',
+                        phone: '1234567890',
+                    }
+                ]
+            }
+        };
+
         beforeEach(() => {
             jest.clearAllMocks();
         });
@@ -136,23 +197,11 @@ describe('receive_message', () => {
             const recipient = '0987654321';
             const message = 'test message';
             const sent_time = new Date();
-            Community.get = jest.fn(() => {
-                return {
-                    id: "1",
-                    name: 'Mock Community',
-                    data: { onboarding_id: 'mock_onboarding_script' }
-                };
-            });
-
-            Membership.get = jest.fn(() => {
-                return {
-                    id: "membership_1",
-                    };
-            });
+            graphql.mockResolvedValue(mockQueryResponse);
 
             await receive_message(sender, recipient, message, sent_time);
 
-            expect(Message.create).toHaveBeenCalledWith("1", "membership_1", message, sent_time, true);
+            expect(Message.create).toHaveBeenCalledWith("community_1", "membership_1", message, sent_time, true);
         });
 
         it('should get the member and a community', async () => {
@@ -160,18 +209,11 @@ describe('receive_message', () => {
             const recipient = '0987654321';
             const message = 'test message';
             const sent_time = new Date();
-            Community.get = jest.fn(() => {
-                return {
-                    id: "1",
-                    name: 'Mock Community',
-                    data: { onboarding_id: 'mock_onboarding_script' }
-                };
-            });
+            graphql.mockResolvedValue(mockQueryResponse);
 
             await receive_message(sender, recipient, message, sent_time);
 
-            expect(Membership.get).toHaveBeenCalledWith(sender, recipient);
-            expect(Community.get).toHaveBeenCalledWith(recipient);
+            expect(graphql).toHaveBeenCalledWith(expect.stringContaining('query RecieveMessageQuery($bot_phone:String!, $phone:String!)'), { bot_phone: recipient, phone: sender });
         });
 
         it('should create a new member if the member does not exist', async () => {
@@ -179,17 +221,15 @@ describe('receive_message', () => {
             const recipient = '0987654321';
             const message = 'test message';
             const sent_time = new Date();
-            Membership.get.mockReturnValue(null);
-            const mockCommunity = {
-                id: "1",
-                name: 'Mock Community',
-                data: { onboarding_id: 'mock_onboarding_script' }
-            }
-            Community.get = jest.fn(() => mockCommunity);
+            let noUserResponse = JSON.parse(JSON.stringify(mockQueryResponse));
+            noUserResponse.data.users = [];
+            noUserResponse.data.memberships = [];
+            graphql.mockResolvedValue(noUserResponse);
+            Membership.create.mockReturnValue({ id: 'membership_1', user: { phone: sender }, community: { id: 'community_1', bot_phone: recipient } });
 
             await receive_message(sender, recipient, message, sent_time);
 
-            expect(Membership.create).toHaveBeenCalledWith(sender, mockCommunity.id);
+            expect(Membership.create).toHaveBeenCalledWith(sender, noUserResponse.data.communities[0], null);
         });
 
         it('should send a message if the member\'s step is done', async () => {
@@ -197,7 +237,9 @@ describe('receive_message', () => {
             const recipient = '0987654321';
             const message = 'test message';
             const sent_time = new Date();
-            Membership.get.mockReturnValue({ step: 'done' });
+            let doneResponse = JSON.parse(JSON.stringify(mockQueryResponse));;
+            doneResponse.data.memberships[0].step = 'done';
+            graphql.mockResolvedValue(doneResponse);
 
             await receive_message(sender, recipient, message, sent_time);
 
@@ -209,18 +251,11 @@ describe('receive_message', () => {
             const recipient = '0987654321';
             const message = 'test message';
             const sent_time = new Date();
-            Community.get.mockReturnValue({
-                id: "1",
-                name: 'Mock Community',
-                data: { onboarding_id: 'test_script' }
-            });
-            Membership.get.mockReturnValue({ id: '1', step: 'step1', current_script_id: 'test_script' });
-
+            graphql.mockResolvedValue(mockQueryResponse);
             await receive_message(sender, recipient, message, sent_time);
 
-            expect(Script.init).toHaveBeenCalledWith('test_script');
-            expect(mockGetVars).toHaveBeenCalledWith({ id: '1', step: 'step1', current_script_id: 'test_script' }, message); 
-            expect(mockScriptReceive).toHaveBeenCalledWith('step1', message);
+            expect(mockGetVars).toHaveBeenCalledWith(mockQueryResponse.data.memberships[0], message); 
+            expect(mockScriptReceive).toHaveBeenCalledWith('0', message);
         });
     });
 

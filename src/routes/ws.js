@@ -39,6 +39,5 @@ export async function receive_raw_message(msg) {
         receive_group_message(groupInfo.groupId, message, source, account, sourceName, timestamp);
         return;
     }
-    console.log(`Received message from ${source} to ${account} at ${timestamp}: ${message}`);
     receive_message(source, account, message, timestamp);
 };

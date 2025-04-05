@@ -1,5 +1,6 @@
 const Membership = require('../models/membership');
 const { graphql } = require('../apis/graphql');
+const { id } = require('../models/message');
 
 jest.mock('../apis/graphql');
 
@@ -50,48 +51,47 @@ mutation updateMembershipVariable($id:uuid!, $value:String!) {
 
     describe('create', () => {
         it('should call graphql with correct mutation and variables if the user already exists', async () => {
-            graphql.mockResolvedValueOnce({ data: { users: [{ id: '123', phone: '+1234567890' }] }});
             graphql.mockResolvedValueOnce({ data: { insert_memberships_one: { id: '456', user: {id: '123', phone: '+1234567890' }, type: 'member', community: {bot_phone: 'bot_phone'} } } });
+            const user = { id: '123', phone: '+1234567890' };
+            const community = { id: 'community_id', bot_phone: 'bot_phone', onboarding: { id: 'onboarding_id' } };
+            const membership = await Membership.create('+1234567890', community, user);
 
-            const membership = await Membership.create('+1234567890', 'community_id');
-
-            expect(graphql).toHaveBeenNthCalledWith(1, expect.stringContaining('query GetUser'), { phone: '+1234567890' });
-            expect(graphql).toHaveBeenNthCalledWith(2, expect.stringContaining('mutation CreateMembership'), { user_id: '123', community_id: 'community_id' });
+            expect(graphql).toHaveBeenNthCalledWith(1, expect.stringContaining('mutation CreateMembership($user_id:uuid!, $community_id:uuid!, $current_script_id:uuid!)'), { user_id: '123', community_id: 'community_id', current_script_id: 'onboarding_id'});
             expect(membership.id).toBe('456');
-            expect(membership.phone).toBe('+1234567890');
-            expect(membership.user_id).toBe('123');
+            expect(membership.user.phone).toBe('+1234567890');
+            expect(membership.user.id).toBe('123');
         });
 
         it('should call graphql with correct mutation and variables if the user does not exist', async () => {
-            graphql.mockResolvedValueOnce({ data: { users: [] }});
             graphql.mockResolvedValueOnce({ data: { insert_memberships_one: { id: '456', user: {id: '123', phone: '+1234567890' }, type: 'member', community: {bot_phone: 'bot_phone'} } } });
+            const user = null;
+            const community = { id: 'community_id', bot_phone: 'bot_phone', onboarding: { id: 'onboarding_id' } };
+            const membership = await Membership.create('+1234567890', community, user);
 
-            const membership = await Membership.create('+1234567890', 'community_id');
-
-            expect(graphql).toHaveBeenNthCalledWith(1, expect.stringContaining('query GetUser'), { phone: '+1234567890' });
-            expect(graphql).toHaveBeenNthCalledWith(2, expect.stringContaining('mutation CreateUserAndMembership'), { phone: '+1234567890', community_id: 'community_id' });
+            expect(graphql).toHaveBeenNthCalledWith(1, expect.stringContaining('mutation CreateUserAndMembership($phone:String!, $community_id:uuid!, $current_script_id:uuid!)'), { phone: '+1234567890', community_id: 'community_id', current_script_id: 'onboarding_id' });
             expect(membership.id).toBe('456');
-            expect(membership.phone).toBe('+1234567890');
-            expect(membership.user_id).toBe('123');
+            expect(membership.user.phone).toBe('+1234567890');
+            expect(membership.user.id).toBe('123');
         });
 
         it('should return a Membership object', async () => {
-            graphql.mockResolvedValueOnce({ data: { users: [] }});
             graphql.mockResolvedValueOnce({ data: { insert_memberships_one: { id: '456', user: {id: '123', phone: '+1234567890' }, type: 'member', community: {bot_phone: 'bot_phone'} } } });
-
-            const membership = await Membership.create('+1234567890', 'community_id');
+            const user = null;
+            const community = { id: 'community_id', bot_phone: 'bot_phone', onboarding: { id: 'onboarding_id' } };
+            const membership = await Membership.create('+1234567890', community, user);
 
             expect(membership).toBeInstanceOf(Membership);
             expect(membership.id).toBe('456');
-            expect(membership.phone).toBe('+1234567890');
-            expect(membership.user_id).toBe('123');
+            expect(membership.user.phone).toBe('+1234567890');
+            expect(membership.user.id).toBe('123');
         });
 
         it('should log an error if graphql request fails', async () => {
             const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
             graphql.mockRejectedValue(new Error('GraphQL Error'));
-
-            await Membership.create('1234567890');
+            const user = null;
+            const community = { id: 'community_id', bot_phone: 'bot_phone', onboarding: { id: 'onboarding_id' } };
+            const membership = await Membership.create('+1234567890', community, user);
 
             expect(consoleSpy).toHaveBeenCalledWith('Error creating membership:', expect.any(Error));
             consoleSpy.mockRestore();
@@ -114,8 +114,8 @@ mutation updateMembershipVariable($id:uuid!, $value:String!) {
 
             expect(membership).toBeInstanceOf(Membership);
             expect(membership.id).toBe('456');
-            expect(membership.phone).toBe('+1234567890');
-            expect(membership.user_id).toBe('123');
+            expect(membership.user.phone).toBe('+1234567890');
+            expect(membership.user.id).toBe('123');
             expect(membership.type).toBe('member');
         });
 

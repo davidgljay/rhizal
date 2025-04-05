@@ -67,7 +67,7 @@ describe('Script', () => {
             };
             graphql.mockResolvedValue(mockResponse);
 
-            const data = await scriptInstance.get_vars({id: '123', phone: 'member_phone', bot_phone: 'bot_phone', community_id:'456'}, 'message');
+            const data = await scriptInstance.get_vars({id: '123', user: {phone: 'member_phone'}, community: {bot_phone: 'bot_phone', id:'456'}}, 'message');
 
             expect(graphql).toHaveBeenCalledWith('vars query', { membership_id: "123" });
             expect(data).toEqual({bot_phone: 'bot_phone', phone: 'member_phone', id: "123", message: 'message', name: 'Var 1', community_id: '456' });
@@ -76,7 +76,7 @@ describe('Script', () => {
         it('should return phone and bot_phone if no vars query is defined', async () => {
             scriptInstance.varsquery = '';
 
-            const vars = await scriptInstance.get_vars({id: '123', phone: 'member_phone', bot_phone: 'bot_phone', community_id:'456'}, 'message');
+            const vars = await scriptInstance.get_vars({id: '123', user: {phone: 'member_phone'}, community: {bot_phone: 'bot_phone', id:'456'}}, 'message');
 
             expect(graphql).toHaveBeenCalledTimes(1);
             expect(vars).toEqual({id: '123', bot_phone: 'bot_phone', phone: 'member_phone', community_id: '456', message: 'message' });

@@ -5,13 +5,13 @@ const Membership = require('./membership');
 const GroupThread = require('./group_thread');
 
 class Script {
-    constructor({id, name, script_json, varsquery, targetquery}) {
-        this.id = id;
-        this.name = name;
-        this.script_json = script_json;
-        this.varsquery = varsquery;
-        this.targetquery = targetquery;
-        this.parser = new RhizalParser(script_json, Message.send, Membership.set_variable, GroupThread.set_variable);
+    constructor(script) {
+        for (const key in script) {
+            if (script.hasOwnProperty(key)) {
+                this[key] = script[key];
+            }
+        }
+        this.parser = new RhizalParser(script.script_json, Message.send, Membership.set_variable, GroupThread.set_variable);
     }
 
     static async init(id) {
@@ -33,23 +33,23 @@ query GetScript($id:uuid!) {
     }
 
     async get_vars(membership, message) {
-        if (!this.varsquery) {
+        if (!this.vars_query) {
             this.vars = {
                 id: membership.id,
-                phone: membership.phone,
-                bot_phone: membership.bot_phone,
+                phone: membership.user.phone,
+                bot_phone: membership.community.bot_phone,
                 message,
-                community_id: membership.community_id
+                community_id: membership.community.id
             }
             return this.vars;
         }
-        const varsData = await graphql(this.varsquery, { membership_id: membership.id });
+        const varsData = await graphql(this.vars_query, { membership_id: membership.id });
         this.vars = varsData.data.vars[0];
         this.vars.id = membership.id;
-        this.vars.phone = membership.phone;
-        this.vars.bot_phone = membership.bot_phone;
+        this.vars.phone = membership.user.phone;
+        this.vars.bot_phone = membership.community.bot_phone;
         this.vars.message = message;
-        this.vars.community_id = membership.community_id;
+        this.vars.community_id = membership.community.id;
         return this.vars;
     }
 

@@ -38,6 +38,7 @@ class RhyzalParser {
             if (!this.script[step]) {
                 throw new Error('Step missing from script');
             }
+
             const messages = this.script[step].send;
             const { community_id, id } = vars;
             let recipient = vars.phone;
@@ -58,6 +59,7 @@ class RhyzalParser {
                     for (const key in vars) {
                         message = message.replace(new RegExp(`{{${key}}}`, 'g'), vars[key]);
                     }
+
                     await this.send_message(community_id, id, recipient, vars.bot_phone, message, log_message);
                 // }
             }

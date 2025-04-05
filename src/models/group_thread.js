@@ -7,6 +7,7 @@ class GroupThread {
     static async run_script(group_thread, membership, message) {
         const Script = require('./script');
         const script = await Script.init(group_thread.community.group_script_id);
+        console.log('Running get_vars');
         await script.get_vars(membership, message);
         script.vars.group_id = group_thread.group_id;
         if (group_thread.step == '0' && !message) {

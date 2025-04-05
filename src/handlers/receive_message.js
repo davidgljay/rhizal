@@ -4,20 +4,58 @@ const Script = require('../models/script');
 const Community = require('../models/community');
 const GroupThread = require('../models/group_thread');
 const Signal = require('../apis/signal');
+const { graphql } = require('../apis/graphql');
 
+
+const queries = {
+    receiveMessageQuery: 
+`query RecieveMessageQuery($bot_phone:String!, $phone:String!) {
+    communities(where: {bot_phone: {_eq: $bot_phone}}) {
+        id
+        onboarding {
+            id
+            name
+            script_json
+            vars_query
+            targets_query
+        }
+    }
+    users(where: {phone: {_eq: $phone}}) {
+        id
+        phone
+    }
+    memberships(where:{community:{bot_phone:{_eq: $bot_phone}},user:{phone:{_eq:$phone}}}) {
+        id
+        step
+        name
+        informal_name
+        community {
+            id
+            bot_phone
+        }
+        user {
+            id
+            phone
+        }
+    }
+}`
+
+}
 
 
 export async function receive_message(sender, recipient, message, sent_time) {
     if (!message) {
         return;
     }
-    const community = await Community.get(recipient);
+    const results = await graphql(queries.receiveMessageQuery, { bot_phone: recipient, phone: sender });
+    const community = results.data.communities.length > 0 ? results.data.communities[0] : null;
+    const user = results.data.users.length > 0 ? results.data.users[0] : null;
+    let membership = results.data.memberships.length > 0 ? results.data.memberships[0] : null;
     if (!community) {
         return;
     }
-    let membership = await Membership.get(sender, recipient);
     if (!membership) {
-        membership = await new_member(sender, community, message);
+        membership = await new_member(sender, community, message, user);
         await Message.create(community.id, membership.id, message, sent_time, true);
         return;
     }
@@ -26,36 +64,31 @@ export async function receive_message(sender, recipient, message, sent_time) {
         await no_script_message(membership);
         return;
     }
-    const script = await Script.init(community.data.onboarding_id);
+    const script = new Script(community.onboarding);
     await script.get_vars(membership, message);
     await script.receive(membership.step, message);
     return;
 }
 
-export async function new_member(phone, community, message) {
-    const membership = await Membership.create(phone, community.id);
-    await membership.set_variable('current_script_id', community.data.onboarding_id);
-    const script = await Script.init(community.data.onboarding_id);
+export async function new_member(phone, community, message, user) {
+    const membership = await Membership.create(phone, community, user);
+    const script = new Script(community.onboarding);
+    console.log('Getting new member vars');
     await script.get_vars(membership, message);
     await script.send('0');
     return membership;
 }
 
-export async function no_script_message(user) {
-    await Message.send(user.phone, 'Thanks for letting me know, I\'ll pass your message on to an organizer who may get back to you.');
-    return;
-}
-
-export async function script_message(member, message) {
-    const script = await Script.init(member.current_script_id);
-    await script.receive(member.step, message);
+export async function no_script_message(membership) {
+    //community_id, membership_id, to_phone, from_phone, text, log_message = true
+    await Message.send(membership.community.id, membership.id, membership.user.phone, membership.community.bot_phone, 'Thanks for letting me know, I\'ll pass your message on to an organizer who may get back to you.', true);
     return;
 }
 
 export async function receive_group_message(internal_group_id, message, from_phone, bot_phone, sender_name, sent_time) {
     const group_id = Buffer.from(internal_group_id).toString('base64');
     const membership = await Membership.get(from_phone, bot_phone);
-    const community_id = membership.data.community.id;
+    const community_id = membership.community.id;
     const group_thread = await GroupThread.find_or_create_group_thread(group_id, community_id);
 
 

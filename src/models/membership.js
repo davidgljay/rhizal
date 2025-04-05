@@ -3,20 +3,11 @@ const { graphql } = require('../apis/graphql');
 class Membership {
 
     constructor(data) {
-        const { id, type, step, current_script_id } = data;
-        if (data.community) {
-            this.bot_phone = data.community.bot_phone;
-            this.community_id = data.community.id;
+        for (const key in data) {
+            if (data.hasOwnProperty(key)) {
+                this[key] = data[key];
+            }
         }
-        if (data.user) {
-            this.user_id = data.user.id;
-            this.phone = data.user.phone;
-        }
-        this.id = id;
-        this.type = type;
-        this.step = step;
-        this.current_script_id = current_script_id;
-        this.data = data;
     }
 
     static async get(user_phone, bot_phone) {
@@ -98,16 +89,17 @@ mutation updateMembershipVariable($id:uuid!, $value:${variableTypes[variable]}!)
     
     
     
-    static async create(user_phone, community_id) {
+    static async create(user_phone, community, user) {
         try {
             const createUserAndMembershipMutation = `
-mutation CreateUserAndMembership($phone:String!, $community_id:uuid!) {
+mutation CreateUserAndMembership($phone:String!, $community_id:uuid!, $current_script_id:uuid!) {
   insert_memberships_one(
     object: {
         user: {
             data: {phone: $phone}
         }, 
         community_id: $community_id, 
+        current_script_id: $current_script_id,
         type: "member", 
         step: "0"
         }) 
@@ -130,39 +122,37 @@ mutation CreateUserAndMembership($phone:String!, $community_id:uuid!) {
 `;
 
             const createMembershipMutation = `
-mutation CreateMembership($user_id:uuid!, $community_id:uuid!) {
-  insert_memberships_one(object: {user_id: $user_id, community_id: $community_id, type: "member", step: "0"}) {
-    id
-    type
-    step
-    current_script_id
-    user {
+mutation CreateMembership($user_id:uuid!, $community_id:uuid!, $current_script_id:uuid!) {
+  insert_memberships_one(
+    object: {
+        user_id: $user_id,
+        community_id: $community_id,
+        type: "member",
+        step: "0",
+        current_script_id: $current_script_id
+    }) {
         id
-        phone
-    }
-    community {
-        id
-        bot_phone
-        onboarding_id
-    }
-  }
-}
-`;
-
-const userQuery = `
-query GetUser($phone: String!) {
-  users(where: {phone: {_eq: $phone}}) {
-    id
+        type
+        step
+        current_script_id
+        user {
+            id
+            phone
+        }
+        community {
+            id
+            bot_phone
+            onboarding_id
+        }
   }
 }
 `;
 
             let mutationResults;
-            const userQueryResults = await graphql(userQuery, { phone: user_phone });
-            if (userQueryResults.data.users.length > 0) {
-                mutationResults = await graphql(createMembershipMutation, { user_id: userQueryResults.data.users[0].id, community_id });
+            if (user) {
+                mutationResults = await graphql(createMembershipMutation, { user_id: user.id, community_id: community.id, current_script_id: community.onboarding.id });
             } else {
-                mutationResults = await graphql(createUserAndMembershipMutation, { phone: user_phone, community_id });
+                mutationResults = await graphql(createUserAndMembershipMutation, { phone: user_phone, community_id: community.id, current_script_id: community.onboarding.id });
             }
             return new Membership(mutationResults.data.insert_memberships_one);
 
