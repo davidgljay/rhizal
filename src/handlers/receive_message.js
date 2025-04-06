@@ -73,7 +73,6 @@ export async function receive_message(sender, recipient, message, sent_time) {
 export async function new_member(phone, community, message, user) {
     const membership = await Membership.create(phone, community, user);
     const script = new Script(community.onboarding);
-    console.log('Getting new member vars');
     await script.get_vars(membership, message);
     await script.send('0');
     return membership;
