@@ -274,7 +274,7 @@ describe('receive_message', () => {
             const bot_phone = '0987654321';
             const sender_name = 'Test Sender';
 
-            const mockMembership = { data: { community: { id: 'community_id' } } };
+            const mockMembership = { community: { id: 'community_id' } };
             const mockGroupThread = { step: '0' };
 
             jest.spyOn(GroupThread, 'find_or_create_group_thread').mockResolvedValue(mockGroupThread);
@@ -294,7 +294,7 @@ describe('receive_message', () => {
             const bot_phone = '0987654321';
             const sender_name = 'Test Sender';
             const mockGroupThread = { step: 'done' };
-            const mockMembership = { data: { community: { id: 'community_id' } } };
+            const mockMembership = {community: { id: 'community_id' } };
 
             jest.spyOn(Membership, 'get').mockResolvedValue(mockMembership);
             jest.spyOn(GroupThread, 'find_or_create_group_thread').mockResolvedValue(mockGroupThread);
@@ -314,7 +314,7 @@ describe('receive_message', () => {
             const bot_phone = '0987654321';
             const sender_name = 'Test Sender';
             const mockGroupThread = { step: 'done' };
-            const mockMembership = { data: { community: { id: 'community_id' } } };
+            const mockMembership = {community: { id: 'community_id' } };
 
             jest.spyOn(Membership, 'get').mockResolvedValue(mockMembership);
             jest.spyOn(GroupThread, 'find_or_create_group_thread').mockResolvedValue(mockGroupThread);
@@ -356,7 +356,7 @@ describe('receive_message', () => {
             const bot_phone = '0987654321';
             const sender_name = 'Test Sender';
 
-            const mockMembership = { data: { community: { id: 'community_id' } } };
+            const mockMembership = {community: { id: 'community_id' } };
             const mockGroupThread = {
                 step: 'done',
                 community: {

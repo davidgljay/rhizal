@@ -56,7 +56,7 @@ query GetScript($id:uuid!) {
     async get_targets() {
         try{
             const targetsData = await graphql({
-                query: this.targetquery
+                query: this.targets_query
             });
             this.targets = targetsData.data;
             return targetsData.data;    

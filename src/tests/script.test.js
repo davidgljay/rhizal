@@ -9,8 +9,8 @@ const mockGetScriptResponse = {
                 id: 1,
                 name: 'Test Script',
                 script_json: '{"json": "json content"}',
-                varsquery: 'vars query',
-                targetquery: 'target query',
+                vars_query: 'vars query',
+                targets_query: 'target query',
             }],
     },
 };
@@ -54,8 +54,7 @@ describe('Script', () => {
     describe('get_vars', () => {
         let scriptInstance;
         beforeEach(async () => {
-            graphql.mockResolvedValueOnce(mockGetScriptResponse);
-            scriptInstance = await Script.init('1');
+            scriptInstance = new Script(mockGetScriptResponse.data.scripts[0]);
         });
 
 
@@ -66,19 +65,20 @@ describe('Script', () => {
                 data: { vars: [{ id: '123', name: 'Var 1' }] },
             };
             graphql.mockResolvedValue(mockResponse);
+            const membership = { id: '123', user: { phone: 'member_phone' }, community: { bot_phone: 'bot_phone', id:'456'} };
 
-            const data = await scriptInstance.get_vars({id: '123', user: {phone: 'member_phone'}, community: {bot_phone: 'bot_phone', id:'456'}}, 'message');
+            const data = await scriptInstance.get_vars(membership, 'message');
 
             expect(graphql).toHaveBeenCalledWith('vars query', { membership_id: "123" });
             expect(data).toEqual({bot_phone: 'bot_phone', phone: 'member_phone', id: "123", message: 'message', name: 'Var 1', community_id: '456' });
         });
 
         it('should return phone and bot_phone if no vars query is defined', async () => {
-            scriptInstance.varsquery = '';
+            scriptInstance.vars_query = '';
 
             const vars = await scriptInstance.get_vars({id: '123', user: {phone: 'member_phone'}, community: {bot_phone: 'bot_phone', id:'456'}}, 'message');
 
-            expect(graphql).toHaveBeenCalledTimes(1);
+            expect(graphql).not.toHaveBeenCalled();
             expect(vars).toEqual({id: '123', bot_phone: 'bot_phone', phone: 'member_phone', community_id: '456', message: 'message' });
             expect(scriptInstance.vars).toEqual({id: '123', bot_phone: 'bot_phone', phone: 'member_phone', community_id: '456', message: 'message' });
         });
