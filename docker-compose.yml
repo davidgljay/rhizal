@@ -1,20 +1,17 @@
-version: '0.2'
-
 services:
   app:
     image: node:14
     working_dir: /usr/src/app
     volumes:
       - .:/usr/src/app
-    command: sh -c "yarn install && sleep 5 && yarn dev"
+      - ./config/signal:/home/.local/share/signal-cli
+    command: sh -c "yarn install && yarn start"
     environment:
       - HASURA_GRAPHQL_URL=${HASURA_GRAPHQL_URL}
       - HASURA_ADMIN_SECRET=${HASURA_ADMIN_SECRET}
       - ACCOUNT_PHONE=${ACCOUNT_PHONE}
     depends_on:
       - signal-cli
-    volumes:
-      - ./config/signal:/home/.local/share/signal-cli
     networks:
       - app-network
 
