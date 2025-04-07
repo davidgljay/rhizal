@@ -6,7 +6,8 @@ services:
     working_dir: /usr/src/app
     volumes:
       - .:/usr/src/app
-    command: sh -c "yarn install && sleep 5 && yarn dev"
+      - ./config/signal:/home/.local/share/signal-cli
+    command: sh -c "yarn install && yarn build && yarn dev"
     environment:
       - HASURA_GRAPHQL_URL=${HASURA_GRAPHQL_URL}
       - HASURA_ADMIN_SECRET=${HASURA_ADMIN_SECRET}
