@@ -1,5 +1,6 @@
 const WebSocket = require('ws');
 const fetch = require('node-fetch');
+const { exec } = require('child_process');
 
 class WebSocketManager {
     constructor() {
@@ -128,6 +129,22 @@ class WebSocketManager {
             console.error('Error sending emoji reaction:', error);
             });
     }
+
+    clear_local_storage() {
+        //TODO: Handle arbitrary signal storage.
+        //TODO: Confirm that this is the only place that messages are being stored in the local sqlite.
+        exec('sqlite3 /home/.local/share/signal-cli/data/862038.d/account.db "DELETE FROM message_send_log_content;"', (error, stdout, stderr) => {
+            if (error) {
+                console.error(`Error clearing local storage: ${error.message}`);
+                return;
+            }
+            if (stderr) {
+                console.error(`stderr: ${stderr}`);
+                return;
+            }
+            console.log('Local storage cleared successfully:', stdout);
+        });
+    };
 }
 
 const webSocketManager = new WebSocketManager();

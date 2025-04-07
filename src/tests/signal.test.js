@@ -260,4 +260,59 @@ describe('WebSocketManager', () => {
             expect(console.error).toHaveBeenCalledWith('Error sending emoji reaction:', 'Bad Request');
         });
     });
+
+    describe('clear_local_storage', () => {
+        it('should execute the sqlite3 command to clear local storage', () => {
+            const execMock = jest.fn((command, callback) => {
+                callback(null, 'Success', '');
+            });
+            jest.spyOn(require('child_process'), 'exec').mockImplementation(execMock);
+
+            webSocketManager.clear_local_storage();
+
+            expect(execMock).toHaveBeenCalledWith(
+                'sqlite3 /home/.local/share/signal-cli/data/862038.d/account.db "DELETE FROM message_send_log_content;"',
+                expect.any(Function)
+            );
+        });
+
+        it('should log an error if the sqlite3 command fails', () => {
+            const errorMessage = 'Command failed';
+            const execMock = jest.fn((command, callback) => {
+                callback(new Error(errorMessage), '', '');
+            });
+            jest.spyOn(require('child_process'), 'exec').mockImplementation(execMock);
+            console.error = jest.fn();
+
+            webSocketManager.clear_local_storage();
+
+            expect(console.error).toHaveBeenCalledWith(`Error clearing local storage: ${errorMessage}`);
+        });
+
+        it('should log stderr if the sqlite3 command produces stderr', () => {
+            const stderrMessage = 'Some stderr output';
+            const execMock = jest.fn((command, callback) => {
+                callback(null, '', stderrMessage);
+            });
+            jest.spyOn(require('child_process'), 'exec').mockImplementation(execMock);
+            console.error = jest.fn();
+
+            webSocketManager.clear_local_storage();
+
+            expect(console.error).toHaveBeenCalledWith(`stderr: ${stderrMessage}`);
+        });
+
+        it('should log success message if the sqlite3 command executes successfully', () => {
+            const stdoutMessage = 'Success';
+            const execMock = jest.fn((command, callback) => {
+                callback(null, stdoutMessage, '');
+            });
+            jest.spyOn(require('child_process'), 'exec').mockImplementation(execMock);
+            console.log = jest.fn();
+
+            webSocketManager.clear_local_storage();
+
+            expect(console.log).toHaveBeenCalledWith('Local storage cleared successfully:', stdoutMessage);
+        });
+    });
 });

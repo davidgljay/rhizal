@@ -13,6 +13,8 @@ services:
       - ACCOUNT_PHONE=${ACCOUNT_PHONE}
     depends_on:
       - signal-cli
+    volumes:
+      - ./config/signal:/home/.local/share/signal-cli
     networks:
       - app-network
 
