@@ -5,7 +5,7 @@ services:
     volumes:
       - .:/usr/src/app
       - ./config/signal:/home/.local/share/signal-cli
-    command: sh -c "yarn install && yarn start"
+    command: sh -c "yarn install && yarn build && yarn start"
     environment:
       - HASURA_GRAPHQL_URL=${HASURA_GRAPHQL_URL}
       - HASURA_ADMIN_SECRET=${HASURA_ADMIN_SECRET}
