@@ -1,0 +1,33 @@
+name: Deploy to DigitalOcean Droplet
+
+on:
+  push:
+    branches:
+      - main  # Trigger only on push to the main branch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Install SSH client
+        run: sudo apt-get install -y openssh-client
+
+      - name: Add SSH private key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DROPLET_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+
+      - name: Add DigitalOcean Droplet's IP to known hosts
+        run: |
+          ssh-keyscan -H ${{ secrets.DROPLET_IP }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to Droplet
+        run: |
+          ssh -o StrictHostKeyChecking=no root@${{ secrets.DROPLET_IP }} "
+            cd /rhizal &&
+            git pull origin main &&
+            docker-compose up -d --build"
