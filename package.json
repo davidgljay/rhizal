@@ -4,9 +4,10 @@
   "description": "A lightweight chatbot for the Signal platform.",
   "main": "index.js",
   "scripts": {
-    "start": "node dist/app.js",
+    "start": "docker compose up",
+    "stop": "docker compose down",
     "build": "babel src --out-dir dist",
-    "dev": "nodemon dist/app.js",
+    "dev": "docker compose -f docker-compose-dev.yml up",
     "test": "jest --watch"
   },
   "author": "David Jay",
