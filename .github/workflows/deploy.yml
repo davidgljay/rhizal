@@ -28,7 +28,7 @@ jobs:
       - name: Deploy to Droplet
         run: |
           ssh -o StrictHostKeyChecking=no root@${{ secrets.DROPLET_IP }} "
-            cd /rhizal &&
+            cd rhizal &&
             git pull origin main &&
             docker compose down &&
             docker-compose up -d --build"
