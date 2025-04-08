@@ -894,7 +894,7 @@ describe('Integration Tests for receive_message Handler', () => {
                     expect(graphql).toHaveBeenNthCalledWith(i + 1, expect.stringContaining(mockGraphql[i].query), mockGraphql[i].variables);
                 }
                 expect(graphql).toHaveBeenCalledTimes(mockGraphql.length);
-                expect(signal.send).toHaveBeenCalledWith(['group.group_2'], botNumber, 'Message relayed from +1234567890(Test User) in #groupHash: Lets send this to #anotherGroupHashtag');
+                expect(signal.send).toHaveBeenCalledWith(['group.group_2'], botNumber, 'Message relayed from Test User in #groupHash: Lets send this to #anotherGroupHashtag');
             });
 
             it('should not relay a hashtag if the group is not in the community', async () => {

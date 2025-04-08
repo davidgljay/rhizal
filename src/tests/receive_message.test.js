@@ -374,7 +374,7 @@ describe('receive_message', () => {
 
             await receive_group_message(group_id, message, from_phone, bot_phone, sender_name);
 
-            const expectedMessage = `Message relayed from ${from_phone}(${sender_name}) in ${mockGroupThread.hashtag}: ${message}`;
+            const expectedMessage = `Message relayed from ${sender_name} in ${mockGroupThread.hashtag}: ${message}`;
             expect(Message.send).toHaveBeenCalledWith(null, null, 'group.1', bot_phone, expectedMessage, false);
             expect(Message.send).not.toHaveBeenCalledWith(null, null, 'group.2', bot_phone, expectedMessage, false);
         });
