@@ -114,7 +114,7 @@ export async function receive_group_message(internal_group_id, message, from_pho
     }
     for (const ht of community_hashtags) {
         if (hashtags.includes(ht.hashtag)) {
-            const expanded_message = `Message relayed from ${from_phone}(${sender_name}) in ${group_thread.hashtag}: ${message}`;
+            const expanded_message = `Message relayed from ${sender_name} in ${group_thread.hashtag}: ${message}`;
             await Message.send(null, null, 'group.' + ht.group_id, bot_phone, expanded_message, false);
             await Signal.emoji_reaction(from_phone, bot_phone, sent_time, '✉️', group_thread.id );
         }
