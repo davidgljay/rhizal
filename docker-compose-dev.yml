@@ -1,8 +1,6 @@
-version: '0.2'
-
 services:
   app:
-    image: node:14
+    image: node:23
     working_dir: /usr/src/app
     volumes:
       - .:/usr/src/app
