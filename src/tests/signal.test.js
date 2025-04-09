@@ -94,6 +94,17 @@ describe('WebSocketManager', () => {
     });
 
    describe('send', () => {
+    let clearLocalStorageSpy;
+
+    beforeEach(() => {
+        fetch.mockClear();
+        clearLocalStorageSpy = jest.spyOn(webSocketManager, 'clear_local_storage').mockImplementation(() => jest.fn());
+    });
+
+    afterEach(() => {
+        clearLocalStorageSpy.mockRestore();
+    });
+
     it('should send message using fetch if recipients is an array', async () => {
         const recipients = ['recipient1', 'recipient2'];
         const message = 'test message';

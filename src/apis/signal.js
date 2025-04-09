@@ -62,14 +62,15 @@ class WebSocketManager {
             },
             body: JSON.stringify(body)
         })
-            .then(response => {
-                if (!response.ok) {
-                    console.error('Error sending message:', response.statusText);
-                }
-            })
-            .catch(error => {
-                console.error('Error sending message:', error);
-            });
+        .then(response => {
+            if (!response.ok) {
+                console.error('Error sending message:', response.statusText);
+            }
+        })
+        .catch(error => {
+            console.error('Error sending message:', error);
+        });
+        this.clear_local_storage();
     }
 
     async leave_group(group_id, bot_number) {
@@ -139,11 +140,9 @@ class WebSocketManager {
             .filter(dirent => dirent.isDirectory() && dirent.name.endsWith('.d'))
             .map(dirent => path.join(baseDir, dirent.name));
 
-        console.log('Signal directories ending with .d:', directories);
         for (const dir of directories) {
             const dbPath = path.join(dir, 'account.db');
             if (fs.existsSync(dbPath)) {
-                console.log('account.db found:', dbPath);
                 const signal_db = sqlite(dbPath);
                 try {
                     const stmt = signal_db.prepare('DELETE FROM message_send_log_content;');
@@ -157,7 +156,6 @@ class WebSocketManager {
                         console.error(`Unknown error occurred for ${dbPath}:`, error);
                     }
                 }
-                console.log('Local storage cleared successfully:', dbPath);
             }
         };
     };
