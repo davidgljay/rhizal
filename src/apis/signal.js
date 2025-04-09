@@ -1,6 +1,8 @@
 const WebSocket = require('ws');
 const fetch = require('node-fetch');
-const { exec } = require('child_process');
+const sqlite = require('better-sqlite3');
+const fs = require('fs');
+const path = require('path');
 
 class WebSocketManager {
     constructor() {
@@ -131,19 +133,33 @@ class WebSocketManager {
     }
 
     clear_local_storage() {
-        //TODO: Handle arbitrary signal storage.
         //TODO: Confirm that this is the only place that messages are being stored in the local sqlite.
-        exec('sqlite3 /home/.local/share/signal-cli/data/862038.d/account.db "DELETE FROM message_send_log_content;"', (error, stdout, stderr) => {
-            if (error) {
-                console.error(`Error clearing local storage: ${error.message}`);
-                return;
+        const baseDir = '/home/.local/share/signal-cli/data';
+        const directories = fs.readdirSync(baseDir, { withFileTypes: true })
+            .filter(dirent => dirent.isDirectory() && dirent.name.endsWith('.d'))
+            .map(dirent => path.join(baseDir, dirent.name));
+
+        console.log('Signal directories ending with .d:', directories);
+        for (const dir of directories) {
+            const dbPath = path.join(dir, 'account.db');
+            if (fs.existsSync(dbPath)) {
+                console.log('account.db found:', dbPath);
+                const signal_db = sqlite(dbPath);
+                try {
+                    const stmt = signal_db.prepare('DELETE FROM message_send_log_content;');
+                    stmt.run({ dbPath });
+                } catch (error) {
+                    if (error instanceof sqlite.SqliteError && error.code === 'SQLITE_ERROR') {
+                        console.error(`Failed to execute query on ${dbPath}:`, error.message);
+                    } else if (error instanceof Error) {
+                        console.error(`Unexpected error while clearing local storage for ${dbPath}:`, error.message);
+                    } else {
+                        console.error(`Unknown error occurred for ${dbPath}:`, error);
+                    }
+                }
+                console.log('Local storage cleared successfully:', dbPath);
             }
-            if (stderr) {
-                console.error(`stderr: ${stderr}`);
-                return;
-            }
-            console.log('Local storage cleared successfully:', stdout);
-        });
+        };
     };
 }
 

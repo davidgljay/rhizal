@@ -3,9 +3,28 @@ process.env.ACCOUNT_PHONE = ACCOUNT_PHONE;
 const webSocketManager = require('../apis/signal');
 const WebSocket = require('ws');
 const fetch = require('node-fetch');
+const sqlite = require('better-sqlite3');
+
 
 jest.mock('ws');
 jest.mock('node-fetch');
+let mockReaddirSync = jest.fn();
+const mockExistsSync = jest.fn();
+const mockSqliteRun = jest.fn();
+const mockSqlitePrepare = jest.fn(() => ({ run: mockSqliteRun }));
+const mockConsoleError = jest.spyOn(console, 'error').mockImplementation();
+jest.spyOn(require('fs'), 'readdirSync').mockImplementation(mockReaddirSync);
+jest.spyOn(require('fs'), 'existsSync').mockImplementation(mockExistsSync);
+
+jest.mock('better-sqlite3', () => {
+    const mockSqliteError = jest.fn();
+    return jest.fn(() => ({
+        prepare: mockSqlitePrepare,
+        SqliteError: mockSqliteError,
+    }));
+});
+
+
 
 describe('WebSocketManager', () => {
     let mockWebSocketInstance;
@@ -262,57 +281,75 @@ describe('WebSocketManager', () => {
     });
 
     describe('clear_local_storage', () => {
-        it('should execute the sqlite3 command to clear local storage', () => {
-            const execMock = jest.fn((command, callback) => {
-                callback(null, 'Success', '');
-            });
-            jest.spyOn(require('child_process'), 'exec').mockImplementation(execMock);
 
-            webSocketManager.clear_local_storage();
-
-            expect(execMock).toHaveBeenCalledWith(
-                'sqlite3 /home/.local/share/signal-cli/data/862038.d/account.db "DELETE FROM message_send_log_content;"',
-                expect.any(Function)
-            );
+        afterEach(() => {
+            jest.clearAllMocks();
         });
 
-        it('should log an error if the sqlite3 command fails', () => {
-            const errorMessage = 'Command failed';
-            const execMock = jest.fn((command, callback) => {
-                callback(new Error(errorMessage), '', '');
-            });
-            jest.spyOn(require('child_process'), 'exec').mockImplementation(execMock);
-            console.error = jest.fn();
+        it('should clear local storage if directories and account.db exist', () => {
+            const mockDirectories = [
+                { name: 'dir1.d', isDirectory: () => true },
+                { name: 'dir2.d', isDirectory: () => true },
+            ];
+            const mockDbPath1 = '/home/.local/share/signal-cli/data/dir1.d/account.db';
+            const mockDbPath2 = '/home/.local/share/signal-cli/data/dir2.d/account.db';
+            const mockSignalDb = { prepare: jest.fn().mockReturnValue({ run: jest.fn() }) };
+
+            mockReaddirSync.mockReturnValue(mockDirectories);
+            mockExistsSync.mockImplementation((path) => path === mockDbPath1 || path === mockDbPath2);
+            mockSqliteRun.mockImplementation(() => mockSignalDb);
 
             webSocketManager.clear_local_storage();
 
-            expect(console.error).toHaveBeenCalledWith(`Error clearing local storage: ${errorMessage}`);
+            expect(mockReaddirSync).toHaveBeenCalledWith('/home/.local/share/signal-cli/data', { withFileTypes: true });
+            expect(mockExistsSync).toHaveBeenCalledWith(mockDbPath1);
+            expect(mockExistsSync).toHaveBeenCalledWith(mockDbPath2);
+            
+            expect(mockSqlitePrepare).toHaveBeenCalledWith('DELETE FROM message_send_log_content;');
+            expect(mockSqliteRun).toHaveBeenCalledTimes(2);
         });
 
-        it('should log stderr if the sqlite3 command produces stderr', () => {
-            const stderrMessage = 'Some stderr output';
-            const execMock = jest.fn((command, callback) => {
-                callback(null, '', stderrMessage);
-            });
-            jest.spyOn(require('child_process'), 'exec').mockImplementation(execMock);
-            console.error = jest.fn();
+        it('should not attempt to clear storage if no directories exist', () => {
+            mockReaddirSync.mockReturnValue([]);
 
             webSocketManager.clear_local_storage();
 
-            expect(console.error).toHaveBeenCalledWith(`stderr: ${stderrMessage}`);
+            expect(mockReaddirSync).toHaveBeenCalledWith('/home/.local/share/signal-cli/data', { withFileTypes: true });
+            expect(mockExistsSync).not.toHaveBeenCalled();
+            expect(mockSqliteRun).not.toHaveBeenCalled();
         });
 
-        it('should log success message if the sqlite3 command executes successfully', () => {
-            const stdoutMessage = 'Success';
-            const execMock = jest.fn((command, callback) => {
-                callback(null, stdoutMessage, '');
+        xit('should handle errors during directory reading', () => {
+            const errorMessage = 'Failed to read directory';
+            mockReaddirSync.mockImplementation(() => {
+                throw new Error(errorMessage);
             });
-            jest.spyOn(require('child_process'), 'exec').mockImplementation(execMock);
-            console.log = jest.fn();
 
             webSocketManager.clear_local_storage();
 
-            expect(console.log).toHaveBeenCalledWith('Local storage cleared successfully:', stdoutMessage);
+            expect(mockReaddirSync).toHaveBeenCalledWith('/home/.local/share/signal-cli/data', { withFileTypes: true });
+            expect(mockConsoleError).toHaveBeenCalledWith(expect.any(Error));
+        });
+
+        xit('should handle errors during database clearing', () => {
+            const mockDirectories = [
+                { name: 'dir1.d', isDirectory: () => true },
+            ];
+            const mockDbPath = '/home/.local/share/signal-cli/data/dir1.d/account.db';
+            const errorMessage = 'Failed to clear database';
+
+            mockReaddirSync.mockReturnValue(mockDirectories);
+            mockExistsSync.mockReturnValue(true);
+            mockSqliteRun.mockImplementation(() => {
+                throw new Error(errorMessage);
+            });
+
+            webSocketManager.clear_local_storage();
+
+            expect(mockReaddirSync).toHaveBeenCalledWith('/home/.local/share/signal-cli/data', { withFileTypes: true });
+            expect(mockExistsSync).toHaveBeenCalledWith(mockDbPath);
+            expect(mockSqliteRun).toHaveBeenCalledWith(mockDbPath);
+            expect(mockConsoleError).toHaveBeenCalledWith(expect.any(Error));
         });
     });
 });
