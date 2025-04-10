@@ -5,7 +5,7 @@ const Community = require('../models/community');
 const GroupThread = require('../models/group_thread');
 const Signal = require('../apis/signal');
 const { graphql } = require('../apis/graphql');
-const { new_member, no_script_message, receive_message, receive_group_message  } = require('../handlers/receive_message');
+const { new_member, no_script_message, receive_message, receive_group_message, receive_reply  } = require('../handlers/receive_message');
 
 jest.mock('../models/membership', () => {
     return {
@@ -377,6 +377,68 @@ describe('receive_message', () => {
             const expectedMessage = `Message relayed from ${sender_name} in ${mockGroupThread.hashtag}: ${message}`;
             expect(Message.send).toHaveBeenCalledWith(null, null, 'group.1', bot_phone, expectedMessage, false);
             expect(Message.send).not.toHaveBeenCalledWith(null, null, 'group.2', bot_phone, expectedMessage, false);
+        });
+    });
+
+    describe('receive_reply', () => {
+        describe('receive_reply', () => {
+            beforeEach(() => {
+                jest.clearAllMocks();
+            });
+
+            it('should return if the reply_to starts with "group."', async () => {
+                const message = 'Test reply';
+                const from_phone = '1234567890';
+                const bot_phone = '0987654321';
+                const reply_to = 'group.123';
+
+                await receive_reply(message, from_phone, bot_phone, reply_to);
+
+                expect(graphql).not.toHaveBeenCalled();
+                expect(Message.send).not.toHaveBeenCalled();
+            });
+
+            it('should return if the membership is not found', async () => {
+                const message = 'Test reply';
+                const from_phone = '1234567890';
+                const bot_phone = '0987654321';
+                const reply_to = 'user.123';
+
+                graphql.mockResolvedValue({ data: { memberships: [] } });
+
+                await receive_reply(message, from_phone, bot_phone, reply_to);
+
+                expect(graphql).toHaveBeenCalledWith(expect.stringContaining('query ReplyQuery($phone:String!, $bot_phone:String!)'), { phone: from_phone, bot_phone });
+                expect(Message.send).not.toHaveBeenCalled();
+            });
+
+            it('should return if the membership type is not "admin"', async () => {
+                const message = 'Test reply';
+                const from_phone = '1234567890';
+                const bot_phone = '0987654321';
+                const reply_to = 'user.123';
+
+                graphql.mockResolvedValue({ data: { memberships: [{ id: 'membership_1', type: 'member' }] } });
+
+                await receive_reply(message, from_phone, bot_phone, reply_to);
+
+                expect(graphql).toHaveBeenCalledWith(expect.stringContaining('query ReplyQuery($phone:String!, $bot_phone:String!)'), { phone: from_phone, bot_phone });
+                expect(Message.send).not.toHaveBeenCalled();
+            });
+
+            it('should send a message if the membership type is "admin"', async () => {
+                const message = 'Test reply';
+                const from_phone = '1234567890';
+                const bot_phone = '0987654321';
+                const reply_to = 'user.123';
+
+                graphql.mockResolvedValue({ data: { memberships: [{ id: 'membership_1', type: 'admin' }] } });
+
+                await receive_reply(message, from_phone, bot_phone, reply_to);
+
+                expect(graphql).toHaveBeenCalledWith(expect.stringContaining('query ReplyQuery($phone:String!, $bot_phone:String!)'), { phone: from_phone, bot_phone });
+                expect(Message.send).toHaveBeenCalledWith(null, null, reply_to, bot_phone, message, true);
+            });
         });
     });
 });

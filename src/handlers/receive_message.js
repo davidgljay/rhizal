@@ -49,6 +49,13 @@ const queries = {
             hashtag
         }
     }
+}`,
+    replyQuery:
+`query ReplyQuery($phone:String!, $bot_phone:String!) {
+    memberships(where:{community:{bot_phone:{_eq: $bot_phone}},user:{phone:{_eq:$phone}}}) {
+        id
+        type
+    }
 }`
 
 
@@ -135,4 +142,24 @@ export async function receive_group_message(internal_group_id, message, from_pho
     }
 
     return;
+}
+
+export async function receive_reply(message, from_phone, bot_phone, reply_to) {
+    // Return if the message is a group thread
+    if (reply_to.startsWith('group.')) {
+        return;
+    }
+
+    // Get replyQuery from GraphQL
+    const response = await graphql(queries.replyQuery, { phone: from_phone, bot_phone });
+    const membership = response.data.memberships.length > 0 ? response.data.memberships[0] : null;
+
+    // Confirm that member is an admin
+    if (!membership || membership.type !== 'admin') {
+        return;
+    }
+
+    // Send message to reply_to via bot_phone and log
+    await Message.send(null, null, reply_to, bot_phone, message, true);
+    
 }
