@@ -38,7 +38,19 @@ const queries = {
             phone
         }
     }
+}`,
+    receiveGroupMessageQuery:
+`query RecieveGroupMessageQuery($bot_phone:String!) {
+    communities(where: {bot_phone: {_eq: $bot_phone}}) {
+        id
+        group_script_id
+        group_threads {
+            group_id
+            hashtag
+        }
+    }
 }`
+
 
 }
 
@@ -79,24 +91,26 @@ export async function new_member(phone, community, message, user) {
 }
 
 export async function no_script_message(membership) {
-    //community_id, membership_id, to_phone, from_phone, text, log_message = true
     await Message.send(membership.community.id, membership.id, membership.user.phone, membership.community.bot_phone, 'Thanks for letting me know, I\'ll pass your message on to an organizer who may get back to you.', true);
     return;
 }
 
 export async function receive_group_message(internal_group_id, message, from_phone, bot_phone, sender_name, sent_time) {
     const group_id = Buffer.from(internal_group_id).toString('base64');
-    const membership = await Membership.get(from_phone, bot_phone);
-    const community_id = membership.community.id;
-    const group_thread = await GroupThread.find_or_create_group_thread(group_id, community_id);
+    const response = await graphql(queries.receiveGroupMessageQuery, { bot_phone });
+    const community = response.data.communities.length > 0 ? response.data.communities[0] : null;
+    if (!community) {
+        return;
+    }
+    const group_thread = await GroupThread.find_or_create_group_thread(group_id, community.id);
 
 
     if (message && message.includes('#leave')) {
-        GroupThread.leave_group(group_id, bot_phone);
+        await GroupThread.leave_group(group_id, bot_phone);
         return;
     }
     if (group_thread.step !== 'done') {
-        await GroupThread.run_script(group_thread, membership, message);
+        await GroupThread.run_script(group_thread, {user: {phone: from_phone}, community}, message);
         return;
     }
     if (!message) { //If there is no message, return.

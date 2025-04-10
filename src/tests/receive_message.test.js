@@ -274,17 +274,17 @@ describe('receive_message', () => {
             const bot_phone = '0987654321';
             const sender_name = 'Test Sender';
 
-            const mockMembership = { community: { id: 'community_id' } };
+            const mockQueryResponse = { data: {communities: [{ id: 'community_id', bot_phone }] }};
             const mockGroupThread = { step: '0' };
 
             jest.spyOn(GroupThread, 'find_or_create_group_thread').mockResolvedValue(mockGroupThread);
-            jest.spyOn(Membership, 'get').mockResolvedValue(mockMembership);
+            graphql.mockResolvedValue(mockQueryResponse);
 
             await receive_group_message(group_id, message, from_phone, bot_phone, sender_name);
 
-            expect(Membership.get).toHaveBeenCalledWith(from_phone, bot_phone);
+            expect(graphql).toHaveBeenCalled();
             expect(GroupThread.find_or_create_group_thread).toHaveBeenCalledWith(base64_group_id, 'community_id');
-            expect(GroupThread.run_script).toHaveBeenCalledWith(mockGroupThread, mockMembership, message);
+            expect(GroupThread.run_script).toHaveBeenCalledWith(mockGroupThread, {user: {phone: from_phone}, community: { id: 'community_id', bot_phone }}, message);
         });
 
         it('should return if there is no message and the group step is done', async () => {
@@ -301,7 +301,7 @@ describe('receive_message', () => {
 
             await receive_group_message(group_id, message, from_phone, bot_phone, sender_name);
 
-            expect(Membership.get).toHaveBeenCalled();
+            expect(graphql).toHaveBeenCalled();
             expect(GroupThread.find_or_create_group_thread).toHaveBeenCalled();
             expect(GroupThread.run_script).not.toHaveBeenCalled();
             expect(GroupThread.send_message).not.toHaveBeenCalled();
@@ -321,7 +321,7 @@ describe('receive_message', () => {
 
             await receive_group_message(group_id, message, from_phone, bot_phone, sender_name);
 
-            expect(Membership.get).toHaveBeenCalled();
+            expect(graphql).toHaveBeenCalled();
             expect(GroupThread.find_or_create_group_thread).toHaveBeenCalled();
             expect(GroupThread.run_script).not.toHaveBeenCalled();
             expect(GroupThread.send_message).not.toHaveBeenCalled();
@@ -343,7 +343,7 @@ describe('receive_message', () => {
             await receive_group_message(group_id, message, from_phone, bot_phone, sender_name);
 
             expect(GroupThread.leave_group).toHaveBeenCalledWith(base64_group_id, bot_phone);
-            expect(Membership.get).toHaveBeenCalled();
+            expect(graphql).toHaveBeenCalled();
             expect(GroupThread.find_or_create_group_thread).toHaveBeenCalled();
             expect(GroupThread.run_script).not.toHaveBeenCalled();
             expect(GroupThread.send_message).not.toHaveBeenCalled();
@@ -356,7 +356,7 @@ describe('receive_message', () => {
             const bot_phone = '0987654321';
             const sender_name = 'Test Sender';
 
-            const mockMembership = {community: { id: 'community_id' } };
+            const mockQueryResponse = {data: {communities: [{ id: 'community_id' }] }};
             const mockGroupThread = {
                 step: 'done',
                 community: {
@@ -369,7 +369,7 @@ describe('receive_message', () => {
             };
 
             jest.spyOn(GroupThread, 'find_or_create_group_thread').mockResolvedValue(mockGroupThread);
-            jest.spyOn(Membership, 'get').mockResolvedValue(mockMembership);
+            graphql.mockResolvedValue(mockQueryResponse);
             jest.spyOn(Message, 'send').mockResolvedValue();
 
             await receive_group_message(group_id, message, from_phone, bot_phone, sender_name);
