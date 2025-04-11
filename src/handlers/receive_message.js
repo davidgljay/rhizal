@@ -57,7 +57,13 @@ const queries = {
     }
 }`,
     replyQuery:
-`query ReplyQuery($bot_phone:String!, $signal_timestamp:Int!) {
+`query ReplyQuery($bot_phone:String!, $phone:String!, $signal_timestamp:Int!) {
+    memberships(where:{community:{bot_phone:{_eq: $bot_phone}},user:{phone:{_eq:$phone}}}) {
+        id
+        type
+        name
+        community_id
+    }
     messages(where: {signal_timestamp: {_eq: $signal_timestamp}, community:{bot_phone:{_eq: $bot_phone}}}) {
         id
         about_membership {
@@ -142,31 +148,20 @@ export async function receive_group_message(internal_group_id, message, from_pho
     return;
 }
 
-export async function receive_reply(message, from_phone, bot_phone) {
-    /*
-    * Planning out:
-    * 1. When a user completes onboarding a message is sent to all admins (I'll handle subscriptions later.)
-    * 2. These messages have a about_member_id defined.
-    * 3. When a reply is sent to the message, the timestamp is used to find the about_member.
-    * 4. The reply is sent to the about_member's phone.
-    */
-
-    // Return if the message is a group thread
-    if (reply_to.startsWith('group.')) {
-        return;
-    }
+export async function receive_reply(message, from_phone, bot_phone, reply_to_timestamp) {
 
     // Get replyQuery from GraphQL
-    const response = await graphql(queries.replyQuery, { phone: from_phone, bot_phone });
+    const response = await graphql(queries.replyQuery, { phone: from_phone, bot_phone, signal_timestamp: reply_to_timestamp });
     const membership = response.data.memberships.length > 0 ? response.data.memberships[0] : null;
-
-    // Confirm that member is an admin
-    if (!membership || membership.type !== 'admin') {
+    const reply_to = response.data.messages.length > 0 ? response.data.messages[0].about_membership.user.phone : null;
+    if (!reply_to || !membership || membership.type !== 'admin') {
+        // If no reply_to or membership is not an admin, return
         return;
     }
+    const about_member_phone = response.data.messages[0].about_membership.user.phone;
 
-    // Send message to reply_to via bot_phone and log
-    await Message.send(null, null, reply_to, bot_phone, message, true);
+    // Relay message to the member that the admin received a message about
+    await Message.send(membership.community_id, membership.id, about_member_phone, bot_phone, message, true);
     
 }
 

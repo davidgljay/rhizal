@@ -39,9 +39,8 @@ export async function receive_raw_message(msg) {
         receive_group_message(groupInfo.groupId, message, sourceUuid, account, sourceName, timestamp);
         return;
     }
-    if (quote) {
-        const { authorUuid } = quote;
-        receive_reply(message, sourceUuid, account, authorUuid);
+    if (quote && quote.author == account) {
+        receive_reply(message, sourceUuid, account, quote.id);
         return;
     }
     receive_message(sourceUuid, account, message, timestamp, sourceName);

@@ -381,6 +381,109 @@ describe('receive_message', () => {
     });
 
     describe('receive_reply', () => {
+        const mockQueryResponse = {
+            data: {
+                memberships: [
+                    {
+                        id: 'membership_1',
+                        type: 'admin',
+                        name: 'Admin User',
+                        community_id: 'community_1',
+                    },
+                ],
+                messages: [
+                    {
+                        id: 'message_1',
+                        about_membership: {
+                            id: 'membership_2',
+                            user: {
+                                phone: '1234567890',
+                            },
+                        },
+                    },
+                ],
+            },
+        };
+
+        beforeEach(() => {
+            jest.clearAllMocks();
+        });
+
+        it('should send a reply to the member if the sender is an admin', async () => {
+            const message = 'Reply message';
+            const from_phone = '1111111111';
+            const bot_phone = '0987654321';
+            const reply_to_timestamp = 1234567890;
+
+            graphql.mockResolvedValue(mockQueryResponse);
+
+            await receive_reply(message, from_phone, bot_phone, reply_to_timestamp);
+
+            expect(graphql).toHaveBeenCalledWith(
+                expect.stringContaining('query ReplyQuery($bot_phone:String!, $phone:String!, $signal_timestamp:Int!)'),
+                { phone: from_phone, bot_phone, signal_timestamp: reply_to_timestamp }
+            );
+            expect(Message.send).toHaveBeenCalledWith(
+                'community_1',
+                'membership_1',
+                '1234567890',
+                bot_phone,
+                message,
+                true
+            );
+        });
+
+        it('should not send a reply if the sender is not an admin', async () => {
+            const message = 'Reply message';
+            const from_phone = '1111111111';
+            const bot_phone = '0987654321';
+            const reply_to_timestamp = 1234567890;
+
+            const nonAdminResponse = {
+                ...mockQueryResponse,
+                data: {
+                    ...mockQueryResponse.data,
+                    memberships: [
+                        {
+                            id: 'membership_1',
+                            type: 'member',
+                            name: 'Regular User',
+                            community_id: 'community_1',
+                        },
+                    ],
+                },
+            };
+
+            graphql.mockResolvedValue(nonAdminResponse);
+
+            await receive_reply(message, from_phone, bot_phone, reply_to_timestamp);
+
+            expect(graphql).toHaveBeenCalled();
+            expect(Message.send).not.toHaveBeenCalled();
+        });
+
+        it('should not send a reply if there is no reply_to phone number', async () => {
+            const message = 'Reply message';
+            const from_phone = '1111111111';
+            const bot_phone = '0987654321';
+            const reply_to_timestamp = 1234567890;
+
+            const noReplyToResponse = {
+                ...mockQueryResponse,
+                data: {
+                    ...mockQueryResponse.data,
+                    messages: [],
+                },
+            };
+
+            graphql.mockResolvedValue(noReplyToResponse);
+
+            await receive_reply(message, from_phone, bot_phone, reply_to_timestamp);
+
+            expect(graphql).toHaveBeenCalled();
+            expect(Message.send).not.toHaveBeenCalled();
+        });
+
     });
 
     describe('relay_message', () => {
