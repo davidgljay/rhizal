@@ -34,9 +34,9 @@ export async function receive_raw_message(msg) {
     if (!msg || !msg.envelope || !msg.envelope.dataMessage) {
         return;
     }
-    const { envelope: {source, timestamp, sourceName, dataMessage: {message, groupInfo}}, account } = msg;
+    const { envelope: {sourceUuid, timestamp, sourceName, dataMessage: {message, groupInfo}}, account } = msg;
     if (groupInfo) { 
-        receive_group_message(groupInfo.groupId, message, source, account, sourceName, timestamp);
+        receive_group_message(groupInfo.groupId, message, sourceUuid, account, sourceName, timestamp);
         return;
     }
     receive_message(source, account, message, timestamp);
