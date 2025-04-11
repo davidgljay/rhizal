@@ -34,20 +34,29 @@ query GetMessage($id: ID!) {
 
     static async create(community_id, membership_id, text, signal_timestamp, from_user) {
         const CREATE_MESSAGE = `
-mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $signal_timestamp: Int!) {
-  insert_messages_one(object: {community_id: $community_id, from_user: $from_user, membership_id: $membership_id, text: $text, signal_timestamp: $signal_timestamp}) {
-    id
-    membership {
-      id
-      user {
-        phone
-      }
+mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $signal_timestamp: Int!, $about_member_id: uuid!) {
+  insert_messages_one(
+    object: {
+        community_id: $community_id, 
+        from_user: $from_user, 
+        membership_id: $membership_id, 
+        text: $text, 
+        signal_timestamp: $signal_timestamp,
+        about_membership_id: $about_member_id
+    }) 
+    {
+        id
+        membership {
+            id
+            user {
+                phone
+            }
+        }
+        community {
+            id
+            bot_phone
+        }
     }
-    community {
-      id
-      bot_phone
-    }
-  }
 }`;
 
         const message = {
@@ -59,6 +68,7 @@ mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_i
         };
         const result = await graphql(CREATE_MESSAGE,  message);
         const { id, membership, community } = result.data.insert_messages_one;
+        //TODO: Make this match graphql schema to match other objects, probably through a consistent constructor
         this.id = id;
         this.text = text;
         this.from_user = from_user;
@@ -71,7 +81,7 @@ mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_i
         return result.data.insert_messages_one;
     }
 
-    static async send(community_id, membership_id, to_phone, from_phone, text, log_message = true, attachment) {
+    static async send(community_id, membership_id, to_phone, from_phone, text, log_message = true, about_member_id = null) {
         // Add the message to the queue
         Message.messageQueue = Message.messageQueue.then(async () => {
             Signal.show_typing_indicator(to_phone, from_phone);
@@ -80,7 +90,7 @@ mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_i
             }
             const {timestamp} = await Signal.send([to_phone], from_phone, text);
             if (log_message) {
-                await Message.create(community_id, membership_id, text, timestamp, false);
+                await Message.create(community_id, membership_id, text, timestamp, false, about_member_id);
             }
         }).catch(err => {
             console.error('Error sending message:', err);

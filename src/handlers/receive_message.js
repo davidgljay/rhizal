@@ -19,6 +19,12 @@ const queries = {
             vars_query
             targets_query
         }
+        admins: memberships(where: {type: {_eq: "admin"}}) {
+            id
+            user {
+                phone
+            }
+        }
     }
     users(where: {phone: {_eq: $phone}}) {
         id
@@ -51,10 +57,15 @@ const queries = {
     }
 }`,
     replyQuery:
-`query ReplyQuery($phone:String!, $bot_phone:String!) {
-    memberships(where:{community:{bot_phone:{_eq: $bot_phone}},user:{phone:{_eq:$phone}}}) {
+`query ReplyQuery($bot_phone:String!, $signal_timestamp:Int!) {
+    messages(where: {signal_timestamp: {_eq: $signal_timestamp}, community:{bot_phone:{_eq: $bot_phone}}}) {
         id
-        type
+        about_membership {
+            id
+            user {
+                phone
+            }
+        }
     }
 }`
 
@@ -62,7 +73,7 @@ const queries = {
 }
 
 
-export async function receive_message(sender, recipient, message, sent_time) {
+export async function receive_message(sender, recipient, message, sent_time, sender_name) {
     if (!message) {
         return;
     }
@@ -132,11 +143,13 @@ export async function receive_group_message(internal_group_id, message, from_pho
 }
 
 export async function receive_reply(message, from_phone, bot_phone) {
-    // This is a reply to a message sent by the bot, which should then be passed on to the person who the message is about. Hmm.
-    // Signal passes an id in the quote, which is a timestamp from the sent message. 
-    // So I could save an "about_id" for messages sent to admins about members, then use that to direct a reply.
-    // BUT I have a timestamp problem. I don't think I get the timestamp of messages sent to Signal
-    // Wait, signal sends the timestamp back!!
+    /*
+    * Planning out:
+    * 1. When a user completes onboarding a message is sent to all admins (I'll handle subscriptions later.)
+    * 2. These messages have a about_member_id defined.
+    * 3. When a reply is sent to the message, the timestamp is used to find the about_member.
+    * 4. The reply is sent to the about_member's phone.
+    */
 
     // Return if the message is a group thread
     if (reply_to.startsWith('group.')) {
@@ -167,5 +180,17 @@ export async function new_member(phone, community, message, user) {
 
 export async function no_script_message(membership) {
     await Message.send(membership.community.id, membership.id, membership.user.phone, membership.community.bot_phone, 'Thanks for letting me know, I\'ll pass your message on to an organizer who may get back to you.', true);
+    return;
+}
+
+export async function relay_message_to_admins(community, message, sender_name, sender_id) {
+    const admins = community.admins;
+    if (!admins) {
+        return;
+    }
+    for (const admin of admins) {
+        const expandedMessage = `Message relayed from ${sender_name}: "${message}" Reply to respond.`;
+        await Message.send(community.id, admin.id, admin.user.phone, community.bot_phone, expandedMessage, true, sender_id);
+    }
     return;
 }

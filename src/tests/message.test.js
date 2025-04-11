@@ -75,7 +75,7 @@ describe('Message', () => {
             const ms_time = new Date('2023-10-01T00:00:00Z').getTime();
             const result = await Message.create('community_1', 'membership_1', 'Hello, world!', ms_time, true);
 
-            expect(graphql).toHaveBeenCalledWith( expect.stringContaining('mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $signal_timestamp: Int!)'), messageVars );
+            expect(graphql).toHaveBeenCalledWith( expect.stringContaining('mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $signal_timestamp: Int!, $about_member_id: uuid!)'), messageVars );
             expect(result).toEqual(mockMessage);
         });
 
@@ -94,7 +94,7 @@ describe('Message', () => {
 
             await Message.send('community_1', 'membership_1', 'to_phone', 'from_phone', 'Hello, world!', true);
 
-            expect(mockCreate).toHaveBeenCalledWith('community_1', 'membership_1', 'Hello, world!', 1234567890, false);
+            expect(mockCreate).toHaveBeenCalledWith('community_1', 'membership_1', 'Hello, world!', 1234567890, false, null);
             expect(mockSend).toHaveBeenCalledWith(['to_phone'], 'from_phone', 'Hello, world!');
 
             mockCreate.mockRestore();

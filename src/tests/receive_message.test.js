@@ -5,7 +5,7 @@ const Community = require('../models/community');
 const GroupThread = require('../models/group_thread');
 const Signal = require('../apis/signal');
 const { graphql } = require('../apis/graphql');
-const { new_member, no_script_message, receive_message, receive_group_message, receive_reply  } = require('../handlers/receive_message');
+const { new_member, no_script_message, receive_message, receive_group_message, receive_reply, relay_message_to_admins  } = require('../handlers/receive_message');
 
 jest.mock('../models/membership', () => {
     return {
@@ -381,5 +381,65 @@ describe('receive_message', () => {
     });
 
     describe('receive_reply', () => {
+    });
+
+    describe('relay_message', () => {
+        describe('relay_message_to_admins', () => {
+            const community = {
+                id: 'community_1',
+                bot_phone: '0987654321',
+                admins: [
+                    { id: 'admin_1', user: { phone: '1111111111' } },
+                    { id: 'admin_2', user: { phone: '2222222222' } },
+                ],
+            };
+            const message = 'Test message';
+            const sender_name = 'Test Sender';
+            const sender_id = 'sender_1';
+
+            beforeEach(() => {
+                jest.clearAllMocks();
+            });
+
+            it('should send a message to all admins', async () => {
+                await relay_message_to_admins(community, message, sender_name, sender_id);
+
+                expect(Message.send).toHaveBeenCalledTimes(2);
+                expect(Message.send).toHaveBeenCalledWith(
+                    'community_1',
+                    'admin_1',
+                    '1111111111',
+                    '0987654321',
+                    `Message relayed from ${sender_name}: "${message}" Reply to respond.`,
+                    true,
+                    sender_id
+                );
+                expect(Message.send).toHaveBeenCalledWith(
+                    'community_1',
+                    'admin_2',
+                    '2222222222',
+                    '0987654321',
+                    `Message relayed from ${sender_name}: "${message}" Reply to respond.`,
+                    true,
+                    sender_id
+                );
+            });
+
+            it('should not send messages if there are no admins', async () => {
+                const communityWithoutAdmins = { ...community, admins: null };
+
+                await relay_message_to_admins(communityWithoutAdmins, message, sender_name, sender_id);
+
+                expect(Message.send).not.toHaveBeenCalled();
+            });
+
+            it('should handle an empty admins array gracefully', async () => {
+                const communityWithEmptyAdmins = { ...community, admins: [] };
+
+                await relay_message_to_admins(communityWithEmptyAdmins, message, sender_name, sender_id);
+
+                expect(Message.send).not.toHaveBeenCalled();
+            });
+        });
     });
 });

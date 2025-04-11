@@ -44,5 +44,5 @@ export async function receive_raw_message(msg) {
         receive_reply(message, sourceUuid, account, authorUuid);
         return;
     }
-    receive_message(sourceUuid, account, message, timestamp);
+    receive_message(sourceUuid, account, message, timestamp, sourceName);
 };
