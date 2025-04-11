@@ -32,10 +32,10 @@ query GetMessage($id: ID!) {
         return result.data.message;
     }
 
-    static async create(community_id, membership_id, text, sent_time, from_user) {
+    static async create(community_id, membership_id, text, signal_timestamp, from_user) {
         const CREATE_MESSAGE = `
-mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $sent_time: timestamptz!) {
-  insert_messages_one(object: {community_id: $community_id, from_user: $from_user, membership_id: $membership_id, text: $text, sent_time: $sent_time}) {
+mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $signal_timestamp: Int!) {
+  insert_messages_one(object: {community_id: $community_id, from_user: $from_user, membership_id: $membership_id, text: $text, signal_timestamp: $signal_timestamp}) {
     id
     membership {
       id
@@ -55,14 +55,14 @@ mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_i
             from_user,
             membership_id,
             text,
-            sent_time: new Date(sent_time).toISOString()
+            signal_timestamp
         };
         const result = await graphql(CREATE_MESSAGE,  message);
         const { id, membership, community } = result.data.insert_messages_one;
         this.id = id;
         this.text = text;
         this.from_user = from_user;
-        this.sent_time = sent_time;
+        this.signal_timestamp = signal_timestamp;
         this.membership_id = membership_id;
         this.community_id = community_id;
         this.bot_phone = community.bot_phone;
@@ -74,15 +74,14 @@ mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_i
     static async send(community_id, membership_id, to_phone, from_phone, text, log_message = true, attachment) {
         // Add the message to the queue
         Message.messageQueue = Message.messageQueue.then(async () => {
-            // Safety step to avoid sending messages to the wrong phone number
-            if (log_message) {
-                await Message.create(community_id, membership_id, text, Date.now(), false);
-            }
             Signal.show_typing_indicator(to_phone, from_phone);
             if (process.env.NODE_ENV !== 'test') {
                 await new Promise(resolve => setTimeout(resolve, 2000)); 
             }
-            Signal.send([to_phone], from_phone, text);
+            const {timestamp} = await Signal.send([to_phone], from_phone, text);
+            if (log_message) {
+                await Message.create(community_id, membership_id, text, timestamp, false);
+            }
         }).catch(err => {
             console.error('Error sending message:', err);
         });

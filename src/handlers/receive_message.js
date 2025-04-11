@@ -144,7 +144,13 @@ export async function receive_group_message(internal_group_id, message, from_pho
     return;
 }
 
-export async function receive_reply(message, from_phone, bot_phone, reply_to) {
+export async function receive_reply(message, from_phone, bot_phone) {
+    // This is a reply to a message sent by the bot, which should then be passed on to the person who the message is about. Hmm.
+    // Signal passes an id in the quote, which is a timestamp from the sent message. 
+    // So I could save an "about_id" for messages sent to admins about members, then use that to direct a reply.
+    // BUT I have a timestamp problem. I don't think I get the timestamp of messages sent to Signal
+    // Wait, signal sends the timestamp back!!
+
     // Return if the message is a group thread
     if (reply_to.startsWith('group.')) {
         return;

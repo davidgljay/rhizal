@@ -39,5 +39,10 @@ export async function receive_raw_message(msg) {
         receive_group_message(groupInfo.groupId, message, sourceUuid, account, sourceName, timestamp);
         return;
     }
+    if (quote) {
+        const { authorUuid } = quote;
+        receive_reply(message, sourceUuid, account, authorUuid);
+        return;
+    }
     receive_message(sourceUuid, account, message, timestamp);
 };

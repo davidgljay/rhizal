@@ -107,7 +107,7 @@ const testScript = JSON.stringify(script);
 const groupTestScript = JSON.stringify(groupScript);
 
 jest.mock('../apis/signal', () => ({
-    send: jest.fn(),
+    send: jest.fn(() => ({timestamp: 1234567890})),
     show_typing_indicator: jest.fn(),
     emoji_reaction: jest.fn(),
 }));
@@ -200,23 +200,23 @@ describe('Integration Tests for receive_message Handler', () => {
                     variables: { membership_id: "membership_1" },
                     response: { data: { vars: [{ name: 'var1' }] } }
                 }, {
-                    query: `mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $sent_time: timestamptz!)`,
+                    query: `mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $signal_timestamp: Int!)`,
                     variables: {
                         community_id: 'community_1',
                         membership_id: 'membership_1',
-                        sent_time: expect.any(String),
+                        signal_timestamp: expect.any(Number),
                         text: 'Welcome to the service!',
                         from_user: false
                     },
                     response: { data: { insert_messages_one: { id: "message_2", membership: {id: 'membership_1', user: {phone: '+1234567890'}}, community: { id: 'community_1', bot_phone: '+0987654321'} } } }
                 },
                 {
-                    query: `mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $sent_time: timestamptz!)`,
+                    query: `mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $signal_timestamp: Int!)`,
                     variables: {
                         community_id: 'community_1',
                         membership_id: 'membership_1',
                         from_user: true,
-                        sent_time: expect.any(String),
+                        signal_timestamp: expect.any(Number),
                         text: 'Hello'
                     },
                     response: { data: { insert_messages_one: { id: "message_1", membership: {id: 'membership_1', user: {phone: '+1234567890'}}, community: { id: 'community_1', bot_phone: '+0987654321'} } } }
@@ -267,23 +267,23 @@ describe('Integration Tests for receive_message Handler', () => {
                     variables: { membership_id: "membership_1" },
                     response: { data: { vars: [{ name: 'var1' }] } }
                 }, {
-                    query: `mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $sent_time: timestamptz!)`,
+                    query: `mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $signal_timestamp: Int!)`,
                     variables: {
                         community_id: 'community_1',
                         membership_id: 'membership_1',
-                        sent_time: expect.any(String),
+                        signal_timestamp: expect.any(Number),
                         text: 'Welcome to the service!',
                         from_user: false
                     },
                     response: { data: { insert_messages_one: { id: "message_2", membership: {id: 'membership_1', user: {phone: '+1234567890'}}, community: { id: 'community_1', bot_phone: '+0987654321'} } } }
                 },
                 {
-                    query: `mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $sent_time: timestamptz!)`,
+                    query: `mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $signal_timestamp: Int!)`,
                     variables: {
                         community_id: 'community_1',
                         membership_id: 'membership_1',
                         from_user: true,
-                        sent_time: expect.any(String),
+                        signal_timestamp: expect.any(Number),
                         text: 'Hello'
                     },
                     response: { data: { insert_messages_one: { id: "message_1", membership: {id: 'membership_1', user: {phone: '+1234567890'}}, community: { id: 'community_1', bot_phone: '+0987654321'} } } }
@@ -350,12 +350,12 @@ describe('Integration Tests for receive_message Handler', () => {
                     response: mockQueryResponse
                 },
                 {
-                    query: `mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $sent_time: timestamptz!)`,
+                    query: `mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $signal_timestamp: Int!)`,
                     variables: {
                         community_id: 'community_1',
                         membership_id: 'membership_1',
                         from_user: true,
-                        sent_time: expect.any(String),
+                        signal_timestamp: expect.any(Number),
                         text: 'Hello'
                     },
                     response: { data: { insert_messages_one: { id: "message_1", membership: {id: 'membership_1', user: {phone: '+1234567890'}}, community: { id: 'community_1', bot_phone: '+0987654321'} } } }
@@ -371,11 +371,11 @@ describe('Integration Tests for receive_message Handler', () => {
                     response: { data: { updateMembership: { id: "membership_1" } } }
                 },
                 {
-                    query: `mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $sent_time: timestamptz!)`,
+                    query: `mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $signal_timestamp: Int!)`,
                     variables: {
                         community_id: 'community_1',
                         membership_id: 'membership_1',
-                        sent_time: expect.any(String),
+                        signal_timestamp: expect.any(Number),
                         text: 'Message with stuff to things!',
                         from_user: false
                     },
@@ -413,12 +413,12 @@ describe('Integration Tests for receive_message Handler', () => {
                     response: step1Response
                 },
                 {
-                    query: `mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $sent_time: timestamptz!)`,
+                    query: `mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $signal_timestamp: Int!)`,
                     variables: {
                         community_id: 'community_1',
                         membership_id: 'membership_1',
                         from_user: true,
-                        sent_time: expect.any(String),
+                        signal_timestamp: expect.any(Number),
                         text: 'yes'
                     },
                     response: { data: { insert_messages_one: { id: "message_1", membership: {id: 'membership_1', user: {phone: '+1234567890'}}, community: { id: 'community_1', bot_phone: '+0987654321'} } } }
@@ -434,22 +434,22 @@ describe('Integration Tests for receive_message Handler', () => {
                     response: { data: { updateMembership: { id: "membership_1" } } }
                 },
                 {
-                    query: `mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $sent_time: timestamptz!)`,
+                    query: `mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $signal_timestamp: Int!)`,
                     variables: {
                         community_id: 'community_1',
                         membership_id: 'membership_1',
-                        sent_time: expect.any(String),
+                        signal_timestamp: expect.any(Number),
                         text: 'Another message with no variables!',
                         from_user: false
                     },
                     response: { data: { insert_messages_one: { id: "message_2", membership: {id: 'membership_1', user: {phone: '+1234567890'}}, community: { id: 'community_1', bot_phone: '+0987654321'} } } }
                 },
                 {
-                    query: `mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $sent_time: timestamptz!)`,
+                    query: `mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $signal_timestamp: Int!)`,
                     variables: {
                         community_id: 'community_1',
                         membership_id: 'membership_1',
-                        sent_time: expect.any(String),
+                        signal_timestamp: expect.any(Number),
                         text: 'A second message to be sent a few seconds later.',
                         from_user: false
                     },
@@ -493,12 +493,12 @@ describe('Integration Tests for receive_message Handler', () => {
                     response: step1Response
                 },
                 {
-                    query: `mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $sent_time: timestamptz!)`,
+                    query: `mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $signal_timestamp: Int!)`,
                     variables: {
                         community_id: 'community_1',
                         membership_id: 'membership_1',
                         from_user: true,
-                        sent_time: expect.any(String),
+                        signal_timestamp: expect.any(Number),
                         text: 'no'
                     },
                     response: { data: { insert_messages_one: { id: "message_1", membership: {id: 'membership_1', user: {phone: '+1234567890'}}, community: { id: 'community_1', bot_phone: '+0987654321'} } } }

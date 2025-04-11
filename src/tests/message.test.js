@@ -51,7 +51,7 @@ describe('Message', () => {
             const mockMessage = {
                 id: '1',
                 text: 'Hello, world!',
-                sent_time: '2023-10-01T00:00:00.000Z',
+                signal_timestamp: 1234567890,
                 from_user: true,
                 membership: {
                     id: '2',
@@ -69,13 +69,13 @@ describe('Message', () => {
                 from_user: true,
                 membership_id: 'membership_1',
                 text: 'Hello, world!',
-                sent_time: '2023-10-01T00:00:00.000Z'
+                signal_timestamp: 1696118400000
             }
             graphql.mockResolvedValue({ data: { insert_messages_one: mockMessage } });
             const ms_time = new Date('2023-10-01T00:00:00Z').getTime();
             const result = await Message.create('community_1', 'membership_1', 'Hello, world!', ms_time, true);
 
-            expect(graphql).toHaveBeenCalledWith( expect.stringContaining('mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $sent_time: timestamptz!)'), messageVars );
+            expect(graphql).toHaveBeenCalledWith( expect.stringContaining('mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $signal_timestamp: Int!)'), messageVars );
             expect(result).toEqual(mockMessage);
         });
 
@@ -90,11 +90,11 @@ describe('Message', () => {
     describe('send', () => {
         it('should send a message via WebSocket and log it', async () => {
             const mockCreate = jest.spyOn(Message, 'create').mockResolvedValue({});
-            const mockSend = jest.spyOn(Signal, 'send').mockImplementation(() => {});
+            const mockSend = jest.spyOn(Signal, 'send').mockImplementation(() => ({timestamp: 1234567890}));
 
             await Message.send('community_1', 'membership_1', 'to_phone', 'from_phone', 'Hello, world!', true);
 
-            expect(mockCreate).toHaveBeenCalledWith('community_1', 'membership_1', 'Hello, world!', expect.any(Number), false);
+            expect(mockCreate).toHaveBeenCalledWith('community_1', 'membership_1', 'Hello, world!', 1234567890, false);
             expect(mockSend).toHaveBeenCalledWith(['to_phone'], 'from_phone', 'Hello, world!');
 
             mockCreate.mockRestore();
@@ -103,7 +103,7 @@ describe('Message', () => {
 
         it('should send a message via WebSocket without logging it', async () => {
             const mockCreate = jest.spyOn(Message, 'create');
-            const mockSend = jest.spyOn(Signal, 'send').mockImplementation(() => {});
+            const mockSend = jest.spyOn(Signal, 'send').mockImplementation(() => ({timestamp: 1234567890}));
 
             await Message.send('community_1', 'membership_1', 'to_phone', 'from_phone', 'Hello, world!', false);
 
@@ -118,7 +118,7 @@ describe('Message', () => {
             const originalEnv = process.env.NODE_ENV;
             process.env.NODE_ENV = 'production';
 
-            const mockSend = jest.spyOn(Signal, 'send').mockImplementation(() => {});
+            const mockSend = jest.spyOn(Signal, 'send').mockImplementation(() => ({timestamp: 1234567890}));
             const mockDelay = jest.spyOn(global, 'setTimeout');
 
             await Message.send('community_1', 'membership_1', 'to_phone', 'from_phone', 'Hello, world!', false);
@@ -132,7 +132,7 @@ describe('Message', () => {
         });
 
         it('should not delay sending the message in test environments', async () => {
-            const mockSend = jest.spyOn(Signal, 'send').mockImplementation(() => {});
+            const mockSend = jest.spyOn(Signal, 'send').mockImplementation(() => ({timestamp: 1234567890}));
             const mockDelay = jest.spyOn(global, 'setTimeout');
 
             await Message.send('community_1', 'membership_1', 'to_phone', 'from_phone', 'Hello, world!', false);
