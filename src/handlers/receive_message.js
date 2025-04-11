@@ -89,19 +89,6 @@ export async function receive_message(sender, recipient, message, sent_time) {
     return;
 }
 
-export async function new_member(phone, community, message, user) {
-    const membership = await Membership.create(phone, community, user);
-    const script = new Script(community.onboarding);
-    await script.get_vars(membership, message);
-    await script.send('0');
-    return membership;
-}
-
-export async function no_script_message(membership) {
-    await Message.send(membership.community.id, membership.id, membership.user.phone, membership.community.bot_phone, 'Thanks for letting me know, I\'ll pass your message on to an organizer who may get back to you.', true);
-    return;
-}
-
 export async function receive_group_message(internal_group_id, message, from_phone, bot_phone, sender_name, sent_time) {
     const group_id = Buffer.from(internal_group_id).toString('base64');
     const response = await graphql(queries.receiveGroupMessageQuery, { bot_phone });
@@ -168,4 +155,17 @@ export async function receive_reply(message, from_phone, bot_phone) {
     // Send message to reply_to via bot_phone and log
     await Message.send(null, null, reply_to, bot_phone, message, true);
     
+}
+
+export async function new_member(phone, community, message, user) {
+    const membership = await Membership.create(phone, community, user);
+    const script = new Script(community.onboarding);
+    await script.get_vars(membership, message);
+    await script.send('0');
+    return membership;
+}
+
+export async function no_script_message(membership) {
+    await Message.send(membership.community.id, membership.id, membership.user.phone, membership.community.bot_phone, 'Thanks for letting me know, I\'ll pass your message on to an organizer who may get back to you.', true);
+    return;
 }
