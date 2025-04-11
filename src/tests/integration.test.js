@@ -108,7 +108,7 @@ const expectedQueries = {
     createUserAndMembership: `mutation CreateUserAndMembership($phone:String!, $community_id:uuid!, $current_script_id:uuid!)`,
     createMembership: `mutation CreateMembership($user_id:uuid!, $community_id:uuid!, $current_script_id:uuid!)`,
     testVars: `testVarsQuery($membership_id:uuid!)`,
-    createMessage: `mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $signal_timestamp: Int!)`,
+    createMessage: `mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $signal_timestamp: Int!, $about_member_id: uuid!)`,
     updateMembershipVariable: `mutation updateMembershipVariable($id:uuid!, $value:String!)`,
     getScript: `query GetScript($id:uuid!)`,
     getGroupThread: `query GetGroupThread($group_id: String!)`,
