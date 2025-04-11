@@ -103,6 +103,18 @@ const groupScript = {
     }
 };
 
+const expectedQueries = {
+    receiveMessage: `query RecieveMessageQuery($bot_phone:String!, $phone:String!)`,
+    createUserAndMembership: `mutation CreateUserAndMembership($phone:String!, $community_id:uuid!, $current_script_id:uuid!)`,
+    createMembership: `mutation CreateUserAndMembership($phone:String!, $community_id:uuid!, $current_script_id:uuid!)`,
+    testVars: `mutation CreateUserAndMembership($phone:String!, $community_id:uuid!, $current_script_id:uuid!)`,
+    createMessage: `mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $signal_timestamp: Int!)`,
+    updateMembershipVariable: `mutation updateMembershipVariable($id:uuid!, $value:String!)`,
+    getScript: `query GetScript($id:uuid!)`,
+    getGroupThread: `query GetGroupThread($group_id: String!)`,
+    createGroupThread: `mutation CreateGroupThread($community_id: uuid!, $group_id: String!)`
+}
+
 const testScript = JSON.stringify(script);
 const groupTestScript = JSON.stringify(groupScript);
 
@@ -186,21 +198,21 @@ describe('Integration Tests for receive_message Handler', () => {
             const mockGraphql = [
 
                 {
-                    query: `query RecieveMessageQuery($bot_phone:String!, $phone:String!)`,
+                    query: expectedQueries.receiveMessage,
                     variables: { bot_phone: recipientNumber, phone: senderNumber },
                     response: noMembershipResponse
                 },
                 {
-                    query: `mutation CreateUserAndMembership($phone:String!, $community_id:uuid!, $current_script_id:uuid!)`,
+                    query: expectedQueries.createUserAndMembership,
                     variables: { phone: senderNumber, community_id: "community_1", current_script_id: 'onboarding_script' },
                     response: { data: { insert_memberships_one: { id: "membership_1", user: { id: "user_1", phone: senderNumber }, type: 'member', community: { id: 'community_1', bot_phone: recipientNumber } } } }
                 },
                 {
-                    query: `query testVarsQuery($membership_id:uuid!)`,
+                    query: expectedQueries.testVars,
                     variables: { membership_id: "membership_1" },
                     response: { data: { vars: [{ name: 'var1' }] } }
                 }, {
-                    query: `mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $signal_timestamp: Int!)`,
+                    query: expectedQueries.createMembership,
                     variables: {
                         community_id: 'community_1',
                         membership_id: 'membership_1',
@@ -211,7 +223,7 @@ describe('Integration Tests for receive_message Handler', () => {
                     response: { data: { insert_messages_one: { id: "message_2", membership: {id: 'membership_1', user: {phone: '+1234567890'}}, community: { id: 'community_1', bot_phone: '+0987654321'} } } }
                 },
                 {
-                    query: `mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $signal_timestamp: Int!)`,
+                    query: expectedQueries.createMembership,
                     variables: {
                         community_id: 'community_1',
                         membership_id: 'membership_1',
@@ -253,21 +265,21 @@ describe('Integration Tests for receive_message Handler', () => {
             const mockGraphql = [
 
                 {
-                    query: `query RecieveMessageQuery($bot_phone:String!, $phone:String!)`,
+                    query: expectedQueries.receiveMessage,
                     variables: { bot_phone: recipientNumber, phone: senderNumber },
                     response: noMembershipResponse
                 },
                 {
-                    query: `mutation CreateMembership($user_id:uuid!, $community_id:uuid!, $current_script_id:uuid!)`,
+                    query: expectedQueries.createMembership,
                     variables: { user_id: 'user_1', community_id: "community_1", current_script_id: 'onboarding_script' },
                     response: { data: { insert_memberships_one: { id: "membership_1", user: { id: "user_1", phone: senderNumber }, type: 'member', community: { id: 'community_1', bot_phone: recipientNumber } } } }
                 },
                 {
-                    query: `query testVarsQuery($membership_id:uuid!)`,
+                    query: expectedQueries.testVars,
                     variables: { membership_id: "membership_1" },
                     response: { data: { vars: [{ name: 'var1' }] } }
                 }, {
-                    query: `mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $signal_timestamp: Int!)`,
+                    query: expectedQueries.createMembership,
                     variables: {
                         community_id: 'community_1',
                         membership_id: 'membership_1',
@@ -278,7 +290,7 @@ describe('Integration Tests for receive_message Handler', () => {
                     response: { data: { insert_messages_one: { id: "message_2", membership: {id: 'membership_1', user: {phone: '+1234567890'}}, community: { id: 'community_1', bot_phone: '+0987654321'} } } }
                 },
                 {
-                    query: `mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $signal_timestamp: Int!)`,
+                    query: expectedQueries.createMembership,
                     variables: {
                         community_id: 'community_1',
                         membership_id: 'membership_1',
@@ -318,7 +330,7 @@ describe('Integration Tests for receive_message Handler', () => {
 
             const mockGraphql = [
                 {
-                    query: `query RecieveMessageQuery($bot_phone:String!, $phone:String!)`,
+                    query: expectedQueries.receiveMessage,
                     variables: { bot_phone: recipientNumber, phone: senderNumber },
                     response: noCommunitiesResponse
                 }
@@ -345,12 +357,12 @@ describe('Integration Tests for receive_message Handler', () => {
 
             const mockGraphql = [
                 {
-                    query: `query RecieveMessageQuery($bot_phone:String!, $phone:String!)`,
+                    query: expectedQueries.receiveMessage,
                     variables: { bot_phone: recipientNumber, phone: senderNumber },
                     response: mockQueryResponse
                 },
                 {
-                    query: `mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $signal_timestamp: Int!)`,
+                    query: expectedQueries.createMembership,
                     variables: {
                         community_id: 'community_1',
                         membership_id: 'membership_1',
@@ -361,17 +373,17 @@ describe('Integration Tests for receive_message Handler', () => {
                     response: { data: { insert_messages_one: { id: "message_1", membership: {id: 'membership_1', user: {phone: '+1234567890'}}, community: { id: 'community_1', bot_phone: '+0987654321'} } } }
                 },
                 {
-                    query: `query testVarsQuery($membership_id:uuid!)`,
+                    query: expectedQueries.testVars,
                     variables: { membership_id: "membership_1" },
                     response: { data: { vars: [{ var1: 'stuff', var2: "things" }] } }
                 }, 
                 {
-                    query: `mutation updateMembershipVariable($id:uuid!, $value:String!)`,
+                    query: expectedQueries.updateMembershiVarupdateMembershipVariable,
                     variables: { id: "membership_1", value: "1" },
                     response: { data: { updateMembership: { id: "membership_1" } } }
                 },
                 {
-                    query: `mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $signal_timestamp: Int!)`,
+                    query: expectedQueries.createMembership,
                     variables: {
                         community_id: 'community_1',
                         membership_id: 'membership_1',
@@ -408,12 +420,12 @@ describe('Integration Tests for receive_message Handler', () => {
 
             const mockGraphql = [
                 {
-                    query: `query RecieveMessageQuery($bot_phone:String!, $phone:String!)`,
+                    query: expectedQueries.receiveMessage,
                     variables: { bot_phone: recipientNumber, phone: senderNumber },
                     response: step1Response
                 },
                 {
-                    query: `mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $signal_timestamp: Int!)`,
+                    query: expectedQueries.createMembership,
                     variables: {
                         community_id: 'community_1',
                         membership_id: 'membership_1',
@@ -424,17 +436,17 @@ describe('Integration Tests for receive_message Handler', () => {
                     response: { data: { insert_messages_one: { id: "message_1", membership: {id: 'membership_1', user: {phone: '+1234567890'}}, community: { id: 'community_1', bot_phone: '+0987654321'} } } }
                 },
                 {
-                    query: `query testVarsQuery($membership_id:uuid!)`,
+                    query: expectedQueries.testVars,
                     variables: { membership_id: "membership_1" },
                     response: { data: { vars: [{ var1: 'stuff', var2: 'things' }] } }
                 },
                 {
-                    query: `mutation updateMembershipVariable($id:uuid!, $value:String!)`,
+                    query: expectedQueries.updateMembershiVarupdateMembershipVariable,
                     variables: { id: "membership_1", value: "2" },
                     response: { data: { updateMembership: { id: "membership_1" } } }
                 },
                 {
-                    query: `mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $signal_timestamp: Int!)`,
+                    query: expectedQueries.createMembership,
                     variables: {
                         community_id: 'community_1',
                         membership_id: 'membership_1',
@@ -445,7 +457,7 @@ describe('Integration Tests for receive_message Handler', () => {
                     response: { data: { insert_messages_one: { id: "message_2", membership: {id: 'membership_1', user: {phone: '+1234567890'}}, community: { id: 'community_1', bot_phone: '+0987654321'} } } }
                 },
                 {
-                    query: `mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $signal_timestamp: Int!)`,
+                    query: expectedQueries.createMembership,
                     variables: {
                         community_id: 'community_1',
                         membership_id: 'membership_1',
@@ -456,7 +468,7 @@ describe('Integration Tests for receive_message Handler', () => {
                     response: { data: { insert_messages_one: { id: "message_3", membership: {id: 'membership_1', user: {phone: '+1234567890'}}, community: { id: 'community_1', bot_phone: '+0987654321'} } } }
                 },
                 {
-                    query: `mutation updateMembershipVariable($id:uuid!, $value:String!)`,
+                    query: expectedQueries.updateMembershiVarupdateMembershipVariable,
                     variables: { id: "membership_1", value: "user_name" },
                     response: { data: { updateMembership: { id: "membership_1" } } }
                 }
@@ -488,12 +500,12 @@ describe('Integration Tests for receive_message Handler', () => {
 
             const mockGraphql = [
                 {
-                    query: `query RecieveMessageQuery($bot_phone:String!, $phone:String!)`,
+                    query: expectedQueries.receiveMessage,
                     variables: { bot_phone: recipientNumber, phone: senderNumber },
                     response: step1Response
                 },
                 {
-                    query: `mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $signal_timestamp: Int!)`,
+                    query: expectedQueries.createMembership,
                     variables: {
                         community_id: 'community_1',
                         membership_id: 'membership_1',
@@ -504,12 +516,12 @@ describe('Integration Tests for receive_message Handler', () => {
                     response: { data: { insert_messages_one: { id: "message_1", membership: {id: 'membership_1', user: {phone: '+1234567890'}}, community: { id: 'community_1', bot_phone: '+0987654321'} } } }
                 },
                 {
-                    query: `query testVarsQuery($membership_id:uuid!)`,
+                    query: expectedQueries.testVars,
                     variables: { membership_id: "membership_1" },
                     response: { data: { vars: [{ var1: 'stuff', var2: 'things' }] } }
                 },
                 {
-                    query: `mutation updateMembershipVariable($id:uuid!, $value:String!)`,
+                    query: expectedQueries.updateMembershiVarupdateMembershipVariable,
                     variables: { id: "membership_1", value: "done" },
                     response: { data: { updateMembership: { id: "membership_1" } } }
                 }
@@ -551,17 +563,17 @@ describe('Integration Tests for receive_message Handler', () => {
                         response: { data: { communities: [{id: communityId, bot_phone: botNumber }] } }
                     },
                     {
-                        query: `query GetGroupThread($group_id: String!)`,
+                        query: expectedQueries.getGroupThread,
                         variables: { group_id: base64_group_id },
                         response: { data: { group_threads: [] } }
                     },
                     {
-                        query: `mutation CreateGroupThread($community_id: uuid!, $group_id: String!)`,
+                        query: expectedQueries.createGroupThread,
                         variables: { community_id: communityId, group_id: base64_group_id },
                         response: { data: { insert_group_threads_one: { id: 'thread_1', group_id: base64_group_id, step: '0', community: {group_script_id: 'script_2'} } } }
                     },
                     {
-                        query: `query GetScript($id:uuid!)`,
+                        query: expectedQueries.getScript,
                         variables: { id: 'script_2' },
                         response: { data: { scripts: [{ id: 'script_2', name: 'group_setup', script_json: groupTestScript, vars_query: null } ]} }
                     },
@@ -600,12 +612,12 @@ describe('Integration Tests for receive_message Handler', () => {
                         response: { data: { communities: [{id: communityId, bot_phone: botNumber }] } }
                     },
                     {
-                        query: `query GetGroupThread($group_id: String!)`,
+                        query: expectedQueries.getGroupThread,
                         variables: { group_id: base64_group_id },
                         response: { data: { group_threads: [{ id: 'thread_1', group_id: base64_group_id, step: '0', community: {group_script_id: 'script_2'} }] } }
                     },
                     {
-                        query: `query GetScript($id:uuid!)`,
+                        query: expectedQueries.getScript,
                         variables: { id: 'script_2' },
                         response: { data: { scripts: [{ id: 'script_2', name: 'group_setup', script_json: groupTestScript, vars_query: null } ]} }
                     }
@@ -643,7 +655,7 @@ describe('Integration Tests for receive_message Handler', () => {
                         response: { data: { communities: [{id: communityId, bot_phone: botNumber }] } }
                     },
                     {
-                        query: `query GetGroupThread($group_id: String!)`,
+                        query: expectedQueries.getGroupThread,
                         variables: { group_id: base64_group_id },
                         response: { data: { group_threads: [{ id: 'thread_1', group_id: base64_group_id, step: 'done', community: {group_script_id: 'script_2'} }] } }
                     }
@@ -683,7 +695,7 @@ describe('Integration Tests for receive_message Handler', () => {
                         response: { data: { communities: [{id: communityId, bot_phone: botNumber }] } }
                     },
                     {
-                        query: `query GetGroupThread($group_id: String!)`,
+                        query: expectedQueries.getGroupThread,
                         variables: { group_id: base64_group_id },
                         response: { data: { group_threads: [{ id: 'thread_1', group_id: base64_group_id, step: 'done', community: { group_script_id: 'script_2' } }] } }
                     },
@@ -719,12 +731,12 @@ describe('Integration Tests for receive_message Handler', () => {
                         response: { data: { communities: [{id: communityId, bot_phone: botNumber }] } }
                     },
                     {
-                        query: `query GetGroupThread($group_id: String!)`,
+                        query: expectedQueries.getGroupThread,
                         variables: { group_id: base64_group_id },
                         response: { data: { group_threads: [{ id: 'thread_1', group_id: base64_group_id, step: '0', community: { group_script_id: 'script_2' } }] } }
                     },
                     {
-                        query: `query GetScript($id:uuid!)`,
+                        query: expectedQueries.getScript,
                         variables: { id: 'script_2' },
                         response: { data: { scripts: [{ id: 'script_2', name: 'group_setup', script_json: groupTestScript, vars_query: null } ]} }
                     },
@@ -773,12 +785,12 @@ describe('Integration Tests for receive_message Handler', () => {
                         response: { data: { communities: [{id: communityId, bot_phone: botNumber }] } }
                     },
                     {
-                        query: `query GetGroupThread($group_id: String!)`,
+                        query: expectedQueries.getGroupThread,
                         variables: { group_id: base64_group_id },
                         response: { data: { group_threads: [{ id: 'thread_1', group_id: base64_group_id, step: '0', community: { group_script_id: 'script_2' } }] } }
                     },
                     {
-                        query: `query GetScript($id:uuid!)`,
+                        query: expectedQueries.getScript,
                         variables: { id: 'script_2' },
                         response: { data: { scripts: [{ id: 'script_2', name: 'group_setup', script_json: groupTestScript, vars_query: null } ]} }
                     },
@@ -820,7 +832,7 @@ describe('Integration Tests for receive_message Handler', () => {
                         response: { data: { communities: [{id: communityId, bot_phone: botNumber }] } }
                     },
                     {
-                        query: `query GetGroupThread($group_id: String!)`,
+                        query: expectedQueries.getGroupThread,
                         variables: { group_id: base64_group_id },
                         response: { data: { group_threads: [{ id: 'thread_1', group_id: base64_group_id, step: 'done', community: { group_script_id: 'script_2' } }] } }
                     }
@@ -856,7 +868,7 @@ describe('Integration Tests for receive_message Handler', () => {
                         response: { data: { communities: [{id: communityId, bot_phone: botNumber }] } }
                     },
                     {
-                        query: `query GetGroupThread($group_id: String!)`,
+                        query: expectedQueries.getGroupThread,
                         variables: { group_id: base64_group_id },
                         response: { data: { group_threads: [{ id: 'thread_1', hashtag: '#groupHash', group_id: base64_group_id, step: 'done', community: { group_script_id: 'script_2', group_threads: [{ group_id: 'group_2', hashtag: '#anotherGroupHashtag' }, { group_id: 'group_3', hashtag: '#funky' }] } }] } }
                     }
@@ -892,7 +904,7 @@ describe('Integration Tests for receive_message Handler', () => {
                         response: { data: { communities: [{id: communityId, bot_phone: botNumber }] } }
                     },
                     {
-                        query: `query GetGroupThread($group_id: String!)`,
+                        query: expectedQueries.getGroupThread,
                         variables: { group_id: base64_group_id },
                         response: { data: { group_threads: [{ id: 'thread_1', group_id: base64_group_id, step: 'done', community: { group_script_id: 'script_2' } }] } }
                     }
