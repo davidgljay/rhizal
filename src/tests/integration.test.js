@@ -106,8 +106,8 @@ const groupScript = {
 const expectedQueries = {
     receiveMessage: `query RecieveMessageQuery($bot_phone:String!, $phone:String!)`,
     createUserAndMembership: `mutation CreateUserAndMembership($phone:String!, $community_id:uuid!, $current_script_id:uuid!)`,
-    createMembership: `mutation CreateUserAndMembership($phone:String!, $community_id:uuid!, $current_script_id:uuid!)`,
-    testVars: `mutation CreateUserAndMembership($phone:String!, $community_id:uuid!, $current_script_id:uuid!)`,
+    createMembership: `mutation CreateMembership($user_id:uuid!, $community_id:uuid!, $current_script_id:uuid!)`,
+    testVars: `testVarsQuery($membership_id:uuid!)`,
     createMessage: `mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $signal_timestamp: Int!)`,
     updateMembershipVariable: `mutation updateMembershipVariable($id:uuid!, $value:String!)`,
     getScript: `query GetScript($id:uuid!)`,
@@ -212,7 +212,7 @@ describe('Integration Tests for receive_message Handler', () => {
                     variables: { membership_id: "membership_1" },
                     response: { data: { vars: [{ name: 'var1' }] } }
                 }, {
-                    query: expectedQueries.createMembership,
+                    query: expectedQueries.createMessage,
                     variables: {
                         community_id: 'community_1',
                         membership_id: 'membership_1',
@@ -223,7 +223,7 @@ describe('Integration Tests for receive_message Handler', () => {
                     response: { data: { insert_messages_one: { id: "message_2", membership: {id: 'membership_1', user: {phone: '+1234567890'}}, community: { id: 'community_1', bot_phone: '+0987654321'} } } }
                 },
                 {
-                    query: expectedQueries.createMembership,
+                    query: expectedQueries.createMessage,
                     variables: {
                         community_id: 'community_1',
                         membership_id: 'membership_1',
@@ -279,7 +279,7 @@ describe('Integration Tests for receive_message Handler', () => {
                     variables: { membership_id: "membership_1" },
                     response: { data: { vars: [{ name: 'var1' }] } }
                 }, {
-                    query: expectedQueries.createMembership,
+                    query: expectedQueries.createMessage,
                     variables: {
                         community_id: 'community_1',
                         membership_id: 'membership_1',
@@ -290,7 +290,7 @@ describe('Integration Tests for receive_message Handler', () => {
                     response: { data: { insert_messages_one: { id: "message_2", membership: {id: 'membership_1', user: {phone: '+1234567890'}}, community: { id: 'community_1', bot_phone: '+0987654321'} } } }
                 },
                 {
-                    query: expectedQueries.createMembership,
+                    query: expectedQueries.createMessage,
                     variables: {
                         community_id: 'community_1',
                         membership_id: 'membership_1',
@@ -362,7 +362,7 @@ describe('Integration Tests for receive_message Handler', () => {
                     response: mockQueryResponse
                 },
                 {
-                    query: expectedQueries.createMembership,
+                    query: expectedQueries.createMessage,
                     variables: {
                         community_id: 'community_1',
                         membership_id: 'membership_1',
@@ -378,12 +378,12 @@ describe('Integration Tests for receive_message Handler', () => {
                     response: { data: { vars: [{ var1: 'stuff', var2: "things" }] } }
                 }, 
                 {
-                    query: expectedQueries.updateMembershiVarupdateMembershipVariable,
+                    query: expectedQueries.updateMembershipVariable,
                     variables: { id: "membership_1", value: "1" },
                     response: { data: { updateMembership: { id: "membership_1" } } }
                 },
                 {
-                    query: expectedQueries.createMembership,
+                    query: expectedQueries.createMessage,
                     variables: {
                         community_id: 'community_1',
                         membership_id: 'membership_1',
@@ -425,7 +425,7 @@ describe('Integration Tests for receive_message Handler', () => {
                     response: step1Response
                 },
                 {
-                    query: expectedQueries.createMembership,
+                    query: expectedQueries.createMessage,
                     variables: {
                         community_id: 'community_1',
                         membership_id: 'membership_1',
@@ -441,12 +441,12 @@ describe('Integration Tests for receive_message Handler', () => {
                     response: { data: { vars: [{ var1: 'stuff', var2: 'things' }] } }
                 },
                 {
-                    query: expectedQueries.updateMembershiVarupdateMembershipVariable,
+                    query: expectedQueries.updateMembershipVariable,
                     variables: { id: "membership_1", value: "2" },
                     response: { data: { updateMembership: { id: "membership_1" } } }
                 },
                 {
-                    query: expectedQueries.createMembership,
+                    query: expectedQueries.createMessage,
                     variables: {
                         community_id: 'community_1',
                         membership_id: 'membership_1',
@@ -457,7 +457,7 @@ describe('Integration Tests for receive_message Handler', () => {
                     response: { data: { insert_messages_one: { id: "message_2", membership: {id: 'membership_1', user: {phone: '+1234567890'}}, community: { id: 'community_1', bot_phone: '+0987654321'} } } }
                 },
                 {
-                    query: expectedQueries.createMembership,
+                    query: expectedQueries.createMessage,
                     variables: {
                         community_id: 'community_1',
                         membership_id: 'membership_1',
@@ -468,7 +468,7 @@ describe('Integration Tests for receive_message Handler', () => {
                     response: { data: { insert_messages_one: { id: "message_3", membership: {id: 'membership_1', user: {phone: '+1234567890'}}, community: { id: 'community_1', bot_phone: '+0987654321'} } } }
                 },
                 {
-                    query: expectedQueries.updateMembershiVarupdateMembershipVariable,
+                    query: expectedQueries.updateMembershipVariable,
                     variables: { id: "membership_1", value: "user_name" },
                     response: { data: { updateMembership: { id: "membership_1" } } }
                 }
@@ -505,7 +505,7 @@ describe('Integration Tests for receive_message Handler', () => {
                     response: step1Response
                 },
                 {
-                    query: expectedQueries.createMembership,
+                    query: expectedQueries.createMessage,
                     variables: {
                         community_id: 'community_1',
                         membership_id: 'membership_1',
@@ -521,7 +521,7 @@ describe('Integration Tests for receive_message Handler', () => {
                     response: { data: { vars: [{ var1: 'stuff', var2: 'things' }] } }
                 },
                 {
-                    query: expectedQueries.updateMembershiVarupdateMembershipVariable,
+                    query: expectedQueries.updateMembershipVariable,
                     variables: { id: "membership_1", value: "done" },
                     response: { data: { updateMembership: { id: "membership_1" } } }
                 }
