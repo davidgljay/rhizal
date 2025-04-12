@@ -82,12 +82,12 @@ mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_i
         return result.data.insert_messages_one;
     }
 
-    static async send(community_id, membership_id, to_phone, from_phone, text, log_message = true, about_membership_id = null) {
+    static async send(community_id, membership_id, to_phone, from_phone, text, log_message = true, about_membership_id = null, message_type = "message", timeout = 2000) {
         // Add the message to the queue
         Message.messageQueue = Message.messageQueue.then(async () => {
             Signal.show_typing_indicator(to_phone, from_phone);
             if (process.env.NODE_ENV !== 'test') {
-                await new Promise(resolve => setTimeout(resolve, 2000)); 
+                await new Promise(resolve => setTimeout(resolve, timeout)); 
             }
             const {timestamp} = await Signal.send([to_phone], from_phone, text);
             if (log_message) {
@@ -98,6 +98,44 @@ mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_i
         });
         // Return the message queue promise
         return Message.messageQueue;
+    }
+
+    static async send_announcement(community_id, message) {
+        const ANNOUNCEMENT_QUERY = `
+query AnnouncementQuery($community_id: uuid!) {
+    communities(where: {id: {_eq: $community_id}}) {
+        id
+        bot_phone
+        memberships {
+            id
+            user {
+                phone
+            }
+        }
+    }
+}`;
+
+        const result = await graphql(ANNOUNCEMENT_QUERY, { community_id });
+        const community = result.data.communities[0];
+        if (!community) {
+            console.error('Community not found');
+            return;
+        }
+        const {bot_phone, memberships} = community;
+        for (const membership of memberships) {
+            const { phone } = membership.user;
+            await Message.send(
+                community_id=community_id,
+                membership_id=membership.id, 
+                to_phone=phone, 
+                from_phone=bot_phone, 
+                text=message, 
+                log_message = true,
+                message_type="announcement", 
+                timeout=500
+            );
+        }
+        
     }
 
 }
