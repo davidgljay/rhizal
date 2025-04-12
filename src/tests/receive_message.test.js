@@ -85,6 +85,7 @@ describe('receive_message', () => {
             id: 'community_1',
             name: 'Test Community',
             bot_phone: '0987654321',
+            admins: [],
             onboarding: {
                 id: 'onboarding_script',
                 name: 'Onboarding Script',
@@ -141,7 +142,9 @@ describe('receive_message', () => {
 
         it('should send a message to the member', async () => {
             const membership = { user: {phone: '1234567890' }, community: { id: 'community_1', bot_phone: '0987654321' }, id: 'membership_1' };
-            await no_script_message(membership);
+            const community = { id: 'community_1', bot_phone: '0987654321', admins: [] };
+            const message = 'Test message';
+            await no_script_message(membership, community, message);
             expect(Message.send).toHaveBeenCalledWith('community_1', 'membership_1', "1234567890", "0987654321", 'Thanks for letting me know, I\'ll pass your message on to an organizer who may get back to you.', true);
         });
     });
@@ -161,7 +164,8 @@ describe('receive_message', () => {
                             script_json: '{"0": {"send": ["Welcome to Test Community! Please reply with your name."], "on_receive": [{"step": "done"}]}}',
                             vars_query: 'vars query',
                             targets_query: 'target query',
-                        }
+                        },
+                        admins: []
                     }
                 ],
                 memberships: [

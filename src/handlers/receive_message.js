@@ -97,7 +97,7 @@ export async function receive_message(sender, recipient, message, sent_time, sen
     }
     await Message.create(community.id, membership.id, message, sent_time, true);
     if (membership.step == 'done') {
-        await no_script_message(membership);
+        await no_script_message(membership, community, message);
         return;
     }
     const script = new Script(community.onboarding);
@@ -173,8 +173,9 @@ export async function new_member(phone, community, message, user) {
     return membership;
 }
 
-export async function no_script_message(membership) {
+export async function no_script_message(membership, community, message) {
     await Message.send(membership.community.id, membership.id, membership.user.phone, membership.community.bot_phone, 'Thanks for letting me know, I\'ll pass your message on to an organizer who may get back to you.', true);
+    relay_message_to_admins(community, message, membership.name, membership.user.phone);
     return;
 }
 
@@ -188,4 +189,4 @@ export async function relay_message_to_admins(community, message, sender_name, s
         await Message.send(community.id, admin.id, admin.user.phone, community.bot_phone, expandedMessage, true, sender_id);
     }
     return;
-}
+} 
