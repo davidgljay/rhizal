@@ -44,7 +44,8 @@ describe('receive_raw_message', () => {
             'UUID',
             '+10987654321',
             'Test message',
-            1741473723341
+            1741473723341,
+            'Test User',
         );
     });
 

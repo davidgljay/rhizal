@@ -69,13 +69,14 @@ describe('Message', () => {
                 from_user: true,
                 membership_id: 'membership_1',
                 text: 'Hello, world!',
-                signal_timestamp: 1696118400000
+                signal_timestamp: 1696118400000,
+                about_membership_id: null 
             }
             graphql.mockResolvedValue({ data: { insert_messages_one: mockMessage } });
             const ms_time = new Date('2023-10-01T00:00:00Z').getTime();
             const result = await Message.create('community_1', 'membership_1', 'Hello, world!', ms_time, true);
 
-            expect(graphql).toHaveBeenCalledWith( expect.stringContaining('mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $signal_timestamp: Int!, $about_member_id: uuid!)'), messageVars );
+            expect(graphql).toHaveBeenCalledWith( expect.stringContaining('mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $signal_timestamp: bigint!, $about_membership_id: uuid = null)'), messageVars );
             expect(result).toEqual(mockMessage);
         });
 
