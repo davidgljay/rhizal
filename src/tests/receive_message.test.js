@@ -75,8 +75,6 @@ jest.mock('../models/script', () => {
 });
 
 
-
-
 describe('receive_message', () => {
     describe('new_member', () => {
 
@@ -191,7 +189,7 @@ describe('receive_message', () => {
                 ]
             }
         };
-
+        
         beforeEach(() => {
             jest.clearAllMocks();
         });
@@ -406,6 +404,12 @@ describe('receive_message', () => {
                         },
                     },
                 ],
+                communities: [
+                    {
+                        id: 'community_1',
+                        bot_phone: '0987654321',
+                    },
+                ],
             },
         };
 
@@ -424,7 +428,7 @@ describe('receive_message', () => {
             await receive_reply(message, from_phone, bot_phone, reply_to_timestamp);
 
             expect(graphql).toHaveBeenCalledWith(
-                expect.stringContaining('query ReplyQuery($bot_phone:String!, $phone:String!, $signal_timestamp:Int!)'),
+                expect.stringContaining('query ReplyQuery($bot_phone:String!, $phone:String!, $signal_timestamp:bigint!)'),
                 { phone: from_phone, bot_phone, signal_timestamp: reply_to_timestamp }
             );
             expect(Message.send).toHaveBeenCalledWith(
@@ -432,38 +436,9 @@ describe('receive_message', () => {
                 'membership_1',
                 '1234567890',
                 bot_phone,
-                message,
+                'Message from Admin User: Reply message',
                 true
             );
-        });
-
-        it('should not send a reply if the sender is not an admin', async () => {
-            const message = 'Reply message';
-            const from_phone = '1111111111';
-            const bot_phone = '0987654321';
-            const reply_to_timestamp = 1234567890;
-
-            const nonAdminResponse = {
-                ...mockQueryResponse,
-                data: {
-                    ...mockQueryResponse.data,
-                    memberships: [
-                        {
-                            id: 'membership_1',
-                            type: 'member',
-                            name: 'Regular User',
-                            community_id: 'community_1',
-                        },
-                    ],
-                },
-            };
-
-            graphql.mockResolvedValue(nonAdminResponse);
-
-            await receive_reply(message, from_phone, bot_phone, reply_to_timestamp);
-
-            expect(graphql).toHaveBeenCalled();
-            expect(Message.send).not.toHaveBeenCalled();
         });
 
         it('should not send a reply if there is no reply_to phone number', async () => {
@@ -486,6 +461,86 @@ describe('receive_message', () => {
 
             expect(graphql).toHaveBeenCalled();
             expect(Message.send).not.toHaveBeenCalled();
+        });
+
+        it('should call receive_message if the user is not an admin', async () => {
+            const message = 'Reply message';
+            const from_phone = '1111111111';
+            const bot_phone = '0987654321';
+            const reply_to_timestamp = 1234567890;
+
+            const mockReceiveMessageQueryResponse = {
+                data: {
+                    communities: [
+                        {
+                            id: 'community_1',
+                            name: 'Test Community',
+                            bot_phone: '0987654321',
+                            onboarding: {
+                                id: 'onboarding_script',
+                                name: 'Onboarding Script',
+                                script_json: '{"0": {"send": ["Welcome to Test Community! Please reply with your name."], "on_receive": [{"step": "done"}]}}',
+                                vars_query: 'vars query',
+                                targets_query: 'target query',
+                            },
+                            admins: []
+                        }
+                    ],
+                    memberships: [
+                        {
+                            id: 'membership_1',
+                            user: {
+                                phone: '1234567890',
+                            },
+                            community: {
+                                id: 'community_1',
+                                bot_phone: '0987654321',
+                            },
+                            step: '0',
+                            current_script_id: 'onboarding_script',
+                            set_variable: jest.fn(),
+                        }
+                    ],
+                    users: [
+                        {
+                            id: 'user_1',
+                            phone: '1234567890',
+                        }
+                    ]
+                }
+            };
+            
+
+            const nonAdminResponse = {
+                ...mockQueryResponse,
+                data: {
+                    ...mockQueryResponse.data,
+                    memberships: [
+                        {
+                            id: 'membership_1',
+                            type: 'member',
+                            name: 'Regular User',
+                            community_id: 'community_1',
+                        },
+                    ],
+                },
+            };
+
+            graphql.mockResolvedValueOnce(nonAdminResponse);
+            graphql.mockResolvedValueOnce(mockReceiveMessageQueryResponse);
+
+            await receive_reply(message, from_phone, bot_phone, reply_to_timestamp);
+
+            expect(graphql).toHaveBeenNthCalledWith(1, 
+                expect.stringContaining('query ReplyQuery($bot_phone:String!, $phone:String!, $signal_timestamp:bigint!)'),
+                {"bot_phone": "0987654321", "phone": "1111111111", "signal_timestamp": 1234567890}
+            );
+            expect(graphql).toHaveBeenNthCalledWith(2,
+                expect.stringContaining('query RecieveMessageQuery($bot_phone:String!, $phone:String!)'),
+                { bot_phone: bot_phone, phone: from_phone }
+            );
+            expect(Message.send).not.toHaveBeenCalled();
+            
         });
 
     });

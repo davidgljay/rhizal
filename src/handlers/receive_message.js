@@ -12,6 +12,7 @@ const queries = {
 `query RecieveMessageQuery($bot_phone:String!, $phone:String!) {
     communities(where: {bot_phone: {_eq: $bot_phone}}) {
         id
+        bot_phone
         onboarding {
             id
             name
@@ -148,17 +149,23 @@ export async function receive_group_message(internal_group_id, message, from_pho
     return;
 }
 
-export async function receive_reply(message, from_phone, bot_phone, reply_to_timestamp) {
+export async function receive_reply(message, from_phone, bot_phone, reply_to_timestamp, sent_time, sender_name) {
 
     // Get replyQuery from GraphQL
     const response = await graphql(queries.replyQuery, { phone: from_phone, bot_phone, signal_timestamp: reply_to_timestamp });
     const membership = response.data.memberships.length > 0 ? response.data.memberships[0] : null;
-    const reply_to = response.data.messages.length > 0 ? response.data.messages[0].about_membership.user.phone : null;
-    if (!reply_to || !membership || membership.type !== 'admin') {
+    const reply_to = response.data.messages.length > 0 && response.data.messages[0].about_membership ? response.data.messages[0].about_membership.user.phone : null;
+    if (!reply_to || !membership) {
         // If no reply_to or membership is not an admin, return
         return;
     }
+    if (membership.type !== 'admin') {
+        // Treat as a normal message
+        receive_message(from_phone, bot_phone, message, sent_time, sender_name);
+        return;
+    }
     const about_member_phone = response.data.messages[0].about_membership.user.phone;
+    const expandedMessage = `Message from ${membership.name}: ${message}`;
 
     // Relay message to the member that the admin received a message about
     await Message.send(membership.community_id, membership.id, about_member_phone, bot_phone, message, true);

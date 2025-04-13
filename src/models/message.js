@@ -90,6 +90,9 @@ mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_i
                 await new Promise(resolve => setTimeout(resolve, timeout)); 
             }
             const {timestamp} = await Signal.send([to_phone], from_phone, text);
+            if (!timestamp) {
+                return;
+            }
             if (log_message) {
                 await Message.create(community_id, membership_id, text, timestamp, false, about_membership_id);
             }

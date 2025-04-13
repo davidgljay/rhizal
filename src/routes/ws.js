@@ -40,7 +40,7 @@ export async function receive_raw_message(msg) {
         return;
     }
     if (quote && quote.author == account) {
-        receive_reply(message, sourceUuid, account, quote.id);
+        receive_reply(message, sourceUuid, account, quote.id, timestamp, sourceName);
         return;
     }
     receive_message(sourceUuid, account, message, timestamp, sourceName);

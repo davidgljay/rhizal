@@ -67,7 +67,11 @@ class WebSocketManager {
                 console.error('Error sending message:', response.statusText);
             }
             this.clear_local_storage();
-            return response.json();
+            const data = response.json()
+            if (data.error) {
+                console.error('Error in response:', data.error);
+            }
+            return data;
         })
         .catch(error => {
             console.error('Error sending message:', error);
