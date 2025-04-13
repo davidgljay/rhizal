@@ -1,4 +1,7 @@
 const yaml = require('js-yaml');
+const Message = require('../models/message');
+const GroupThread = require('../models/group_thread');
+const Membership = require('../models/membership');
 
 
 /* 
@@ -14,11 +17,15 @@ The function parses the yaml script, replaces the variables in the messages, and
 */
 class RhyzalParser {
 
-    constructor(script_json, send_message, set_variable, set_group_variable) {
+    constructor(script_json) {
         let script_obj;
-        this.send_message = send_message;
+        const {send, set_message_type, send_announcement} = Message;
+        const {set_variable} = Membership;
+        this.send_message = send;
+        this.send_announcement = send_announcement;
+        this.set_message_type = set_message_type;
         this.set_variable = set_variable;
-        this.set_group_variable = set_group_variable;
+        this.set_group_variable = GroupThread.set_variable;
         try {
             script_obj = JSON.parse(script_json);
         }
