@@ -58,7 +58,7 @@ const queries = {
     }
 }`,
     replyQuery:
-`query ReplyQuery($bot_phone:String!, $phone:String!, $signal_timestamp:Int!) {
+`query ReplyQuery($bot_phone:String!, $phone:String!, $signal_timestamp:bigint!) {
     memberships(where:{community:{bot_phone:{_eq: $bot_phone}},user:{phone:{_eq:$phone}}}) {
         id
         type
@@ -85,6 +85,7 @@ export async function receive_message(sender, recipient, message, sent_time, sen
         return;
     }
     const results = await graphql(queries.receiveMessageQuery, { bot_phone: recipient, phone: sender });
+    console.log(results)
     const community = results.data.communities.length > 0 ? results.data.communities[0] : null;
     const user = results.data.users.length > 0 ? results.data.users[0] : null;
     let membership = results.data.memberships.length > 0 ? results.data.memberships[0] : null;
@@ -168,7 +169,7 @@ export async function receive_reply(message, from_phone, bot_phone, reply_to_tim
     const expandedMessage = `Message from ${membership.name}: ${message}`;
 
     // Relay message to the member that the admin received a message about
-    await Message.send(membership.community_id, membership.id, about_member_phone, bot_phone, message, true);
+    await Message.send(membership.community_id, membership.id, about_member_phone, bot_phone, expandedMessage, true);
     
 }
 
@@ -182,7 +183,7 @@ export async function new_member(phone, community, message, user) {
 
 export async function no_script_message(membership, community, message) {
     await Message.send(membership.community.id, membership.id, membership.user.phone, membership.community.bot_phone, 'Thanks for letting me know, I\'ll pass your message on to an organizer who may get back to you.', true);
-    relay_message_to_admins(community, message, membership.name, membership.user.phone);
+    relay_message_to_admins(community, message, membership.name, membership.id);
     return;
 }
 
@@ -197,3 +198,18 @@ export async function relay_message_to_admins(community, message, sender_name, s
     }
     return;
 } 
+
+export async function send_announcement(community, message) {
+    /*
+    * Simple version of sending an announcement for now. 
+    * If an admin messages a bot with #announcement it will trigger a script which asks for an announcement, confirms, and then sends. 
+    * This will be improved in the future to allow for more complex announcements, such as ones that target specific members or are sent in the future.
+    * 
+    * 1. #announcement triggers a script if member is an admin. How do I handle system-level scripts? Create a community called "system"?
+    * 2. Script asks for announcement text. How is this saved?
+    *     a. I have an "announcements" concept, I'll need a save_announcement function in the parser. Or is this overkill for now? Maybe I just have a type field, and a message can be type "announcement". 
+    * 3. Script asks for confirmation, loads announcement text, and sends it to all members of the community.
+    *     a. Announcement text is most recent message from the admin with type "announcement". 
+    * 
+    */
+}
