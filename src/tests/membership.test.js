@@ -2,7 +2,9 @@ const Membership = require('../models/membership');
 const { graphql } = require('../apis/graphql');
 const { id } = require('../models/message');
 
-jest.mock('../apis/graphql');
+jest.mock('../apis/graphql', () => ({
+    graphql: jest.fn()
+}));
 
 describe('Membership Model', () => {
 

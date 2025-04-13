@@ -4,10 +4,10 @@ const Signal = require('../apis/signal');
 class GroupThread {
 
 
-    static async run_script(group_thread, membership, message) {
+    static async run_script(group_thread, membership, message, signal_timestamp) {
         const Script = require('./script');
         const script = await Script.init(group_thread.community.group_script_id);
-        await script.get_vars(membership, message);
+        await script.get_vars(membership, message, signal_timestamp);
         script.vars.group_id = group_thread.group_id;
         if (group_thread.step == '0' && !message) {
             await script.send('0');

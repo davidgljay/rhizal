@@ -143,6 +143,17 @@ query AnnouncementQuery($community_id: uuid!) {
         
     }
 
-}
+    static async set_message_type(signal_timestamp, type) {
+        const SET_MESSAGE_TYPE = `
+mutation SetMessageType($signal_timestamp: bigint!, $type: String!) {
+    update_messages(where: {signal_timestamp: {_eq: $signal_timestamp}}, _set: {type: $message_type}) {
+        returning {
+            id
+        }
+}`
+        const result = await graphql(SET_MESSAGE_TYPE, { signal_timestamp, type });
+        return result.data.update_messages.returning[0];
+    }
+    }
 
 module.exports = Message;

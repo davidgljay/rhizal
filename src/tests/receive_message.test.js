@@ -256,12 +256,13 @@ describe('receive_message', () => {
             graphql.mockResolvedValue(mockQueryResponse);
             await receive_message(sender, recipient, message, sent_time);
 
-            expect(mockGetVars).toHaveBeenCalledWith(mockQueryResponse.data.memberships[0], message); 
+            expect(mockGetVars).toHaveBeenCalledWith(mockQueryResponse.data.memberships[0], message, sent_time); 
             expect(mockScriptReceive).toHaveBeenCalledWith('0', message);
         });
     });
 
     describe('receive_group_message', () => {
+        const mockQueryResponse = { data: {communities: [{ id: 'community_id', bot_phone: '0987654321' }] }};
 
         afterEach(() => {
             jest.clearAllMocks();
@@ -275,18 +276,18 @@ describe('receive_message', () => {
             const from_phone = '1234567890';
             const bot_phone = '0987654321';
             const sender_name = 'Test Sender';
+            const timestamp = 1234567890;
 
-            const mockQueryResponse = { data: {communities: [{ id: 'community_id', bot_phone }] }};
             const mockGroupThread = { step: '0' };
 
             jest.spyOn(GroupThread, 'find_or_create_group_thread').mockResolvedValue(mockGroupThread);
             graphql.mockResolvedValue(mockQueryResponse);
 
-            await receive_group_message(group_id, message, from_phone, bot_phone, sender_name);
+            await receive_group_message(group_id, message, from_phone, bot_phone, sender_name, timestamp);
 
             expect(graphql).toHaveBeenCalled();
             expect(GroupThread.find_or_create_group_thread).toHaveBeenCalledWith(base64_group_id, 'community_id');
-            expect(GroupThread.run_script).toHaveBeenCalledWith(mockGroupThread, {user: {phone: from_phone}, community: { id: 'community_id', bot_phone }}, message);
+            expect(GroupThread.run_script).toHaveBeenCalledWith(mockGroupThread, {user: {phone: from_phone}, community: { id: 'community_id', bot_phone }}, message, timestamp);
         });
 
         it('should return if there is no message and the group step is done', async () => {
@@ -296,12 +297,12 @@ describe('receive_message', () => {
             const bot_phone = '0987654321';
             const sender_name = 'Test Sender';
             const mockGroupThread = { step: 'done' };
-            const mockMembership = {community: { id: 'community_id' } };
+            const timestamp = 1234567890;
 
-            jest.spyOn(Membership, 'get').mockResolvedValue(mockMembership);
+            graphql.mockResolvedValue(mockQueryResponse);
             jest.spyOn(GroupThread, 'find_or_create_group_thread').mockResolvedValue(mockGroupThread);
 
-            await receive_group_message(group_id, message, from_phone, bot_phone, sender_name);
+            await receive_group_message(group_id, message, from_phone, bot_phone, sender_name, timestamp);
 
             expect(graphql).toHaveBeenCalled();
             expect(GroupThread.find_or_create_group_thread).toHaveBeenCalled();
@@ -318,7 +319,7 @@ describe('receive_message', () => {
             const mockGroupThread = { step: 'done' };
             const mockMembership = {community: { id: 'community_id' } };
 
-            jest.spyOn(Membership, 'get').mockResolvedValue(mockMembership);
+            graphql.mockResolvedValue(mockQueryResponse);
             jest.spyOn(GroupThread, 'find_or_create_group_thread').mockResolvedValue(mockGroupThread);
 
             await receive_group_message(group_id, message, from_phone, bot_phone, sender_name);
@@ -337,6 +338,7 @@ describe('receive_message', () => {
             const bot_phone = '0987654321';
             const sender_name = 'Test Sender';
             const mockGroupThread = { step: 'done', community: {group_threads: [{group_id: '123', hashtag: '#test'}]} };
+            graphql.mockResolvedValue(mockQueryResponse);
 
             jest.spyOn(GroupThread, 'find_or_create_group_thread').mockResolvedValue(mockGroupThread);
             jest.spyOn(GroupThread, 'leave_group').mockResolvedValue();
@@ -358,7 +360,6 @@ describe('receive_message', () => {
             const bot_phone = '0987654321';
             const sender_name = 'Test Sender';
 
-            const mockQueryResponse = {data: {communities: [{ id: 'community_id' }] }};
             const mockGroupThread = {
                 step: 'done',
                 community: {

@@ -1,4 +1,5 @@
 const { graphql } = require('../apis/graphql');
+const { signal_timestamp } = require('../models/message');
 const Script = require('../models/script');
 
 jest.mock('../apis/graphql');
@@ -76,17 +77,17 @@ describe('Script', () => {
         it('should return phone and bot_phone if no vars query is defined', async () => {
             scriptInstance.vars_query = '';
 
-            const vars = await scriptInstance.get_vars({id: '123', user: {phone: 'member_phone'}, community: {bot_phone: 'bot_phone', id:'456'}}, 'message');
+            const vars = await scriptInstance.get_vars({id: '123', user: {phone: 'member_phone'}, community: {bot_phone: 'bot_phone', id:'456'}}, 'message', 1234567890);
 
             expect(graphql).not.toHaveBeenCalled();
-            expect(vars).toEqual({id: '123', bot_phone: 'bot_phone', phone: 'member_phone', community_id: '456', message: 'message' });
-            expect(scriptInstance.vars).toEqual({id: '123', bot_phone: 'bot_phone', phone: 'member_phone', community_id: '456', message: 'message' });
+            expect(vars).toEqual({id: '123', bot_phone: 'bot_phone', phone: 'member_phone', community_id: '456', message: 'message', signal_timestamp: 1234567890 });
+            expect(scriptInstance.vars).toEqual({id: '123', bot_phone: 'bot_phone', phone: 'member_phone', community_id: '456', message: 'message', signal_timestamp: 1234567890 });
         });
 
         it('should throw an error when the response is not successful', async () => {
             graphql.mockRejectedValue(new Error('Error message'));
 
-            await expect(scriptInstance.get_vars(1)).rejects.toThrow('Error message');
+            await expect(scriptInstance.get_vars({id: '123', user: {phone: 'member_phone'}, community: {bot_phone: 'bot_phone', id:'456'}}, 'message', 1234567890)).rejects.toThrow('Error message');
         });
 
     });

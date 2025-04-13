@@ -119,6 +119,9 @@ class RhyzalParser {
                     await this.set_group_variable(vars.group_id, script['set_group_variable']['variable'], script['set_group_variable']['value']);
                 }
                 break;
+            case 'set_message_type':
+                await this.set_message_type(vars.signal_timestamp, script['set_message_type']['type']);
+                break;
             case 'if': //TODO: add elif to support more complex logic
                 if (this.evaluate_condition(script.if, vars)) {
                     if (script.then) {

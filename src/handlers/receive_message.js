@@ -85,7 +85,6 @@ export async function receive_message(sender, recipient, message, sent_time, sen
         return;
     }
     const results = await graphql(queries.receiveMessageQuery, { bot_phone: recipient, phone: sender });
-    console.log(results)
     const community = results.data.communities.length > 0 ? results.data.communities[0] : null;
     const user = results.data.users.length > 0 ? results.data.users[0] : null;
     let membership = results.data.memberships.length > 0 ? results.data.memberships[0] : null;
@@ -93,7 +92,7 @@ export async function receive_message(sender, recipient, message, sent_time, sen
         return;
     }
     if (!membership) {
-        membership = await new_member(sender, community, message, user);
+        membership = await new_member(sender, community, message, user, sent_time);
         await Message.create(community.id, membership.id, message, sent_time, true);
         return;
     }
@@ -103,7 +102,7 @@ export async function receive_message(sender, recipient, message, sent_time, sen
         return;
     }
     const script = new Script(community.onboarding);
-    await script.get_vars(membership, message);
+    await script.get_vars(membership, message, sent_time);
     await script.receive(membership.step, message);
     return;
 }
@@ -123,7 +122,7 @@ export async function receive_group_message(internal_group_id, message, from_pho
         return;
     }
     if (group_thread.step !== 'done') {
-        await GroupThread.run_script(group_thread, {user: {phone: from_phone}, community}, message);
+        await GroupThread.run_script(group_thread, {user: {phone: from_phone}, community}, message, sent_time);
         return;
     }
     if (!message) { //If there is no message, return.
@@ -173,10 +172,10 @@ export async function receive_reply(message, from_phone, bot_phone, reply_to_tim
     
 }
 
-export async function new_member(phone, community, message, user) {
+export async function new_member(phone, community, message, user, sent_time) {
     const membership = await Membership.create(phone, community, user);
     const script = new Script(community.onboarding);
-    await script.get_vars(membership, message);
+    await script.get_vars(membership, message, sent_time);
     await script.send('0');
     return membership;
 }
