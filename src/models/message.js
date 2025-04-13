@@ -127,15 +127,17 @@ query AnnouncementQuery($community_id: uuid!) {
         const {bot_phone, memberships} = community;
         for (const membership of memberships) {
             const { phone } = membership.user;
+            //TODO: Maybe refactor message.send to have a params object.
             await Message.send(
-                community_id=community_id,
-                membership_id=membership.id, 
-                to_phone=phone, 
-                from_phone=bot_phone, 
-                text=message, 
-                log_message = true,
-                message_type="announcement", 
-                timeout=500
+                community_id,
+                membership.id, 
+                phone, 
+                bot_phone, 
+                message, 
+                true,
+                null, 
+                "announcement", 
+                500
             );
         }
         

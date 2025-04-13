@@ -145,4 +145,29 @@ describe('Message', () => {
             mockDelay.mockRestore();
         });
     });
+
+    describe('send_announcement', () => {
+        it('should send an announcement to all members of a community', async () => {
+            const mockCommunity = {
+                id: 'community_1',
+                bot_phone: 'bot_phone',
+                memberships: [
+                    { id: 'membership_1', user: { phone: 'user1' } },
+                    { id: 'membership_2', user: { phone: 'user2' } }
+                ]
+            };
+            const mockSend = jest.spyOn(Message, 'send').mockResolvedValue({});
+
+            graphql.mockResolvedValue({ data: { communities: [mockCommunity] } });
+
+            await Message.send_announcement('community_1', 'Hello, world!');
+
+            expect(graphql).toHaveBeenCalledWith(expect.any(String), { community_id: 'community_1' });
+            expect(mockSend).toHaveBeenCalledTimes(2);
+            expect(mockSend).toHaveBeenCalledWith('community_1', 'membership_1', 'user1', 'bot_phone', 'Hello, world!', true, null, "announcement", 500);
+            expect(mockSend).toHaveBeenCalledWith('community_1', 'membership_2', 'user2', 'bot_phone', 'Hello, world!', true, null, "announcement", 500);
+
+            mockSend.mockRestore();
+        });
+    });
 });
