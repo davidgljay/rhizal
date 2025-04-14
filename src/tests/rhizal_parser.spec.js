@@ -312,4 +312,31 @@ describe('rhyzal_parser', () => {
         });
     });
 
+    describe('set_message_type', () => {
+        it('should set the message type correctly', async () => {
+            const parser = new RhyzalParser(test_json);
+            await parser.evaluate_receive({set_message_type: {type: 'text'}}, {signal_timestamp: 123456789});
+            expect(Message.set_message_type).toHaveBeenCalledWith(123456789, 'text');
+        });
+
+        it('should throw an error if signal_timestamp is not found', async () => {
+            const parser = new RhyzalParser(test_json);
+            await expect(() => parser.evaluate_receive({set_message_type: {type: 'text'}}, {})).rejects.toThrowError('Signal timestamp not found in vars');
+        });
+    }
+    );
+
+    describe('send_announcement', () => {
+        it('should send an announcement correctly', async () => {
+            const parser = new RhyzalParser(test_json);
+            await parser.evaluate_receive({send_announcement: {message: 'Hello, world!'}}, {community_id: '123'});
+            expect(Message.send_announcement).toHaveBeenCalledWith('123', 'Hello, world!');
+        });
+
+        it('should throw an error if community_id is not found', async () => {
+            const parser = new RhyzalParser(test_json);
+            await expect(() => parser.evaluate_receive({send_announcement: {message: 'Hello, world!'}}, {})).rejects.toThrowError('Community ID not found in vars');
+        });
+    });
+
 });

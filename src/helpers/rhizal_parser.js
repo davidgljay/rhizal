@@ -120,7 +120,16 @@ class RhyzalParser {
                 }
                 break;
             case 'set_message_type':
+                if(!vars.signal_timestamp) {
+                    throw new Error('Signal timestamp not found in vars');
+                }
                 await this.set_message_type(vars.signal_timestamp, script['set_message_type']['type']);
+                break;
+            case 'send_announcement':
+                if (!vars.community_id) {
+                    throw new Error('Community ID not found in vars');
+                }
+                await this.send_announcement(vars.community_id, script['send_announcement']['message']);
                 break;
             case 'if': //TODO: add elif to support more complex logic
                 if (this.evaluate_condition(script.if, vars)) {
