@@ -156,16 +156,20 @@ describe('Message', () => {
                     { id: 'membership_2', user: { phone: 'user2' } }
                 ]
             };
+            const mockMessage = {
+                id: 'message_1',
+                text: 'draft announcement'
+            };
             const mockSend = jest.spyOn(Message, 'send').mockResolvedValue({});
 
-            graphql.mockResolvedValue({ data: { communities: [mockCommunity] } });
+            graphql.mockResolvedValue({ data: { communities: [mockCommunity], messages:[mockMessage] } });
 
-            await Message.send_announcement('community_1', 'Hello, world!');
+            await Message.send_announcement('community_1', 'membership_1');
 
-            expect(graphql).toHaveBeenCalledWith(expect.any(String), { community_id: 'community_1' });
+            expect(graphql).toHaveBeenCalledWith(expect.any(String), { community_id: 'community_1', membership_id: 'membership_1' });
             expect(mockSend).toHaveBeenCalledTimes(2);
-            expect(mockSend).toHaveBeenCalledWith('community_1', 'membership_1', 'user1', 'bot_phone', 'Hello, world!', true, null, "announcement", 500);
-            expect(mockSend).toHaveBeenCalledWith('community_1', 'membership_2', 'user2', 'bot_phone', 'Hello, world!', true, null, "announcement", 500);
+            expect(mockSend).toHaveBeenNthCalledWith(1, 'community_1', 'membership_1', 'user1', 'bot_phone', 'draft announcement', true, null, "announcement", 500);
+            expect(mockSend).toHaveBeenNthCalledWith(2, 'community_1', 'membership_2', 'user2', 'bot_phone', 'draft announcement', true, null, "announcement", 500);
 
             mockSend.mockRestore();
         });

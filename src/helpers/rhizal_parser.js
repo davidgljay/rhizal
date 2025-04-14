@@ -129,7 +129,7 @@ class RhyzalParser {
                 if (!vars.community_id) {
                     throw new Error('Community ID not found in vars');
                 }
-                await this.send_announcement(vars.community_id, script['send_announcement']['message']);
+                await this.send_announcement(vars.community_id, vars.id);
                 break;
             case 'if': //TODO: add elif to support more complex logic
                 if (this.evaluate_condition(script.if, vars)) {

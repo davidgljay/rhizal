@@ -103,9 +103,9 @@ mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_i
         return Message.messageQueue;
     }
 
-    static async send_announcement(community_id, message) {
+    static async send_announcement(community_id, membership_id) {
         const ANNOUNCEMENT_QUERY = `
-query AnnouncementQuery($community_id: uuid!) {
+query AnnouncementQuery($community_id: uuid!, #membership_id: uuid!) {
     communities(where: {id: {_eq: $community_id}}) {
         id
         bot_phone
@@ -115,11 +115,20 @@ query AnnouncementQuery($community_id: uuid!) {
                 phone
             }
         }
+        messages(where: {community_id: {_eq: $community_id}, type: {_eq: "draft_announcement"}, membership_id: {_eg: $membership_id}}, limit: 1, order_by: {created_at: desc}) {
+            id
+            text
+        }
     }
 }`;
 
-        const result = await graphql(ANNOUNCEMENT_QUERY, { community_id });
+        const result = await graphql(ANNOUNCEMENT_QUERY, { community_id, membership_id });
         const community = result.data.communities[0];
+        const message = result.data.messages[0];
+        if (!message) {
+            console.error('No announcement message found');
+            return;
+        }
         if (!community) {
             console.error('Community not found');
             return;
@@ -133,7 +142,7 @@ query AnnouncementQuery($community_id: uuid!) {
                 membership.id, 
                 phone, 
                 bot_phone, 
-                message, 
+                message.text, 
                 true,
                 null, 
                 "announcement", 

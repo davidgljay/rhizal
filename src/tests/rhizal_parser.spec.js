@@ -329,8 +329,8 @@ describe('rhyzal_parser', () => {
     describe('send_announcement', () => {
         it('should send an announcement correctly', async () => {
             const parser = new RhyzalParser(test_json);
-            await parser.evaluate_receive({send_announcement: {message: 'Hello, world!'}}, {community_id: '123'});
-            expect(Message.send_announcement).toHaveBeenCalledWith('123', 'Hello, world!');
+            await parser.evaluate_receive({send_announcement: true}, {community_id: '123', id: '456'});
+            expect(Message.send_announcement).toHaveBeenCalledWith('123', '456');
         });
 
         it('should throw an error if community_id is not found', async () => {
