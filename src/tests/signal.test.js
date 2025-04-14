@@ -253,7 +253,7 @@ describe('WebSocketManager', () => {
                 },
                 body: JSON.stringify({
                     reaction: emoji,
-                    recipient: group_id || to_phone,
+                    recipient: 'group.' + group_id || to_phone,
                     target_author: to_phone,
                     timestamp: message_timestamp,
                 }),

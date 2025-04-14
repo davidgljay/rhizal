@@ -112,7 +112,7 @@ class WebSocketManager {
         const reaction_endpoint = `http://signal-cli:8080/v1/reactions/${from_phone}`;
         const body = {
             reaction: emoji,
-            recipient: group_id ? group_id : to_phone,
+            recipient: group_id ? 'group.' + group_id : to_phone,
             target_author: to_phone,
             timestamp: message_timestamp
         };
