@@ -46,7 +46,7 @@ mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_i
     }) 
     {
         id
-        membership: author {
+        membership {
             id
             user {
                 phone
