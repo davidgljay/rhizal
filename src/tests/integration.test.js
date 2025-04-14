@@ -1,4 +1,4 @@
-const { receive_message, receive_group_message } = require('../handlers/receive_message');
+const { receive_message, receive_group_message, receive_reply } = require('../handlers/receive_message');
 const signal = require('../apis/signal');
 const {graphql} = require('../apis/graphql');
 const Membership = require('../models/membership');
@@ -112,7 +112,8 @@ const expectedQueries = {
     updateMembershipVariable: `mutation updateMembershipVariable($id:uuid!, $value:String!)`,
     getScript: `query GetScript($id:uuid!)`,
     getGroupThread: `query GetGroupThread($group_id: String!)`,
-    createGroupThread: `mutation CreateGroupThread($community_id: uuid!, $group_id: String!)`
+    createGroupThread: `mutation CreateGroupThread($community_id: uuid!, $group_id: String!)`,
+    replyQuery: `query ReplyQuery($bot_phone:String!, $phone:String!, $signal_timestamp:bigint!)`
 }
 
 const testScript = JSON.stringify(script);
@@ -934,6 +935,72 @@ describe('Integration Tests for receive_message Handler', () => {
                 expect(graphql).toHaveBeenCalledTimes(mockGraphql.length);
                 expect(signal.send).not.toHaveBeenCalled();
             });
+        });
+
+    });
+
+    describe('reply_message', () => {
+
+        const mockQueryResponse = {
+            data: {
+                memberships: [{
+                    id: 'membership_1',
+                    type: 'admin',
+                    name: 'Test Admin',
+                    community_id: 'community_1',
+                }],
+                messages: [{
+                    id: 'message_1',
+                    about_membership: {
+                        id: 'membership_2',
+                        user: {
+                            phone: '+9999999999'
+                        }
+                    }
+                }]
+            }
+        };
+            
+        it('should forward a reply from admins to the person who sent the original message', async () => {
+            const phone = '+1234567890';
+            const bot_phone = '+0987654321';
+            const signal_timestamp = 1741644982;
+            const message = 'This is a reply'
+            const expectedMessage = 'Message from Test Admin: ' + message;
+
+            const mockGraphql = [
+                {
+                    query: expectedQueries.replyQuery,
+                    variables: { bot_phone, phone, signal_timestamp },
+                    response: mockQueryResponse
+                },
+                {
+                    query: expectedQueries.createMessage,
+                    variables: {
+                        community_id: 'community_1',
+                        membership_id: 'membership_1',
+                        from_user: false,
+                        signal_timestamp: expect.any(Number),
+                        text:expectedMessage,
+                        about_membership_id: null
+                    },
+                    response: { data: { insert_messages_one: { id: "message_1", membership: {id: 'membership_1', user: {phone: '+1234567890'}}, community: { id: 'community_1', bot_phone: '+0987654321'} } } }
+                }
+            ];
+
+            for (let i = 0; i < mockGraphql.length; i++) {
+                graphql.mockImplementationOnce((...args) => {
+                    return Promise.resolve(mockGraphql[i].response);
+                });
+            }
+
+            await receive_reply(message, phone, bot_phone, signal_timestamp);
+
+            for (let i = 0; i < mockGraphql.length; i++) {
+                expect(graphql).toHaveBeenNthCalledWith(i + 1, expect.stringContaining(mockGraphql[i].query), mockGraphql[i].variables);
+            }
+            expect(graphql).toHaveBeenCalledTimes(mockGraphql.length);
+            expect(signal.send).toHaveBeenCalledWith(['+9999999999'], bot_phone, expectedMessage);
         });
 
     });
