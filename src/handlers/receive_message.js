@@ -198,17 +198,3 @@ export async function relay_message_to_admins(community, message, sender_name, s
     return;
 } 
 
-export async function send_announcement(community, message) {
-    /*
-    * Simple version of sending an announcement for now. 
-    * If an admin messages a bot with #announcement it will trigger a script which asks for an announcement, confirms, and then sends. 
-    * This will be improved in the future to allow for more complex announcements, such as ones that target specific members or are sent in the future.
-    * 
-    * 1. #announcement triggers a script if member is an admin. How do I handle system-level scripts? Create a community called "system"?
-    * 2. Script asks for announcement text. How is this saved?
-    *     a. I have an "announcements" concept, I'll need a save_announcement function in the parser. Or is this overkill for now? Maybe I just have a type field, and a message can be type "announcement". 
-    * 3. Script asks for confirmation, loads announcement text, and sends it to all members of the community.
-    *     a. Announcement text is most recent message from the admin with type "announcement". 
-    * 
-    */
-}
