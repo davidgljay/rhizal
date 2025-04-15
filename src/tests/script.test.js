@@ -175,4 +175,44 @@ query GetScript($id:uuid!) {
             expect(scriptInstance.parser.receive).toHaveBeenCalledWith('step', { var1: 'value1' }, 'message_content');
         })
     })
+
+    describe('get_system_script', () => {
+        it('should return a new Script instance when the response is successful', async () => {
+            const mockResponse = {
+                data: {
+                    scripts: [{
+                        id: 1,
+                        name: 'Test Script',
+                        script_json: '{"json": "json content"}',
+                        vars_query: 'vars query',
+                        targets_query: 'target query',
+                    }],
+                },
+            };
+            graphql.mockResolvedValue(mockResponse);
+
+            const scriptInstance = await Script.get_system_script('Test Script');
+
+            expect(graphql).toHaveBeenCalledWith(expect.stringContaining("query GetSystemScript($script_name: String!)"), { script_name: 'Test Script' });
+            expect(scriptInstance).toBeInstanceOf(Script);
+            expect(scriptInstance.id).toBe(1);
+            expect(scriptInstance.name).toBe('Test Script');
+        });
+        it('should throw an error when the response is not successful', async () => {
+            graphql.mockRejectedValue(new Error('Error message'));
+
+            await expect(Script.get_system_script('Test Script')).rejects.toThrow('Error message');
+        });
+        it('should throw an error if the script is not found', async () => {
+            const mockResponse = {
+                data: {
+                    scripts: [],
+                },
+            };
+            graphql.mockResolvedValue(mockResponse);
+
+            await expect(Script.get_system_script('Nonexistent Script')).rejects.toThrow('Script not found');
+        });
+    });
+
 });

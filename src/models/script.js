@@ -71,6 +71,24 @@ query GetScript($id:uuid!) {
         return await this.parser.receive(step, this.vars, message)
     }
 
+    static async get_system_script(script_name) {
+        const systemScriptQuery = `
+query GetSystemScript($script_name: String!) {
+    scripts(where: {name: {_eq: $script_name}, community: { name: {_eq: "system"}}}) {
+        id
+        name
+        script_json
+        vars_query
+        targets_query
+    }
+
+}`;
+        const systemScriptData = await graphql(systemScriptQuery, { script_name });
+        if (systemScriptData.data.scripts.length === 0) {
+            throw new Error(`System script ${script_name} not found`);
+        }
+        return new Script(systemScriptData.data.scripts[0]);
+    }
 }
 
 
