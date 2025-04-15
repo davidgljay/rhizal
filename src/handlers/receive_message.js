@@ -5,6 +5,7 @@ const Community = require('../models/community');
 const GroupThread = require('../models/group_thread');
 const Signal = require('../apis/signal');
 const { graphql } = require('../apis/graphql');
+const { bot_message_hashtag } = require('../helpers/hashtag_commands');
 
 
 const queries = {
@@ -97,6 +98,13 @@ export async function receive_message(sender, recipient, message, sent_time, sen
         return;
     }
     await Message.create(community.id, membership.id, message, sent_time, true);
+    if (message.match(/#[\w]+/)) {
+        const hashtag = message.match(/#[\w]+/)[0];
+        const command_triggered = await bot_message_hashtag(hashtag, community, membership, message);
+        if (command_triggered) {
+            return;
+        }
+    }
     if (membership.step == 'done') {
         await no_script_message(membership, community, message);
         return;

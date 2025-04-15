@@ -13,8 +13,9 @@ export async function bot_message_hashtag(hashtag, membership, community, messag
             await Membership.set_variable(membership.id, 'step', '0');
             await announcement_script.get_vars(membership, message);
             await announcement_script.send('0');
-            break;
+            return true;
     }
+    return false;
 };
 
 

@@ -6,6 +6,7 @@ const GroupThread = require('../models/group_thread');
 const Signal = require('../apis/signal');
 const { graphql } = require('../apis/graphql');
 const { new_member, no_script_message, receive_message, receive_group_message, receive_reply, relay_message_to_admins  } = require('../handlers/receive_message');
+const { bot_message_hashtag } = require('../helpers/hashtag_commands');
 
 jest.mock('../models/membership', () => {
     return {
@@ -43,7 +44,6 @@ jest.mock('../models/group_thread', () => {
 });
 
 
-
 jest.mock('../models/community', () => {
     return jest.fn().mockImplementation((id, name, data) => {
         return {
@@ -56,6 +56,11 @@ jest.mock('../models/community', () => {
 
 jest.mock('../apis/graphql', () => ({
     graphql: jest.fn()
+}));
+
+jest.mock('../helpers/hashtag_commands', () => ({
+    bot_message_hashtag: jest.fn(),
+    group_message_hashtag: jest.fn(),
 }));
 
 const mockScriptSend = jest.fn();
@@ -256,6 +261,42 @@ describe('receive_message', () => {
             graphql.mockResolvedValue(mockQueryResponse);
             await receive_message(sender, recipient, message, sent_time);
 
+            expect(mockGetVars).toHaveBeenCalledWith(mockQueryResponse.data.memberships[0], message, sent_time); 
+            expect(mockScriptReceive).toHaveBeenCalledWith('0', message);
+        });
+
+        it('should call the appropriate function if the message includes a hashtag', async () => {
+            const sender = '1234567890';
+            const recipient = '0987654321';
+            const message = 'test message with #command';
+            const sent_time = new Date();
+            graphql.mockResolvedValue(mockQueryResponse);
+            await receive_message(sender, recipient, message, sent_time);
+
+            expect(bot_message_hashtag).toHaveBeenCalledWith('#command', expect.objectContaining({ id: 'community_1' }), expect.objectContaining({ id: 'membership_1' }), message);
+
+        });
+
+        it('should stop if the hashtag triggers a command', async () => {
+            const sender = '1234567890';
+            const recipient = '0987654321';
+            const message = 'test message with #command';
+            const sent_time = new Date();
+            graphql.mockResolvedValue(mockQueryResponse);
+            bot_message_hashtag.mockResolvedValue(true);
+            await receive_message(sender, recipient, message, sent_time);
+            expect(Membership.set_variable).not.toHaveBeenCalled();
+            expect(Message.send).not.toHaveBeenCalled();
+        });
+
+        it('should proceed if the hashtag does not trigger a command', async () => {
+            const sender = '1234567890';
+            const recipient = '0987654321';
+            const message = 'test message with #command';
+            const sent_time = new Date();
+            graphql.mockResolvedValue(mockQueryResponse);
+            bot_message_hashtag.mockResolvedValue(false);
+            await receive_message(sender, recipient, message, sent_time);
             expect(mockGetVars).toHaveBeenCalledWith(mockQueryResponse.data.memberships[0], message, sent_time); 
             expect(mockScriptReceive).toHaveBeenCalledWith('0', message);
         });
