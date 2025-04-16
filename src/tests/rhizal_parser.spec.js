@@ -60,7 +60,7 @@ describe('rhyzal_parser', () => {
             const invalid = `
     invalid_yaml: {{ action }} message {{ message_type }}
             `;
-            expect(() => new RhyzalParser(invalid)).toThrowError(/^Invalid yaml input/);
+            expect(() => new RhyzalParser(invalid)).toThrowError(/^Invalid JSON input/);
         });
     });
 

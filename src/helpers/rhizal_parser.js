@@ -30,7 +30,7 @@ class RhyzalParser {
             script_obj = JSON.parse(script_json);
         }
         catch (e) {
-            throw new Error('Invalid yaml input ' + e);
+            throw new Error('Invalid JSON input ' + e);
         }
         this.script = script_obj;
     }
