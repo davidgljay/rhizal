@@ -194,16 +194,17 @@ describe('receive_message', () => {
                 ]
             }
         };
+
+        let sender = '1234567890';
+        let recipient = '0987654321';
+        let message = 'test message';
+        let sent_time = new Date();
         
         beforeEach(() => {
             jest.clearAllMocks();
         });
 
         it('should log a message', async () => {
-            const sender = '1234567890';
-            const recipient = '0987654321';
-            const message = 'test message';
-            const sent_time = new Date();
             graphql.mockResolvedValue(mockQueryResponse);
 
             await receive_message(sender, recipient, message, sent_time);
@@ -273,7 +274,7 @@ describe('receive_message', () => {
             graphql.mockResolvedValue(mockQueryResponse);
             await receive_message(sender, recipient, message, sent_time);
 
-            expect(bot_message_hashtag).toHaveBeenCalledWith('#command', expect.objectContaining({ id: 'community_1' }), expect.objectContaining({ id: 'membership_1' }), message);
+            expect(bot_message_hashtag).toHaveBeenCalledWith('#command', expect.objectContaining({ id: 'membership_1' }), expect.objectContaining({ id: 'community_1' }), message);
 
         });
 
@@ -290,14 +291,25 @@ describe('receive_message', () => {
         });
 
         it('should proceed if the hashtag does not trigger a command', async () => {
-            const sender = '1234567890';
-            const recipient = '0987654321';
-            const message = 'test message with #command';
-            const sent_time = new Date();
+
             graphql.mockResolvedValue(mockQueryResponse);
             bot_message_hashtag.mockResolvedValue(false);
             await receive_message(sender, recipient, message, sent_time);
             expect(mockGetVars).toHaveBeenCalledWith(mockQueryResponse.data.memberships[0], message, sent_time); 
+            expect(mockScriptReceive).toHaveBeenCalledWith('0', message);
+        });
+
+        it('should load the script if the member has a current script', async () => {
+            const memberScriptResponse = { ...mockQueryResponse };
+            memberScriptResponse.data.memberships[0].current_script = { 
+                id: 'current_script_id',
+                name: 'Current Script',
+                script_json: '{"0": {"send": ["Current script message"]}}'
+            };
+            graphql.mockResolvedValue(memberScriptResponse);
+            await receive_message(sender, recipient, message, sent_time);
+            expect(Script).toHaveBeenCalledWith(memberScriptResponse.data.memberships[0].current_script);
+            expect(mockGetVars).toHaveBeenCalledWith(memberScriptResponse.data.memberships[0], message, sent_time);
             expect(mockScriptReceive).toHaveBeenCalledWith('0', message);
         });
     });

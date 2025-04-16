@@ -36,7 +36,15 @@ const queries = {
         id
         step
         name
+        type
         informal_name
+        current_script {
+            id
+            name
+            script_json
+            vars_query
+            targets_query
+        }
         community {
             id
             bot_phone
@@ -100,7 +108,7 @@ export async function receive_message(sender, recipient, message, sent_time, sen
     await Message.create(community.id, membership.id, message, sent_time, true);
     if (message.match(/#[\w]+/)) {
         const hashtag = message.match(/#[\w]+/)[0];
-        const command_triggered = await bot_message_hashtag(hashtag, community, membership, message);
+        const command_triggered = await bot_message_hashtag(hashtag, membership, community, message);
         if (command_triggered) {
             return;
         }
@@ -109,7 +117,12 @@ export async function receive_message(sender, recipient, message, sent_time, sen
         await no_script_message(membership, community, message);
         return;
     }
-    const script = new Script(community.onboarding);
+    let script = null;
+    if (membership.current_script) {
+        script = new Script(membership.current_script);
+    } else {
+        script = new Script(community.onboarding);
+    }
     await script.get_vars(membership, message, sent_time);
     await script.receive(membership.step, message);
     return;
