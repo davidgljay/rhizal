@@ -103,6 +103,73 @@ const groupScript = {
     }
 };
 
+const announcementScript = {
+    "0": {
+        "send": [
+        "Would you like to send an announcement to your entire community? Just enter the message here and I'll confirm that it looks good before sending. You can also cancel this process with #cancel."
+        ],
+        "on_receive": {
+        "if": "regex(message, /#cancel[^a-zA-Z0-9]/)",
+        "then": [
+            {
+            "step": 3
+            }
+        ],
+        "else": [
+            {
+            "set_message_type": {
+                "type": "draft_announcement"
+            }
+            },
+            {
+            "step": 1
+            }
+        ]
+        }
+    },
+    "1": {
+        "send": [
+        "Thanks! Does this look good? \n\n{{message}}\n\nPlease respond with 'yes' to send or 'no' to cancel."
+        ],
+        "on_receive": {
+        "if": "regex(message, /yes/)",
+        "then": [
+            {
+            "send_announcement": true
+            },
+            {
+            "step": 2
+            }
+        ],
+        "else": [
+            {
+            "step": 3
+            }
+        ]
+        }
+    },
+    "2": {
+        "send": [
+        "Great! Your announcement has been sent to your community."
+        ],
+        "on_receive": [
+        {
+            "step": "done"
+        }
+        ]
+    },
+    "3": {
+        "send": [
+        "Okay, I've canceled the announcement process. You can start it again with #announcement at any time."
+        ],
+        "on_receive": [
+        {
+            "step": "done"
+        }
+        ]
+    }
+}
+
 const expectedQueries = {
     receiveMessage: `query RecieveMessageQuery($bot_phone:String!, $phone:String!)`,
     createUserAndMembership: `mutation CreateUserAndMembership($phone:String!, $community_id:uuid!, $current_script_id:uuid!)`,
@@ -113,7 +180,8 @@ const expectedQueries = {
     getScript: `query GetScript($id:uuid!)`,
     getGroupThread: `query GetGroupThread($group_id: String!)`,
     createGroupThread: `mutation CreateGroupThread($community_id: uuid!, $group_id: String!)`,
-    replyQuery: `query ReplyQuery($bot_phone:String!, $phone:String!, $signal_timestamp:bigint!)`
+    replyQuery: `query ReplyQuery($bot_phone:String!, $phone:String!, $signal_timestamp:bigint!)`,
+    systemScript: `query GetSystemScript($script_name: String!)`
 }
 
 const testScript = JSON.stringify(script);
@@ -240,7 +308,6 @@ describe('Integration Tests for receive_message Handler', () => {
 
             for (let i = 0; i < mockGraphql.length; i++) {
                 graphql.mockImplementationOnce((...args) => {
-                    // console.log('graphql called with:', args);
                     return Promise.resolve(mockGraphql[i].response);
                 });
                 
@@ -552,6 +619,78 @@ describe('Integration Tests for receive_message Handler', () => {
             expect(graphql).toHaveBeenCalledTimes(mockGraphql.length);
             expect(signal.send).not.toHaveBeenCalled();
         });
+
+        it('should trigger the correct command if the member is an admin and the message includes a hashtag command', async () => {
+            const senderNumber = '1234567890';
+            const recipientNumber = '0987654321';
+            const sentTime = 1741644982;
+            const expectedMessage = "Would you like to send an announcement to your entire community? Just enter the message here and I'll confirm that it looks good before sending. You can also cancel this process with #cancel."
+
+            const hashtagCommandResponse = JSON.parse(JSON.stringify(mockQueryResponse));
+            hashtagCommandResponse.data.memberships[0].type = 'admin';
+
+            const mockGraphql = [
+                {
+                    query: expectedQueries.receiveMessage,
+                    variables: { bot_phone: recipientNumber, phone: senderNumber },
+                    response: hashtagCommandResponse
+                },
+                {
+                    query: expectedQueries.createMessage,
+                    variables: {
+                        community_id: 'community_1',
+                        membership_id: 'membership_1',
+                        from_user: true,
+                        signal_timestamp: expect.any(Number),
+                        text: '#announcement',
+                        about_membership_id: null
+                    },
+                    response: { data: { insert_messages_one: { id: "message_1", membership: {id: 'membership_1', user: {phone: '+1234567890'}}, community: { id: 'community_1', bot_phone: '+0987654321'} } } }
+                },
+                {
+                    query: expectedQueries.systemScript,
+                    variables: { script_name: 'announcement' },
+                    response: { data: { scripts: [{ id: 'script_1', name: 'announcement', script_json: JSON.stringify(announcementScript), vars_query: null }] } }
+                },
+                {
+                    query: 'mutation updateMembershipVariable($id:uuid!, $value:uuid!)',
+                    variables: { id: "membership_1", value: "script_1" },
+                    response: { data: { updateMembership: { id: "membership_1" } } }
+                },
+    
+                {
+                    query: expectedQueries.updateMembershipVariable,
+                    variables: { id: "membership_1", value: "0" },
+                    response: { data: { updateMembership: { id: "membership_1" } } }
+                },
+                {
+                    query: expectedQueries.createMessage,
+                    variables: {
+                        community_id: 'community_1',
+                        membership_id: 'membership_1',
+                        signal_timestamp: expect.any(Number),
+                        text: expectedMessage,
+                        from_user: false,
+                        about_membership_id: null
+                    },
+                    response: { data: { insert_messages_one: { id: "message_2", membership: {id: 'membership_1', user: {phone: '+1234567890'}}, community: { id: 'community_1', bot_phone: '+0987654321'} } } }
+                }
+            ];
+
+            for (let i = 0; i < mockGraphql.length; i++) {
+                graphql.mockImplementationOnce((...args) => {
+                    return Promise.resolve(mockGraphql[i].response);
+                });
+            }
+
+            await receive_message(senderNumber, recipientNumber, '#announcement', sentTime);
+
+            for (let i = 0; i < mockGraphql.length; i++) {
+                expect(graphql).toHaveBeenNthCalledWith(i + 1, expect.stringContaining(mockGraphql[i].query), mockGraphql[i].variables);
+            }
+            expect(graphql).toHaveBeenCalledTimes(mockGraphql.length);
+            expect(signal.send).toHaveBeenCalledWith([senderNumber], recipientNumber, expectedMessage);
+        });  
 
     });
     
