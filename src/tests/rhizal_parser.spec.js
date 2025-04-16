@@ -263,6 +263,11 @@ describe('rhyzal_parser', () => {
             expect(parser.evaluate_condition('regex(var1, /foo/)', {var1: 'bar'})).toBe(false);            
         });
 
+        it('should properly evaluate a regex match between a variable and a regex and ignore case', () => {
+            const parser = new RhyzalParser(test_json);
+            expect(parser.evaluate_condition('regex(var1, /foo/)', {var1: 'FOO'})).toBe(true);          
+        });
+
         it('should properly evaluate a regex match between two variables', () => {
             const parser = new RhyzalParser(test_json);
             expect(parser.evaluate_condition('regex(var1, var2)', {var1: 'foo', var2: 'foo'})).toBe(true);

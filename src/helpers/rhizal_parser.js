@@ -193,7 +193,7 @@ class RhyzalParser {
                 match.trim();
                 if (match.startsWith('/') && match.endsWith('/')) {
                     match = match.slice(1, -1); // Remove the leading and trailing slashes
-                    return new RegExp(match).test(vars[variable]);
+                    return new RegExp(match, 'i').test(vars[variable]);
                 } else {
                     return vars[variable] == vars[match];
                 }
