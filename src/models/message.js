@@ -214,7 +214,7 @@ query SendToAdmins($community_id: uuid!) {
                 true,
                 sender_id, 
                 "relay_to_admin", 
-                500
+                0
             );
         }
     }

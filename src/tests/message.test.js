@@ -226,8 +226,8 @@ describe('Message', () => {
 
         expect(graphql).toHaveBeenCalledWith(expect.any(String), { community_id: 'community_1' });
         expect(mockSend).toHaveBeenCalledTimes(2);
-        expect(mockSend).toHaveBeenNthCalledWith(1, 'community_1', 'admin_1', 'admin1', 'bot_phone', 'Hello, admins!', true, 'sender_id', "relay_to_admin", 500);
-        expect(mockSend).toHaveBeenNthCalledWith(2, 'community_1', 'admin_2', 'admin2', 'bot_phone', 'Hello, admins!', true, 'sender_id', "relay_to_admin", 500);
+        expect(mockSend).toHaveBeenNthCalledWith(1, 'community_1', 'admin_1', 'admin1', 'bot_phone', 'Hello, admins!', true, 'sender_id', "relay_to_admin", 0);
+        expect(mockSend).toHaveBeenNthCalledWith(2, 'community_1', 'admin_2', 'admin2', 'bot_phone', 'Hello, admins!', true, 'sender_id', "relay_to_admin", 0);
 
         mockSend.mockRestore();
         });
@@ -247,8 +247,8 @@ describe('Message', () => {
 
         expect(graphql).not.toHaveBeenCalled();
         expect(mockSend).toHaveBeenCalledTimes(2);
-        expect(mockSend).toHaveBeenNthCalledWith(1, 'community_1', 'admin_1', 'admin1', 'bot_phone', 'Hello, admins!', true, 'sender_id', "relay_to_admin", 500);
-        expect(mockSend).toHaveBeenNthCalledWith(2, 'community_1', 'admin_2', 'admin2', 'bot_phone', 'Hello, admins!', true, 'sender_id', "relay_to_admin", 500);
+        expect(mockSend).toHaveBeenNthCalledWith(1, 'community_1', 'admin_1', 'admin1', 'bot_phone', 'Hello, admins!', true, 'sender_id', "relay_to_admin", 0);
+        expect(mockSend).toHaveBeenNthCalledWith(2, 'community_1', 'admin_2', 'admin2', 'bot_phone', 'Hello, admins!', true, 'sender_id', "relay_to_admin", 0);
 
         mockSend.mockRestore();
         });
