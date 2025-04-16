@@ -202,20 +202,7 @@ export async function new_member(phone, community, message, user, sent_time) {
 }
 
 export async function no_script_message(membership, community, message) {
-    await Message.send(membership.community.id, membership.id, membership.user.phone, membership.community.bot_phone, 'Thanks for letting me know, I\'ll pass your message on to an organizer who may get back to you.', true);
-    relay_message_to_admins(community, message, membership.name, membership.id);
+    const relayMessage = `Message relayed from ${membership.name}: "${message}" Reply to respond.`;
+    Message.send_to_admins(community.id, membership.id, relayMessage, community);
     return;
 }
-
-export async function relay_message_to_admins(community, message, sender_name, sender_id) {
-    const admins = community.admins;
-    if (!admins) {
-        return;
-    }
-    for (const admin of admins) {
-        const expandedMessage = `Message relayed from ${sender_name}: "${message}" Reply to respond.`;
-        await Message.send(community.id, admin.id, admin.user.phone, community.bot_phone, expandedMessage, true, sender_id);
-    }
-    return;
-} 
-

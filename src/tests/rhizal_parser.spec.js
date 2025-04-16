@@ -8,6 +8,7 @@ jest.mock('../models/message', () => ({
     send: jest.fn(),
     send_announcement: jest.fn(),
     set_message_type: jest.fn(),
+    send_to_admins: jest.fn(),
 }));
 
 jest.mock('../models/membership', () => ({
@@ -341,6 +342,25 @@ describe('rhyzal_parser', () => {
         it('should throw an error if community_id is not found', async () => {
             const parser = new RhyzalParser(test_json);
             await expect(() => parser.evaluate_receive({send_announcement: {message: 'Hello, world!'}}, {})).rejects.toThrowError('Community ID not found in vars');
+        });
+    });
+
+    describe('send_to_admins', () => {
+        it('should send a message to admins correctly', async () => {
+            const parser = new RhyzalParser(test_json);
+            await parser.evaluate_receive({send_to_admins: {preamble: 'Test preamble'}}, {community_id: '123', id: '456', message: 'Hello, world!'});
+            expect(Message.send_to_admins).toHaveBeenCalledWith('123', '456', 'Test preamble\n\nHello, world!');
+        });
+
+        it('should replace variables in the preamble', async () => {
+            const parser = new RhyzalParser(test_json);
+            await parser.evaluate_receive({send_to_admins: {preamble: 'Test preamble {{var1}}'}}, {community_id: '123', id: '456', message: 'Hello, world!', var1: 'foo'});
+            expect(Message.send_to_admins).toHaveBeenCalledWith('123', '456', 'Test preamble foo\n\nHello, world!');
+        });
+
+        it('should throw an error if community_id is not found', async () => {
+            const parser = new RhyzalParser(test_json);
+            await expect(() => parser.evaluate_receive({send_to_admins: true}, {})).rejects.toThrowError('Community ID not found in vars');
         });
     });
 

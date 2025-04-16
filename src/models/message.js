@@ -170,6 +170,56 @@ mutation SetMessageType($signal_timestamp: bigint!, $type: String!) {
         const result = await graphql(SET_MESSAGE_TYPE, { signal_timestamp, type });
         return result.data.update_messages.returning[0];
     }
+
+    static async send_to_admins(community_id, sender_id, text, community = null) {
+        let bot_phone;
+        let admins
+        if (!community) {
+        const SEND_TO_ADMINS = `
+query SendToAdmins($community_id: uuid!) {
+    communities(where: {id: {_eq: $community_id}}) {
+        id
+        bot_phone
+        admins:memberships {
+            id
+            user {
+                phone
+            }
+        }
     }
+}`;
+
+            const result = await graphql(SEND_TO_ADMINS, { community_id });
+            const communityData = result.data.communities[0];
+            if (!communityData) {
+                console.error('CommunityData not found');
+                return;
+            }
+            bot_phone = communityData.bot_phone;
+            admins = communityData.admins;
+        } else {
+            bot_phone = community.bot_phone;
+            admins = community.admins;
+        }
+        
+
+        for (const admin of admins) {
+            const { phone } = admin.user;
+            await Message.send(
+                community_id,
+                admin.id, 
+                phone, 
+                bot_phone, 
+                text, 
+                true,
+                sender_id, 
+                "relay_to_admin", 
+                0
+            );
+        }
+    }
+
+
+}
 
 module.exports = Message;

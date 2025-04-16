@@ -10,6 +10,10 @@
     - set_variable:
         variable: "name"
         value: "regex(message, '^[a-zA-Z ]+$')"
+    - set_message_type:
+        type: "onboarding"
+    - send_to_admins:
+        preamble: "New user onboarding started with name:"
     - step: 1
 
 1:
@@ -18,11 +22,15 @@
   on_receive:
     - set_variable:
         variable: "profile"
-        value: "regex(message, '^[a-zA-Z ]+$')"
+        value: "message"
+    - set_message_type:
+        type: "onboarding"
+    - send_to_admins:
+        preamble: "Why {{name}} is here:"
     - step: 2
 
 2:
   send:
-    - "Thanks for sharing! I'll let David know, he may be in touch."
+    - "Thanks for sharing! I'll let David know, he may be in touch. Any more messages you send to me will be relayed on to him."
   on_receive:
     - step: "done"

@@ -23,7 +23,8 @@ jest.mock('../models/membership', () => {
 jest.mock('../models/message', () => {
     return {
         create: jest.fn(),
-        send: jest.fn()
+        send: jest.fn(),
+        send_to_admins: jest.fn()
     };
 });
 
@@ -144,11 +145,11 @@ describe('receive_message', () => {
         });
 
         it('should send a message to the member', async () => {
-            const membership = { user: {phone: '1234567890' }, community: { id: 'community_1', bot_phone: '0987654321' }, id: 'membership_1' };
+            const membership = { user: {phone: '1234567890' }, community: { id: 'community_1', bot_phone: '0987654321' }, id: 'membership_1', name: 'Test User' };
             const community = { id: 'community_1', bot_phone: '0987654321', admins: [] };
             const message = 'Test message';
             await no_script_message(membership, community, message);
-            expect(Message.send).toHaveBeenCalledWith('community_1', 'membership_1', "1234567890", "0987654321", 'Thanks for letting me know, I\'ll pass your message on to an organizer who may get back to you.', true);
+            expect(Message.send_to_admins).toHaveBeenCalledWith('community_1', 'membership_1', 'Message relayed from Test User: \"Test message\" Reply to respond.', community);
         });
     });
 
@@ -174,6 +175,7 @@ describe('receive_message', () => {
                 memberships: [
                     {
                         id: 'membership_1',
+                        name: 'Test User',
                         user: {
                             phone: '1234567890',
                         },
@@ -240,7 +242,7 @@ describe('receive_message', () => {
             expect(Membership.create).toHaveBeenCalledWith(sender, noUserResponse.data.communities[0], null);
         });
 
-        it('should send a message if the member\'s step is done', async () => {
+        it('should send a message if the member\'s step is done and relay it to admins', async () => {
             const sender = '1234567890';
             const recipient = '0987654321';
             const message = 'test message';
@@ -251,7 +253,7 @@ describe('receive_message', () => {
 
             await receive_message(sender, recipient, message, sent_time);
 
-            expect(Message.send).toHaveBeenCalled();
+            expect(Message.send_to_admins).toHaveBeenCalledWith('community_1', 'membership_1', 'Message relayed from Test User: \"test message\" Reply to respond.', doneResponse.data.communities[0]);
         });
 
         it('should process the member\'s message', async () => {
@@ -597,65 +599,5 @@ describe('receive_message', () => {
             
         });
 
-    });
-
-    describe('relay_message', () => {
-        describe('relay_message_to_admins', () => {
-            const community = {
-                id: 'community_1',
-                bot_phone: '0987654321',
-                admins: [
-                    { id: 'admin_1', user: { phone: '1111111111' } },
-                    { id: 'admin_2', user: { phone: '2222222222' } },
-                ],
-            };
-            const message = 'Test message';
-            const sender_name = 'Test Sender';
-            const sender_id = 'sender_1';
-
-            beforeEach(() => {
-                jest.clearAllMocks();
-            });
-
-            it('should send a message to all admins', async () => {
-                await relay_message_to_admins(community, message, sender_name, sender_id);
-
-                expect(Message.send).toHaveBeenCalledTimes(2);
-                expect(Message.send).toHaveBeenCalledWith(
-                    'community_1',
-                    'admin_1',
-                    '1111111111',
-                    '0987654321',
-                    `Message relayed from ${sender_name}: "${message}" Reply to respond.`,
-                    true,
-                    sender_id
-                );
-                expect(Message.send).toHaveBeenCalledWith(
-                    'community_1',
-                    'admin_2',
-                    '2222222222',
-                    '0987654321',
-                    `Message relayed from ${sender_name}: "${message}" Reply to respond.`,
-                    true,
-                    sender_id
-                );
-            });
-
-            it('should not send messages if there are no admins', async () => {
-                const communityWithoutAdmins = { ...community, admins: null };
-
-                await relay_message_to_admins(communityWithoutAdmins, message, sender_name, sender_id);
-
-                expect(Message.send).not.toHaveBeenCalled();
-            });
-
-            it('should handle an empty admins array gracefully', async () => {
-                const communityWithEmptyAdmins = { ...community, admins: [] };
-
-                await relay_message_to_admins(communityWithEmptyAdmins, message, sender_name, sender_id);
-
-                expect(Message.send).not.toHaveBeenCalled();
-            });
-        });
     });
 });
