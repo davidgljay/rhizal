@@ -1,5 +1,5 @@
 services:
-  app:
+  rhizal:
     image: node:23
     working_dir: /usr/src/app
     volumes:
