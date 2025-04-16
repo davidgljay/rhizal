@@ -10,6 +10,8 @@
     - set_variable:
         variable: "name"
         value: "regex(message, '^[a-zA-Z ]+$')"
+    - set_message_type:
+        type: "onboarding"
     - step: 1
 
 1:
@@ -19,6 +21,8 @@
     - set_variable:
         variable: "profile"
         value: "regex(message, '^[a-zA-Z ]+$')"
+    - set_message_type:
+        type: "onboarding"
     - step: 2
 
 2:
