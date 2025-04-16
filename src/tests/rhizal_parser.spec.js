@@ -284,6 +284,26 @@ describe('rhyzal_parser', () => {
         });
     });
 
+    describe('set_variable', () => {
+        it('should set a variable correctly', async () => {
+            const parser = new RhyzalParser(test_json);
+            await parser.evaluate_receive({set_variable: {variable: 'name', value: 'user_name'}}, {id: 'member_1'});
+            expect(Membership.set_variable).toHaveBeenCalledWith('member_1', 'name', 'user_name');
+        });
+
+        it('should set a variable with regex correctly', async () => {
+            const parser = new RhyzalParser(test_json);
+            await parser.evaluate_receive({set_variable: {variable: 'name', value: 'regex(var1, /foo/)'}}, {id: 'member_1', var1: 'foo'});
+            expect(Membership.set_variable).toHaveBeenCalledWith('member_1', 'name', 'foo');
+        });
+
+        it('should set a variable to a key in vars', async () => {
+            const parser = new RhyzalParser(test_json);
+            await parser.evaluate_receive({set_variable: {variable: 'name', value: 'var1'}}, {id: 'member_1', var1: 'foo'});
+            expect(Membership.set_variable).toHaveBeenCalledWith('member_1', 'name', 'foo');
+        });
+    });
+
     describe('set_group_variable', () => {
         it('should set a group variable correctly', async () => {
             const parser = new RhyzalParser(test_json);
