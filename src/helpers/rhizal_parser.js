@@ -26,6 +26,7 @@ class RhyzalParser {
         this.set_message_type = set_message_type;
         this.set_variable = set_variable;
         this.set_group_variable = GroupThread.set_variable;
+        this.send_to_admins = Message.send_to_admins;
         try {
             script_obj = JSON.parse(script_json);
         }
@@ -130,6 +131,13 @@ class RhyzalParser {
                     throw new Error('Community ID not found in vars');
                 }
                 await this.send_announcement(vars.community_id, vars.id);
+                break;
+            case 'send_to_admins':
+                if (!vars.community_id) {
+                    throw new Error('Community ID not found in vars');
+                }
+                const expandedMessage = script['send_to_admins']['preamble'] + '\n\n' + vars.message
+                await this.send_to_admins(vars.community_id, vars.id, expandedMessage);
                 break;
             case 'if': //TODO: add elif to support more complex logic
                 if (this.evaluate_condition(script.if, vars)) {
