@@ -202,7 +202,6 @@ export async function new_member(phone, community, message, user, sent_time) {
 }
 
 export async function no_script_message(membership, community, message) {
-    await Message.send(membership.community.id, membership.id, membership.user.phone, membership.community.bot_phone, 'Thanks for letting me know, I\'ll pass your message on to an organizer who may get back to you.', true);
     const relayMessage = `Message relayed from ${membership.name}: "${message}" Reply to respond.`;
     Message.send_to_admins(community.id, membership.id, relayMessage, community);
     return;

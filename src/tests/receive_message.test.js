@@ -145,11 +145,11 @@ describe('receive_message', () => {
         });
 
         it('should send a message to the member', async () => {
-            const membership = { user: {phone: '1234567890' }, community: { id: 'community_1', bot_phone: '0987654321' }, id: 'membership_1' };
+            const membership = { user: {phone: '1234567890' }, community: { id: 'community_1', bot_phone: '0987654321' }, id: 'membership_1', name: 'Test User' };
             const community = { id: 'community_1', bot_phone: '0987654321', admins: [] };
             const message = 'Test message';
             await no_script_message(membership, community, message);
-            expect(Message.send).toHaveBeenCalledWith('community_1', 'membership_1', "1234567890", "0987654321", 'Thanks for letting me know, I\'ll pass your message on to an organizer who may get back to you.', true);
+            expect(Message.send_to_admins).toHaveBeenCalledWith('community_1', 'membership_1', 'Message relayed from Test User: \"Test message\" Reply to respond.', community);
         });
     });
 
@@ -253,7 +253,6 @@ describe('receive_message', () => {
 
             await receive_message(sender, recipient, message, sent_time);
 
-            expect(Message.send).toHaveBeenCalled();
             expect(Message.send_to_admins).toHaveBeenCalledWith('community_1', 'membership_1', 'Message relayed from Test User: \"test message\" Reply to respond.', doneResponse.data.communities[0]);
         });
 
