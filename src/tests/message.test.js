@@ -124,7 +124,7 @@ describe('Message', () => {
 
             await Message.send('community_1', 'membership_1', 'to_phone', 'from_phone', 'Hello, world!', false);
 
-            expect(mockDelay).toHaveBeenCalledWith(expect.any(Function), 2000);
+            expect(mockDelay).toHaveBeenCalledWith(expect.any(Function), 1000);
             expect(mockSend).toHaveBeenCalledWith(['to_phone'], 'from_phone', 'Hello, world!');
 
             process.env.NODE_ENV = originalEnv;
@@ -154,15 +154,14 @@ describe('Message', () => {
                 memberships: [
                     { id: 'membership_1', user: { phone: 'user1' } },
                     { id: 'membership_2', user: { phone: 'user2' } }
+                ],
+                messages: [
+                    { id: 'message_1', text: 'draft announcement' }
                 ]
-            };
-            const mockMessage = {
-                id: 'message_1',
-                text: 'draft announcement'
             };
             const mockSend = jest.spyOn(Message, 'send').mockResolvedValue({});
 
-            graphql.mockResolvedValue({ data: { communities: [mockCommunity], messages:[mockMessage] } });
+            graphql.mockResolvedValue({ data: { communities: [mockCommunity] } });
 
             await Message.send_announcement('community_1', 'membership_1');
 
@@ -172,6 +171,40 @@ describe('Message', () => {
             expect(mockSend).toHaveBeenNthCalledWith(2, 'community_1', 'membership_2', 'user2', 'bot_phone', 'draft announcement', true, null, "announcement", 500);
 
             mockSend.mockRestore();
+        });
+
+        it('should not send an announcement if no draft announcement is found', async () => {
+            const mockCommunity = {
+                id: 'community_1',
+                bot_phone: 'bot_phone',
+                memberships: [
+                    { id: 'membership_1', user: { phone: 'user1' } }
+                ],
+                messages: []
+            };
+
+            graphql.mockResolvedValue({ data: { communities: [mockCommunity] } });
+
+            await Message.send_announcement('community_1', 'membership_1');
+
+            expect(graphql).toHaveBeenCalledWith(expect.any(String), { community_id: 'community_1', membership_id: 'membership_1' });
+            expect(Signal.send).not.toHaveBeenCalled();
+        });
+
+        it('should not send an announcement if the community is not found', async () => {
+            graphql.mockResolvedValue({ data: { communities: [] } });
+
+            await Message.send_announcement('community_1', 'membership_1');
+
+            expect(graphql).toHaveBeenCalledWith(expect.any(String), { community_id: 'community_1', membership_id: 'membership_1' });
+            expect(Signal.send).not.toHaveBeenCalled();
+        });
+
+        it('should handle errors when sending an announcement', async () => {
+            const errorMessage = 'Error sending announcement';
+            graphql.mockRejectedValue(new Error(errorMessage));
+
+            await expect(Message.send_announcement('community_1', 'membership_1')).rejects.toThrow(errorMessage);
         });
     });
 });

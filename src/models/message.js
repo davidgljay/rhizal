@@ -82,7 +82,7 @@ mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_i
         return result.data.insert_messages_one;
     }
 
-    static async send(community_id, membership_id, to_phone, from_phone, text, log_message = true, about_membership_id = null, message_type = "message", timeout = 2000) {
+    static async send(community_id, membership_id, to_phone, from_phone, text, log_message = true, about_membership_id = null, message_type = "message", timeout = 1000) {
         // Add the message to the queue
         Message.messageQueue = Message.messageQueue.then(async () => {
             Signal.show_typing_indicator(to_phone, from_phone);
@@ -105,7 +105,7 @@ mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_i
 
     static async send_announcement(community_id, membership_id) {
         const ANNOUNCEMENT_QUERY = `
-query AnnouncementQuery($community_id: uuid!, #membership_id: uuid!) {
+query AnnouncementQuery($community_id: uuid!, $membership_id: uuid!) {
     communities(where: {id: {_eq: $community_id}}) {
         id
         bot_phone
@@ -115,7 +115,13 @@ query AnnouncementQuery($community_id: uuid!, #membership_id: uuid!) {
                 phone
             }
         }
-        messages(where: {community_id: {_eq: $community_id}, type: {_eq: "draft_announcement"}, membership_id: {_eg: $membership_id}}, limit: 1, order_by: {created_at: desc}) {
+        messages(where: 
+            {
+                type: {_eq: "draft_announcement"}, 
+                membership_id: {_eq: $membership_id}}, 
+                limit: 1, 
+                order_by: {created_at: desc}) 
+            {
             id
             text
         }
@@ -124,15 +130,15 @@ query AnnouncementQuery($community_id: uuid!, #membership_id: uuid!) {
 
         const result = await graphql(ANNOUNCEMENT_QUERY, { community_id, membership_id });
         const community = result.data.communities[0];
-        const message = result.data.messages[0];
-        if (!message) {
-            console.error('No announcement message found');
-            return;
-        }
         if (!community) {
             console.error('Community not found');
             return;
         }
+        if(!community.messages || community.messages.length === 0) {
+            console.error('No announcement messages found');
+            return;
+        }
+        const message = community.messages[0];
         const {bot_phone, memberships} = community;
         for (const membership of memberships) {
             const { phone } = membership.user;
@@ -155,10 +161,11 @@ query AnnouncementQuery($community_id: uuid!, #membership_id: uuid!) {
     static async set_message_type(signal_timestamp, type) {
         const SET_MESSAGE_TYPE = `
 mutation SetMessageType($signal_timestamp: bigint!, $type: String!) {
-    update_messages(where: {signal_timestamp: {_eq: $signal_timestamp}}, _set: {type: $message_type}) {
+    update_messages(where: {signal_timestamp: {_eq: $signal_timestamp}}, _set: {type: $type}) {
         returning {
             id
         }
+    }
 }`
         const result = await graphql(SET_MESSAGE_TYPE, { signal_timestamp, type });
         return result.data.update_messages.returning[0];
