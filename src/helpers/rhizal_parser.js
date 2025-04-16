@@ -63,10 +63,7 @@ class RhyzalParser {
                 //     //TODO: update to include user_phone number and format properly 
                 //     this.send_message('', file);
                 // } else {
-                    let message = messages[i];
-                    for (const key in vars) {
-                        message = message.replace(new RegExp(`{{${key}}}`, 'g'), vars[key]);
-                    }
+                    let message = this.insert_variables(messages[i], vars);
 
                     await this.send_message(community_id, id, recipient, vars.bot_phone, message, log_message);
                 // }
@@ -136,7 +133,7 @@ class RhyzalParser {
                 if (!vars.community_id) {
                     throw new Error('Community ID not found in vars');
                 }
-                const expandedMessage = script['send_to_admins']['preamble'] + '\n\n' + vars.message
+                const expandedMessage = this.insert_variables(script['send_to_admins']['preamble'], vars) + '\n\n' + vars.message
                 await this.send_to_admins(vars.community_id, vars.id, expandedMessage);
                 break;
             case 'if': //TODO: add elif to support more complex logic
@@ -211,6 +208,13 @@ class RhyzalParser {
             return !!vars[condition];
         }
     };
+
+    insert_variables(message, vars) {
+        for (const key in vars) {
+            message = message.replace(new RegExp(`{{${key}}}`, 'g'), vars[key]);
+        }
+        return message;
+    }
 
 }
 

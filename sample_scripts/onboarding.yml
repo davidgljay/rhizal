@@ -12,6 +12,8 @@
         value: "regex(message, '^[a-zA-Z ]+$')"
     - set_message_type:
         type: "onboarding"
+    - send_to_admins:
+        preamble: "New user onboarding started with name:"
     - step: 1
 
 1:
@@ -23,6 +25,8 @@
         value: "regex(message, '^[a-zA-Z ]+$')"
     - set_message_type:
         type: "onboarding"
+    - send_to_admins:
+        preamble: "Why {{name}} is here:"
     - step: 2
 
 2:
