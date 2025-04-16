@@ -34,6 +34,7 @@ query GetScript($id:uuid!) {
         this.vars = {
             id: membership.id,
             phone: membership.user.phone,
+            name: membership.name,
             bot_phone: membership.community.bot_phone,
             message,
             community_id: membership.community.id,
