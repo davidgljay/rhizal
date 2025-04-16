@@ -207,4 +207,72 @@ describe('Message', () => {
             await expect(Message.send_announcement('community_1', 'membership_1')).rejects.toThrow(errorMessage);
         });
     });
+
+    describe('send_to_admins', () => {
+        it('should send a message to all admins of a community', async () => {
+        const mockCommunity = {
+            id: 'community_1',
+            bot_phone: 'bot_phone',
+            admins: [
+            { id: 'admin_1', user: { phone: 'admin1' } },
+            { id: 'admin_2', user: { phone: 'admin2' } }
+            ]
+        };
+        const mockSend = jest.spyOn(Message, 'send').mockResolvedValue({});
+
+        graphql.mockResolvedValue({ data: { communities: [mockCommunity] } });
+
+        await Message.send_to_admins('community_1', 'sender_id', 'Hello, admins!');
+
+        expect(graphql).toHaveBeenCalledWith(expect.any(String), { community_id: 'community_1' });
+        expect(mockSend).toHaveBeenCalledTimes(2);
+        expect(mockSend).toHaveBeenNthCalledWith(1, 'community_1', 'admin_1', 'admin1', 'bot_phone', 'Hello, admins!', true, 'sender_id', "relay_to_admin", 500);
+        expect(mockSend).toHaveBeenNthCalledWith(2, 'community_1', 'admin_2', 'admin2', 'bot_phone', 'Hello, admins!', true, 'sender_id', "relay_to_admin", 500);
+
+        mockSend.mockRestore();
+        });
+
+        it('should use provided community data if available', async () => {
+        const mockCommunity = {
+            id: 'community_1',
+            bot_phone: 'bot_phone',
+            admins: [
+            { id: 'admin_1', user: { phone: 'admin1' } },
+            { id: 'admin_2', user: { phone: 'admin2' } }
+            ]
+        };
+        const mockSend = jest.spyOn(Message, 'send').mockResolvedValue({});
+
+        await Message.send_to_admins('community_1', 'sender_id', 'Hello, admins!', mockCommunity);
+
+        expect(graphql).not.toHaveBeenCalled();
+        expect(mockSend).toHaveBeenCalledTimes(2);
+        expect(mockSend).toHaveBeenNthCalledWith(1, 'community_1', 'admin_1', 'admin1', 'bot_phone', 'Hello, admins!', true, 'sender_id', "relay_to_admin", 500);
+        expect(mockSend).toHaveBeenNthCalledWith(2, 'community_1', 'admin_2', 'admin2', 'bot_phone', 'Hello, admins!', true, 'sender_id', "relay_to_admin", 500);
+
+        mockSend.mockRestore();
+        });
+
+        it('should not send a message if no admins are found', async () => {
+        const mockCommunity = {
+            id: 'community_1',
+            bot_phone: 'bot_phone',
+            admins: []
+        };
+
+        graphql.mockResolvedValue({ data: { communities: [mockCommunity] } });
+
+        await Message.send_to_admins('community_1', 'sender_id', 'Hello, admins!');
+
+        expect(graphql).toHaveBeenCalledWith(expect.any(String), { community_id: 'community_1' });
+        expect(Signal.send).not.toHaveBeenCalled();
+        });
+
+        it('should handle errors when fetching community data', async () => {
+        const errorMessage = 'Error fetching community data';
+        graphql.mockRejectedValue(new Error(errorMessage));
+
+        await expect(Message.send_to_admins('community_1', 'sender_id', 'Hello, admins!')).rejects.toThrow(errorMessage);
+        });
+    });
 });
