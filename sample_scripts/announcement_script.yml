@@ -1,0 +1,31 @@
+0:
+  send:
+    - "Would you like to send an announcement to your entire community? Just enter the message here and I'll confirm that it looks good before sending. You can also cancel this process with #cancel."
+  on_receive:
+    if: "regex(message, /#cancel[^a-zA-Z0-9]/)"
+    then:
+      - step: 3
+    else:
+      - set_message_type:
+          type: "draft_announcement"
+      - step: 1
+1:
+  send:
+    - "Thanks! Does this look good? \n\n{{message}}\n\nPlease respond with 'yes' to send or 'no' to cancel."
+  on_receive:
+    if: "regex(message, /yes/i)"
+    then:
+      - send_announcement: true
+      - step: 2
+    else:
+      - step: 3
+2: 
+  send:
+    - "Great! Your announcement has been sent to your community."
+  on_receive:
+    - step: "done"
+3:
+  send:
+    - "Okay, I've canceled the announcement process. You can start it again with #announcement at any time."
+  on_receive:
+    - step: "done"

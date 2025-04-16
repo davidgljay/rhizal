@@ -55,7 +55,7 @@ class WebSocketManager {
             number: from_number,
             message
         };
-        await fetch(send_endpoint, {
+        return await fetch(send_endpoint, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -66,11 +66,16 @@ class WebSocketManager {
             if (!response.ok) {
                 console.error('Error sending message:', response.statusText);
             }
+            this.clear_local_storage();
+            const data = response.json()
+            if (data.error) {
+                console.error('Error in response:', data.error);
+            }
+            return data;
         })
         .catch(error => {
             console.error('Error sending message:', error);
         });
-        this.clear_local_storage();
     }
 
     async leave_group(group_id, bot_number) {

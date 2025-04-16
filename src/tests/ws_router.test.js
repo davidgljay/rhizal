@@ -28,7 +28,7 @@ describe('receive_raw_message', () => {
             envelope: {
                 source: '+11234567890',
                 timestamp: 1741473723341,
-
+                sourceUuid: 'UUID',
                 sourceName: 'Test User',
                 dataMessage: {
                     message: 'Test message',
@@ -41,10 +41,11 @@ describe('receive_raw_message', () => {
         await receive_raw_message(msg);
 
         expect(receive_message).toHaveBeenCalledWith(
-            '+11234567890',
+            'UUID',
             '+10987654321',
             'Test message',
-            1741473723341
+            1741473723341,
+            'Test User',
         );
     });
 
@@ -54,6 +55,7 @@ describe('receive_raw_message', () => {
                 source: '+11234567890',
                 timestamp: 1741473723341,
                 sourceName: 'Test User',
+                sourceUuid: 'UUID',
                 dataMessage: {
                     groupInfo: {
                         groupId: 'group123',
@@ -70,7 +72,7 @@ describe('receive_raw_message', () => {
         expect(receive_group_message).toHaveBeenCalledWith(
             'group123',
             'Group test message',
-            '+11234567890',
+            'UUID',
             '+10987654321',
             'Test User',
             expect.any(Number)
@@ -83,6 +85,7 @@ describe('receive_raw_message', () => {
                 source: '+11234567890',
                 timestamp: 1741473723341,
                 sourceName: 'Test User',
+                sourceUuid: 'UUID',
                 dataMessage: {
                     groupInfo: {
                         groupId: 'group123',
@@ -98,7 +101,7 @@ describe('receive_raw_message', () => {
         expect(receive_group_message).toHaveBeenCalledWith(
             'group123',
             undefined,
-            '+11234567890',
+            'UUID',
             '+10987654321',
             'Test User',
             expect.any(Number)

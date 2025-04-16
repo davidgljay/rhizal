@@ -32,22 +32,31 @@ query GetMessage($id: ID!) {
         return result.data.message;
     }
 
-    static async create(community_id, membership_id, text, sent_time, from_user) {
+    static async create(community_id, membership_id, text, signal_timestamp, from_user, about_membership_id = null) {
         const CREATE_MESSAGE = `
-mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $sent_time: timestamptz!) {
-  insert_messages_one(object: {community_id: $community_id, from_user: $from_user, membership_id: $membership_id, text: $text, sent_time: $sent_time}) {
-    id
-    membership {
-      id
-      user {
-        phone
-      }
+mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $signal_timestamp: bigint!, $about_membership_id: uuid = null) {
+  insert_messages_one(
+    object: {
+        community_id: $community_id, 
+        from_user: $from_user, 
+        membership_id: $membership_id, 
+        text: $text, 
+        signal_timestamp: $signal_timestamp,
+        about_membership_id: $about_membership_id
+    }) 
+    {
+        id
+        membership {
+            id
+            user {
+                phone
+            }
+        }
+        community {
+            id
+            bot_phone
+        }
     }
-    community {
-      id
-      bot_phone
-    }
-  }
 }`;
 
         const message = {
@@ -55,14 +64,16 @@ mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_i
             from_user,
             membership_id,
             text,
-            sent_time: new Date(sent_time).toISOString()
+            signal_timestamp,
+            about_membership_id
         };
         const result = await graphql(CREATE_MESSAGE,  message);
         const { id, membership, community } = result.data.insert_messages_one;
+        //TODO: Make this match graphql schema to match other objects, probably through a consistent constructor
         this.id = id;
         this.text = text;
         this.from_user = from_user;
-        this.sent_time = sent_time;
+        this.signal_timestamp = signal_timestamp;
         this.membership_id = membership_id;
         this.community_id = community_id;
         this.bot_phone = community.bot_phone;
@@ -71,18 +82,20 @@ mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_i
         return result.data.insert_messages_one;
     }
 
-    static async send(community_id, membership_id, to_phone, from_phone, text, log_message = true, attachment) {
+    static async send(community_id, membership_id, to_phone, from_phone, text, log_message = true, about_membership_id = null, message_type = "message", timeout = 1000) {
         // Add the message to the queue
         Message.messageQueue = Message.messageQueue.then(async () => {
-            // Safety step to avoid sending messages to the wrong phone number
-            if (log_message) {
-                await Message.create(community_id, membership_id, text, Date.now(), false);
-            }
             Signal.show_typing_indicator(to_phone, from_phone);
             if (process.env.NODE_ENV !== 'test') {
-                await new Promise(resolve => setTimeout(resolve, 2000)); 
+                await new Promise(resolve => setTimeout(resolve, timeout)); 
             }
-            Signal.send([to_phone], from_phone, text);
+            const {timestamp} = await Signal.send([to_phone], from_phone, text);
+            if (!timestamp) {
+                return;
+            }
+            if (log_message) {
+                await Message.create(community_id, membership_id, text, timestamp, false, about_membership_id);
+            }
         }).catch(err => {
             console.error('Error sending message:', err);
         });
@@ -90,6 +103,73 @@ mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_i
         return Message.messageQueue;
     }
 
-}
+    static async send_announcement(community_id, membership_id) {
+        const ANNOUNCEMENT_QUERY = `
+query AnnouncementQuery($community_id: uuid!, $membership_id: uuid!) {
+    communities(where: {id: {_eq: $community_id}}) {
+        id
+        bot_phone
+        memberships {
+            id
+            user {
+                phone
+            }
+        }
+        messages(where: 
+            {
+                type: {_eq: "draft_announcement"}, 
+                membership_id: {_eq: $membership_id}}, 
+                limit: 1, 
+                order_by: {created_at: desc}) 
+            {
+            id
+            text
+        }
+    }
+}`;
+
+        const result = await graphql(ANNOUNCEMENT_QUERY, { community_id, membership_id });
+        const community = result.data.communities[0];
+        if (!community) {
+            console.error('Community not found');
+            return;
+        }
+        if(!community.messages || community.messages.length === 0) {
+            console.error('No announcement messages found');
+            return;
+        }
+        const message = community.messages[0];
+        const {bot_phone, memberships} = community;
+        for (const membership of memberships) {
+            const { phone } = membership.user;
+            //TODO: Maybe refactor message.send to have a params object.
+            await Message.send(
+                community_id,
+                membership.id, 
+                phone, 
+                bot_phone, 
+                message.text, 
+                true,
+                null, 
+                "announcement", 
+                500
+            );
+        }
+        
+    }
+
+    static async set_message_type(signal_timestamp, type) {
+        const SET_MESSAGE_TYPE = `
+mutation SetMessageType($signal_timestamp: bigint!, $type: String!) {
+    update_messages(where: {signal_timestamp: {_eq: $signal_timestamp}}, _set: {type: $type}) {
+        returning {
+            id
+        }
+    }
+}`
+        const result = await graphql(SET_MESSAGE_TYPE, { signal_timestamp, type });
+        return result.data.update_messages.returning[0];
+    }
+    }
 
 module.exports = Message;

@@ -140,11 +140,12 @@ describe('GroupThread', () => {
             const group_thread = { community: { group_script_id: 'script_id' }, step: '0' };
             const membership = { data: { id: 'membership_id' } };
             const message = undefined;
+            const signal_timestamp = 1234567890;
 
-            await GroupThread.run_script(group_thread, membership, message);
+            await GroupThread.run_script(group_thread, membership, message, signal_timestamp);
 
             expect(Script.init).toHaveBeenCalledWith('script_id');
-            expect(mockGetVars).toHaveBeenCalledWith(membership, message);
+            expect(mockGetVars).toHaveBeenCalledWith(membership, message, signal_timestamp);
             expect(mockScriptSend).toHaveBeenCalledWith('0');
             expect(mockScriptReceive).not.toHaveBeenCalled();
         });
@@ -153,11 +154,12 @@ describe('GroupThread', () => {
             const group_thread = { community: { group_script_id: 'script_id' }, step: '1' };
             const membership = { data: { id: 'membership_id' } };
             const message = 'test message';
+            const signal_timestamp = 1234567890;
 
-            await GroupThread.run_script(group_thread, membership, message);
+            await GroupThread.run_script(group_thread, membership, message, signal_timestamp);
 
             expect(Script.init).toHaveBeenCalledWith('script_id');
-            expect(mockGetVars).toHaveBeenCalledWith(membership, message);
+            expect(mockGetVars).toHaveBeenCalledWith(membership, message, signal_timestamp);
             expect(mockScriptSend).not.toHaveBeenCalled();
             expect(mockScriptReceive).toHaveBeenCalledWith('1', message);
         });
@@ -166,12 +168,13 @@ describe('GroupThread', () => {
             const group_thread = { community: { group_script_id: 'script_id' }, step: '0' };
             const membership = { data: { id: 'membership_id' } };
             const message = undefined;
+            const signal_timestamp = 1234567890;
 
             mockScriptSend.mockRejectedValueOnce(new Error('Script error'));
 
-            await expect(GroupThread.run_script(group_thread, membership, message)).rejects.toThrow('Script error');
+            await expect(GroupThread.run_script(group_thread, membership, message, signal_timestamp)).rejects.toThrow('Script error');
             expect(Script.init).toHaveBeenCalledWith('script_id');
-            expect(mockGetVars).toHaveBeenCalledWith(membership, message);
+            expect(mockGetVars).toHaveBeenCalledWith(membership, message, signal_timestamp);
             expect(mockScriptSend).toHaveBeenCalledWith('0');
         });
     });

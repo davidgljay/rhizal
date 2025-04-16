@@ -5,7 +5,8 @@ const Community = require('../models/community');
 const GroupThread = require('../models/group_thread');
 const Signal = require('../apis/signal');
 const { graphql } = require('../apis/graphql');
-const { new_member, no_script_message, receive_message, receive_group_message  } = require('../handlers/receive_message');
+const { new_member, no_script_message, receive_message, receive_group_message, receive_reply, relay_message_to_admins  } = require('../handlers/receive_message');
+const { bot_message_hashtag } = require('../helpers/hashtag_commands');
 
 jest.mock('../models/membership', () => {
     return {
@@ -43,7 +44,6 @@ jest.mock('../models/group_thread', () => {
 });
 
 
-
 jest.mock('../models/community', () => {
     return jest.fn().mockImplementation((id, name, data) => {
         return {
@@ -56,6 +56,11 @@ jest.mock('../models/community', () => {
 
 jest.mock('../apis/graphql', () => ({
     graphql: jest.fn()
+}));
+
+jest.mock('../helpers/hashtag_commands', () => ({
+    bot_message_hashtag: jest.fn(),
+    group_message_hashtag: jest.fn(),
 }));
 
 const mockScriptSend = jest.fn();
@@ -75,8 +80,6 @@ jest.mock('../models/script', () => {
 });
 
 
-
-
 describe('receive_message', () => {
     describe('new_member', () => {
 
@@ -85,6 +88,7 @@ describe('receive_message', () => {
             id: 'community_1',
             name: 'Test Community',
             bot_phone: '0987654321',
+            admins: [],
             onboarding: {
                 id: 'onboarding_script',
                 name: 'Onboarding Script',
@@ -141,7 +145,9 @@ describe('receive_message', () => {
 
         it('should send a message to the member', async () => {
             const membership = { user: {phone: '1234567890' }, community: { id: 'community_1', bot_phone: '0987654321' }, id: 'membership_1' };
-            await no_script_message(membership);
+            const community = { id: 'community_1', bot_phone: '0987654321', admins: [] };
+            const message = 'Test message';
+            await no_script_message(membership, community, message);
             expect(Message.send).toHaveBeenCalledWith('community_1', 'membership_1', "1234567890", "0987654321", 'Thanks for letting me know, I\'ll pass your message on to an organizer who may get back to you.', true);
         });
     });
@@ -161,7 +167,8 @@ describe('receive_message', () => {
                             script_json: '{"0": {"send": ["Welcome to Test Community! Please reply with your name."], "on_receive": [{"step": "done"}]}}',
                             vars_query: 'vars query',
                             targets_query: 'target query',
-                        }
+                        },
+                        admins: []
                     }
                 ],
                 memberships: [
@@ -188,15 +195,16 @@ describe('receive_message', () => {
             }
         };
 
+        let sender = '1234567890';
+        let recipient = '0987654321';
+        let message = 'test message';
+        let sent_time = new Date();
+        
         beforeEach(() => {
             jest.clearAllMocks();
         });
 
         it('should log a message', async () => {
-            const sender = '1234567890';
-            const recipient = '0987654321';
-            const message = 'test message';
-            const sent_time = new Date();
             graphql.mockResolvedValue(mockQueryResponse);
 
             await receive_message(sender, recipient, message, sent_time);
@@ -254,12 +262,60 @@ describe('receive_message', () => {
             graphql.mockResolvedValue(mockQueryResponse);
             await receive_message(sender, recipient, message, sent_time);
 
-            expect(mockGetVars).toHaveBeenCalledWith(mockQueryResponse.data.memberships[0], message); 
+            expect(mockGetVars).toHaveBeenCalledWith(mockQueryResponse.data.memberships[0], message, sent_time); 
+            expect(mockScriptReceive).toHaveBeenCalledWith('0', message);
+        });
+
+        it('should call the appropriate function if the message includes a hashtag', async () => {
+            const sender = '1234567890';
+            const recipient = '0987654321';
+            const message = 'test message with #command';
+            const sent_time = new Date();
+            graphql.mockResolvedValue(mockQueryResponse);
+            await receive_message(sender, recipient, message, sent_time);
+
+            expect(bot_message_hashtag).toHaveBeenCalledWith('#command', expect.objectContaining({ id: 'membership_1' }), expect.objectContaining({ id: 'community_1' }), message);
+
+        });
+
+        it('should stop if the hashtag triggers a command', async () => {
+            const sender = '1234567890';
+            const recipient = '0987654321';
+            const message = 'test message with #command';
+            const sent_time = new Date();
+            graphql.mockResolvedValue(mockQueryResponse);
+            bot_message_hashtag.mockResolvedValue(true);
+            await receive_message(sender, recipient, message, sent_time);
+            expect(Membership.set_variable).not.toHaveBeenCalled();
+            expect(Message.send).not.toHaveBeenCalled();
+        });
+
+        it('should proceed if the hashtag does not trigger a command', async () => {
+
+            graphql.mockResolvedValue(mockQueryResponse);
+            bot_message_hashtag.mockResolvedValue(false);
+            await receive_message(sender, recipient, message, sent_time);
+            expect(mockGetVars).toHaveBeenCalledWith(mockQueryResponse.data.memberships[0], message, sent_time); 
+            expect(mockScriptReceive).toHaveBeenCalledWith('0', message);
+        });
+
+        it('should load the script if the member has a current script', async () => {
+            const memberScriptResponse = { ...mockQueryResponse };
+            memberScriptResponse.data.memberships[0].current_script = { 
+                id: 'current_script_id',
+                name: 'Current Script',
+                script_json: '{"0": {"send": ["Current script message"]}}'
+            };
+            graphql.mockResolvedValue(memberScriptResponse);
+            await receive_message(sender, recipient, message, sent_time);
+            expect(Script).toHaveBeenCalledWith(memberScriptResponse.data.memberships[0].current_script);
+            expect(mockGetVars).toHaveBeenCalledWith(memberScriptResponse.data.memberships[0], message, sent_time);
             expect(mockScriptReceive).toHaveBeenCalledWith('0', message);
         });
     });
 
     describe('receive_group_message', () => {
+        const mockQueryResponse = { data: {communities: [{ id: 'community_id', bot_phone: '0987654321' }] }};
 
         afterEach(() => {
             jest.clearAllMocks();
@@ -273,18 +329,18 @@ describe('receive_message', () => {
             const from_phone = '1234567890';
             const bot_phone = '0987654321';
             const sender_name = 'Test Sender';
+            const timestamp = 1234567890;
 
-            const mockQueryResponse = { data: {communities: [{ id: 'community_id', bot_phone }] }};
             const mockGroupThread = { step: '0' };
 
             jest.spyOn(GroupThread, 'find_or_create_group_thread').mockResolvedValue(mockGroupThread);
             graphql.mockResolvedValue(mockQueryResponse);
 
-            await receive_group_message(group_id, message, from_phone, bot_phone, sender_name);
+            await receive_group_message(group_id, message, from_phone, bot_phone, sender_name, timestamp);
 
             expect(graphql).toHaveBeenCalled();
             expect(GroupThread.find_or_create_group_thread).toHaveBeenCalledWith(base64_group_id, 'community_id');
-            expect(GroupThread.run_script).toHaveBeenCalledWith(mockGroupThread, {user: {phone: from_phone}, community: { id: 'community_id', bot_phone }}, message);
+            expect(GroupThread.run_script).toHaveBeenCalledWith(mockGroupThread, {user: {phone: from_phone}, community: { id: 'community_id', bot_phone }}, message, timestamp);
         });
 
         it('should return if there is no message and the group step is done', async () => {
@@ -294,12 +350,12 @@ describe('receive_message', () => {
             const bot_phone = '0987654321';
             const sender_name = 'Test Sender';
             const mockGroupThread = { step: 'done' };
-            const mockMembership = {community: { id: 'community_id' } };
+            const timestamp = 1234567890;
 
-            jest.spyOn(Membership, 'get').mockResolvedValue(mockMembership);
+            graphql.mockResolvedValue(mockQueryResponse);
             jest.spyOn(GroupThread, 'find_or_create_group_thread').mockResolvedValue(mockGroupThread);
 
-            await receive_group_message(group_id, message, from_phone, bot_phone, sender_name);
+            await receive_group_message(group_id, message, from_phone, bot_phone, sender_name, timestamp);
 
             expect(graphql).toHaveBeenCalled();
             expect(GroupThread.find_or_create_group_thread).toHaveBeenCalled();
@@ -316,7 +372,7 @@ describe('receive_message', () => {
             const mockGroupThread = { step: 'done' };
             const mockMembership = {community: { id: 'community_id' } };
 
-            jest.spyOn(Membership, 'get').mockResolvedValue(mockMembership);
+            graphql.mockResolvedValue(mockQueryResponse);
             jest.spyOn(GroupThread, 'find_or_create_group_thread').mockResolvedValue(mockGroupThread);
 
             await receive_group_message(group_id, message, from_phone, bot_phone, sender_name);
@@ -335,6 +391,7 @@ describe('receive_message', () => {
             const bot_phone = '0987654321';
             const sender_name = 'Test Sender';
             const mockGroupThread = { step: 'done', community: {group_threads: [{group_id: '123', hashtag: '#test'}]} };
+            graphql.mockResolvedValue(mockQueryResponse);
 
             jest.spyOn(GroupThread, 'find_or_create_group_thread').mockResolvedValue(mockGroupThread);
             jest.spyOn(GroupThread, 'leave_group').mockResolvedValue();
@@ -356,7 +413,6 @@ describe('receive_message', () => {
             const bot_phone = '0987654321';
             const sender_name = 'Test Sender';
 
-            const mockQueryResponse = {data: {communities: [{ id: 'community_id' }] }};
             const mockGroupThread = {
                 step: 'done',
                 community: {
@@ -377,6 +433,229 @@ describe('receive_message', () => {
             const expectedMessage = `Message relayed from ${sender_name} in ${mockGroupThread.hashtag}: ${message}`;
             expect(Message.send).toHaveBeenCalledWith(null, null, 'group.1', bot_phone, expectedMessage, false);
             expect(Message.send).not.toHaveBeenCalledWith(null, null, 'group.2', bot_phone, expectedMessage, false);
+        });
+    });
+
+    describe('receive_reply', () => {
+        const mockQueryResponse = {
+            data: {
+                memberships: [
+                    {
+                        id: 'membership_1',
+                        type: 'admin',
+                        name: 'Admin User',
+                        community_id: 'community_1',
+                    },
+                ],
+                messages: [
+                    {
+                        id: 'message_1',
+                        about_membership: {
+                            id: 'membership_2',
+                            user: {
+                                phone: '1234567890',
+                            },
+                        },
+                    },
+                ],
+                communities: [
+                    {
+                        id: 'community_1',
+                        bot_phone: '0987654321',
+                    },
+                ],
+            },
+        };
+
+        beforeEach(() => {
+            jest.clearAllMocks();
+        });
+
+        it('should send a reply to the member if the sender is an admin', async () => {
+            const message = 'Reply message';
+            const from_phone = '1111111111';
+            const bot_phone = '0987654321';
+            const reply_to_timestamp = 1234567890;
+
+            graphql.mockResolvedValue(mockQueryResponse);
+
+            await receive_reply(message, from_phone, bot_phone, reply_to_timestamp);
+
+            expect(graphql).toHaveBeenCalledWith(
+                expect.stringContaining('query ReplyQuery($bot_phone:String!, $phone:String!, $signal_timestamp:bigint!)'),
+                { phone: from_phone, bot_phone, signal_timestamp: reply_to_timestamp }
+            );
+            expect(Message.send).toHaveBeenCalledWith(
+                'community_1',
+                'membership_1',
+                '1234567890',
+                bot_phone,
+                'Message from Admin User: Reply message',
+                true
+            );
+        });
+
+        it('should not send a reply if there is no reply_to phone number', async () => {
+            const message = 'Reply message';
+            const from_phone = '1111111111';
+            const bot_phone = '0987654321';
+            const reply_to_timestamp = 1234567890;
+
+            const noReplyToResponse = {
+                ...mockQueryResponse,
+                data: {
+                    ...mockQueryResponse.data,
+                    messages: [],
+                },
+            };
+
+            graphql.mockResolvedValue(noReplyToResponse);
+
+            await receive_reply(message, from_phone, bot_phone, reply_to_timestamp);
+
+            expect(graphql).toHaveBeenCalled();
+            expect(Message.send).not.toHaveBeenCalled();
+        });
+
+        it('should call receive_message if the user is not an admin', async () => {
+            const message = 'Reply message';
+            const from_phone = '1111111111';
+            const bot_phone = '0987654321';
+            const reply_to_timestamp = 1234567890;
+
+            const mockReceiveMessageQueryResponse = {
+                data: {
+                    communities: [
+                        {
+                            id: 'community_1',
+                            name: 'Test Community',
+                            bot_phone: '0987654321',
+                            onboarding: {
+                                id: 'onboarding_script',
+                                name: 'Onboarding Script',
+                                script_json: '{"0": {"send": ["Welcome to Test Community! Please reply with your name."], "on_receive": [{"step": "done"}]}}',
+                                vars_query: 'vars query',
+                                targets_query: 'target query',
+                            },
+                            admins: []
+                        }
+                    ],
+                    memberships: [
+                        {
+                            id: 'membership_1',
+                            user: {
+                                phone: '1234567890',
+                            },
+                            community: {
+                                id: 'community_1',
+                                bot_phone: '0987654321',
+                            },
+                            step: '0',
+                            current_script_id: 'onboarding_script',
+                            set_variable: jest.fn(),
+                        }
+                    ],
+                    users: [
+                        {
+                            id: 'user_1',
+                            phone: '1234567890',
+                        }
+                    ]
+                }
+            };
+            
+
+            const nonAdminResponse = {
+                ...mockQueryResponse,
+                data: {
+                    ...mockQueryResponse.data,
+                    memberships: [
+                        {
+                            id: 'membership_1',
+                            type: 'member',
+                            name: 'Regular User',
+                            community_id: 'community_1',
+                        },
+                    ],
+                },
+            };
+
+            graphql.mockResolvedValueOnce(nonAdminResponse);
+            graphql.mockResolvedValueOnce(mockReceiveMessageQueryResponse);
+
+            await receive_reply(message, from_phone, bot_phone, reply_to_timestamp);
+
+            expect(graphql).toHaveBeenNthCalledWith(1, 
+                expect.stringContaining('query ReplyQuery($bot_phone:String!, $phone:String!, $signal_timestamp:bigint!)'),
+                {"bot_phone": "0987654321", "phone": "1111111111", "signal_timestamp": 1234567890}
+            );
+            expect(graphql).toHaveBeenNthCalledWith(2,
+                expect.stringContaining('query RecieveMessageQuery($bot_phone:String!, $phone:String!)'),
+                { bot_phone: bot_phone, phone: from_phone }
+            );
+            expect(Message.send).not.toHaveBeenCalled();
+            
+        });
+
+    });
+
+    describe('relay_message', () => {
+        describe('relay_message_to_admins', () => {
+            const community = {
+                id: 'community_1',
+                bot_phone: '0987654321',
+                admins: [
+                    { id: 'admin_1', user: { phone: '1111111111' } },
+                    { id: 'admin_2', user: { phone: '2222222222' } },
+                ],
+            };
+            const message = 'Test message';
+            const sender_name = 'Test Sender';
+            const sender_id = 'sender_1';
+
+            beforeEach(() => {
+                jest.clearAllMocks();
+            });
+
+            it('should send a message to all admins', async () => {
+                await relay_message_to_admins(community, message, sender_name, sender_id);
+
+                expect(Message.send).toHaveBeenCalledTimes(2);
+                expect(Message.send).toHaveBeenCalledWith(
+                    'community_1',
+                    'admin_1',
+                    '1111111111',
+                    '0987654321',
+                    `Message relayed from ${sender_name}: "${message}" Reply to respond.`,
+                    true,
+                    sender_id
+                );
+                expect(Message.send).toHaveBeenCalledWith(
+                    'community_1',
+                    'admin_2',
+                    '2222222222',
+                    '0987654321',
+                    `Message relayed from ${sender_name}: "${message}" Reply to respond.`,
+                    true,
+                    sender_id
+                );
+            });
+
+            it('should not send messages if there are no admins', async () => {
+                const communityWithoutAdmins = { ...community, admins: null };
+
+                await relay_message_to_admins(communityWithoutAdmins, message, sender_name, sender_id);
+
+                expect(Message.send).not.toHaveBeenCalled();
+            });
+
+            it('should handle an empty admins array gracefully', async () => {
+                const communityWithEmptyAdmins = { ...community, admins: [] };
+
+                await relay_message_to_admins(communityWithEmptyAdmins, message, sender_name, sender_id);
+
+                expect(Message.send).not.toHaveBeenCalled();
+            });
         });
     });
 });

@@ -1,8 +1,6 @@
 const { graphql } = require('../apis/graphql');
 const RhizalParser = require('../helpers/rhizal_parser');
-const Message = require('./message');
-const Membership = require('./membership');
-const GroupThread = require('./group_thread');
+const { signal_timestamp } = require('./message');
 
 class Script {
     constructor(script) {
@@ -11,7 +9,7 @@ class Script {
                 this[key] = script[key];
             }
         }
-        this.parser = new RhizalParser(script.script_json, Message.send, Membership.set_variable, GroupThread.set_variable);
+        this.parser = new RhizalParser(script.script_json);
     }
 
     static async init(id) {
@@ -32,24 +30,20 @@ query GetScript($id:uuid!) {
         return script;
     }
 
-    async get_vars(membership, message) {
-        if (!this.vars_query) {
-            this.vars = {
-                id: membership.id,
-                phone: membership.user.phone,
-                bot_phone: membership.community.bot_phone,
-                message,
-                community_id: membership.community.id
-            }
-            return this.vars;
+    async get_vars(membership, message, signal_timestamp) {
+        this.vars = {
+            id: membership.id,
+            phone: membership.user.phone,
+            bot_phone: membership.community.bot_phone,
+            message,
+            community_id: membership.community.id,
+            signal_timestamp
+        };
+        if (this.vars_query) {
+            const varsData = await graphql(this.vars_query, { membership_id: membership.id });
+            this.vars = { ...this.vars, ...varsData.data.vars[0] };
         }
-        const varsData = await graphql(this.vars_query, { membership_id: membership.id });
-        this.vars = varsData.data.vars[0];
-        this.vars.id = membership.id;
-        this.vars.phone = membership.user.phone;
-        this.vars.bot_phone = membership.community.bot_phone;
-        this.vars.message = message;
-        this.vars.community_id = membership.community.id;
+
         return this.vars;
     }
 
@@ -77,6 +71,24 @@ query GetScript($id:uuid!) {
         return await this.parser.receive(step, this.vars, message)
     }
 
+    static async get_system_script(script_name) {
+        const systemScriptQuery = `
+query GetSystemScript($script_name: String!) {
+    scripts(where: {name: {_eq: $script_name}, community: { name: {_eq: "system"}}}) {
+        id
+        name
+        script_json
+        vars_query
+        targets_query
+    }
+
+}`;
+        const systemScriptData = await graphql(systemScriptQuery, { script_name });
+        if (systemScriptData.data.scripts.length === 0) {
+            throw new Error(`System script ${script_name} not found`);
+        }
+        return new Script(systemScriptData.data.scripts[0]);
+    }
 }
 
 
