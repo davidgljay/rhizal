@@ -180,7 +180,7 @@ query SendToAdmins($community_id: uuid!) {
     communities(where: {id: {_eq: $community_id}}) {
         id
         bot_phone
-        admins:memberships {
+        admins:memberships(where: {type: {_eq: "admin"}}) {
             id
             user {
                 phone
