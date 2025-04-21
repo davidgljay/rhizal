@@ -1,10 +1,10 @@
 0:
   send:
-    - "Nice to meet you! I'm Rhizal, a friendly, secure chatbot for community organizing on Signal."
-    - "If you have this number then David Jay probably invited you to join my beta. He's the only one who can see messages you send me."
+    - "Nice to meet you! I'm Rhizal, a lightweight chatbot for community organizing on Signal."
     - "I'm designed to help with things like onboarding people to a community, inviting people to events, and coordinating between Signal threads."
-    - "You can read more about me at https://github.com/davidgljay/rhizal"
-    - "If you'd like, I can sign you up for the Rhizal beta. You'll get very occasional updates as the platform develops, and will get on the waitlist to use Rhizal for your own communities."
+    - "You can read more about me at https://rhizal.chat"
+    - "I'll ask you a few questions to get started, then forward anything else you say to me on to the Rhizal team."
+    - "If you'd like, I can also sign you up for the Rhizal alpha. You'll get very occasional updates as the platform develops, and will get on the waitlist to use Rhizal for your own communities."
     - "To get started, what's your name?"
   on_receive:
     - set_variable:
@@ -18,6 +18,17 @@
 
 1:
   send:
+    - "Thanks {{name}}! I'm curious how you learned about me. Did someone you know tell you about this tool?"
+    - "It's nice to know if someone our team knows can vouch for you 😁"
+  on_receive:
+    - set_message_type:
+        type: "onboarding"
+    - send_to_admins:
+        preamble: "{{name}} referrer:"
+    - step: 2
+
+2:
+  send:
     - "Thanks {{name}}! If you'd like to sign up for the waitlist, please share a bit about a community you're involved with that might benefit from help organizing on Signal."
   on_receive:
     - set_variable:
@@ -27,10 +38,12 @@
         type: "onboarding"
     - send_to_admins:
         preamble: "Why {{name}} is here:"
-    - step: 2
+    - step: 3
 
-2:
+3:
   send:
-    - "Thanks for sharing! I'll let David know, he may be in touch. Any more messages you send to me will be relayed on to him."
+    - "Thanks for sharing! I'll let the Rhizal team know, they may be in touch. Any more messages you send to me will be relayed on to them."
   on_receive:
+    - send_to_admins:
+        preamble: "Final message:"
     - step: "done"
