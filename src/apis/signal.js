@@ -6,6 +6,7 @@ const path = require('path');
 
 class WebSocketManager {
     constructor() {
+        this.websockets = {};
     }
 
     connect(on_receive, account_phone) {
@@ -35,8 +36,7 @@ class WebSocketManager {
                 console.error('WebSocket message:', data);
             }
         });
-
-        return ws;
+        this.websockets[account_phone] = ws;
     }
 
     async send(recipients, from_number, message) {

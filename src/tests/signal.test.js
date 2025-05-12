@@ -42,7 +42,7 @@ describe('WebSocketManager', () => {
     afterEach(() => {
         jest.clearAllMocks();
         WebSocket.mockReset();
-        webSocketManager.ws = null;
+        webSocketManager.websockets = {};
     });
 
     it('should connect to WebSocket if not already connected', () => {
@@ -57,13 +57,13 @@ describe('WebSocketManager', () => {
         expect(mockWebSocketInstance.on).toHaveBeenCalledWith('message', expect.any(Function));
     });
 
-    it('should return the Websocket', () => {
+    it('should add the websocket to the websockets object', () => {
         const onReceive = jest.fn();
         const account_phone = '1234567890';
 
-        const ws = webSocketManager.connect(onReceive, account_phone);
+    webSocketManager.connect(onReceive, account_phone);
 
-        expect(ws).toBe(mockWebSocketInstance);
+        expect(webSocketManager.websockets[account_phone]).toBe(mockWebSocketInstance);
     });
 
     it('should handle WebSocket message and call on_receive', () => {
