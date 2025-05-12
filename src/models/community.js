@@ -25,10 +25,30 @@ query GetCommunities($bot_phone:String!) {
             throw new Error(response.errors[0].message);
         }
         if (response.data.communities.length === 0) {
-            return null;
+            return [];
         }
         const community = response.data.communities[0];
         return new Community(community.id, community.name, community);
+    }
+
+    static async get_bot_phones() {
+        const query = `
+query GetCommunities() {
+  communities {
+    bot_phone
+  }
+}
+`;
+
+
+        const response = await graphql(query);
+        if (response.errors) {
+            throw new Error(response.errors[0].message);
+        }
+        if (response.data.communities.length === 0) {
+            return [];
+        }
+        return response.data.communities.map(c => c.bot_phone);
     }
 }
 
