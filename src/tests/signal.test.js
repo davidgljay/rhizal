@@ -47,7 +47,8 @@ describe('WebSocketManager', () => {
 
     it('should connect to WebSocket if not already connected', () => {
         const onReceive = jest.fn();
-        webSocketManager.connect(onReceive);
+        const account_phone = '1234567890';
+        webSocketManager.connect(onReceive, account_phone);
 
         expect(WebSocket).toHaveBeenCalledWith(`ws://signal-cli:8080/v1/receive/${ACCOUNT_PHONE}`);
         expect(mockWebSocketInstance.on).toHaveBeenCalledWith('open', expect.any(Function));
@@ -56,18 +57,19 @@ describe('WebSocketManager', () => {
         expect(mockWebSocketInstance.on).toHaveBeenCalledWith('message', expect.any(Function));
     });
 
-    it('should not connect to WebSocket if already connected', () => {
+    it('should return the Websocket', () => {
         const onReceive = jest.fn();
-        webSocketManager.ws = {};
+        const account_phone = '1234567890';
 
-        webSocketManager.connect(onReceive);
+        const ws = webSocketManager.connect(onReceive, account_phone);
 
-        expect(WebSocket).not.toHaveBeenCalled();
+        expect(ws).toBe(mockWebSocketInstance);
     });
 
     it('should handle WebSocket message and call on_receive', () => {
         const onReceive = jest.fn();
-        webSocketManager.connect(onReceive);
+        const account_phone = '1234567890';
+        webSocketManager.connect(onReceive, account_phone);
         
         expect(mockWebSocketInstance.on).toHaveBeenCalledWith('message', expect.any(Function));
 

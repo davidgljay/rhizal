@@ -6,35 +6,28 @@ const path = require('path');
 
 class WebSocketManager {
     constructor() {
-        this.ws = null;
-        //TODO: Handle multiple accounts
-        this.account_phone = process.env.ACCOUNT_PHONE;
     }
 
-    connect(on_receive) {
-        if (this.ws) {
-            console.log('WebSocket already connected');
-            return;
-        }
+    connect(on_receive, account_phone) {
 
-        console.log('Connecting to WebSocket for ' + this.account_phone + '... ');
+        console.log('Connecting to WebSocket for ' + account_phone + '... ');
 
-        this.ws = new WebSocket('ws://signal-cli:8080/v1/receive/' + this.account_phone);
+        let ws = new WebSocket('ws://signal-cli:8080/v1/receive/' + account_phone);
 
-        this.ws.on('open', () => {
+        ws.on('open', () => {
             console.log('WebSocket connection established');
         });
 
-        this.ws.on('close', () => {
+        ws.on('close', () => {
             console.log('WebSocket connection closed');
-            this.ws = null;
+            ws = null;
         });
 
-        this.ws.on('error', (err) => {
+        ws.on('error', (err) => {
             console.error('WebSocket error:', err);
         });
 
-        this.ws.on('message', (data) => {
+        ws.on('message', (data) => {
             try {
                 on_receive(JSON.parse(data));
             } catch (e) {
@@ -42,6 +35,8 @@ class WebSocketManager {
                 console.error('WebSocket message:', data);
             }
         });
+
+        return ws;
     }
 
     async send(recipients, from_number, message) {
