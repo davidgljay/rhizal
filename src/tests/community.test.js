@@ -66,7 +66,7 @@ describe('Community Model', () => {
             const bot_phones = await Community.get_bot_phones();
             console.log(bot_phones);
     
-            expect(graphql).toHaveBeenCalledWith(expect.stringContaining('query GetCommunities()'));
+            expect(graphql).toHaveBeenCalledWith(expect.stringContaining('query GetCommunities'));
             expect(bot_phones).toEqual(['+1234567890', '+0987654321']);
         });
 
@@ -75,7 +75,7 @@ describe('Community Model', () => {
             graphql.mockResolvedValue({ errors: [mockError] });
     
             await expect(Community.get_bot_phones()).rejects.toThrow('GraphQL error');
-            expect(graphql).toHaveBeenCalledWith(expect.stringContaining('query GetCommunities()'));
+            expect(graphql).toHaveBeenCalledWith(expect.stringContaining('query GetCommunities'));
         });
 
         it('should return an empty array if no communities are found', async (  ) => {
@@ -89,7 +89,7 @@ describe('Community Model', () => {
     
             const bot_phones = await Community.get_bot_phones();
     
-            expect(graphql).toHaveBeenCalledWith(expect.stringContaining('query GetCommunities()'));
+            expect(graphql).toHaveBeenCalledWith(expect.stringContaining('query GetCommunities'));
             expect(bot_phones).toEqual([]);
         });
     })
