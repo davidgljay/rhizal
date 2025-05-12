@@ -33,7 +33,7 @@ query GetCommunities($bot_phone:String!) {
 
     static async get_bot_phones() {
         const query = `
-query GetCommunities() {
+query GetCommunities {
   communities {
     bot_phone
   }
