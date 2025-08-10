@@ -1,13 +1,14 @@
 const fetch = require('node-fetch');
 
 export async function graphql(query, variables) {
-    const HASURA_GRAPHQL_URL =  process.env.HASURA_GRAPHQL_URL;
-    const HASURA_ADMIN_SECRET = process.env.HASURA_ADMIN_SECRET;
-    const response = await fetch(HASURA_GRAPHQL_URL, {
+    const GRAPHQL_URL =  process.env.GRAPHQL_URL;
+    const GRAPHQL_ADMIN_SECRET = process.env.GRAPHQL_ADMIN_SECRET;
+    const GRAPHQL_AUTH_HEADER = process.env.GRAPHQL_AUTH_HEADER || 'x-hasura-admin-secret';
+    const response = await fetch(GRAPHQL_URL, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'x-hasura-admin-secret': HASURA_ADMIN_SECRET,
+            [GRAPHQL_AUTH_HEADER]: GRAPHQL_ADMIN_SECRET,
         },
         body: JSON.stringify({query, variables}),
     });

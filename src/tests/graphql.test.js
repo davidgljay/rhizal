@@ -4,12 +4,12 @@ const fetch = require('node-fetch');
 jest.mock('node-fetch');
 
 describe('graphql', () => {
-    const HASURA_GRAPHQL_URL = 'https://test.hasura.app/v1/graphql';
-    const HASURA_ADMIN_SECRET = 'test-secret';
+    const GRAPHQL_URL = 'https://test.hasura.app/v1/graphql';
+    const GRAPHQL_ADMIN_SECRET = 'test-secret';
 
     beforeEach(() => {
-        process.env.HASURA_GRAPHQL_URL = HASURA_GRAPHQL_URL
-        process.env.HASURA_ADMIN_SECRET = HASURA_ADMIN_SECRET;
+        process.env.GRAPHQL_URL = GRAPHQL_URL
+        process.env.GRAPHQL_ADMIN_SECRET = GRAPHQL_ADMIN_SECRET;
     });
 
     afterEach(() => {
@@ -25,11 +25,11 @@ describe('graphql', () => {
 
         const data = await graphql('{test}', {variables: { test: 'test' }});
 
-        expect(fetch).toHaveBeenCalledWith(HASURA_GRAPHQL_URL, {
+        expect(fetch).toHaveBeenCalledWith(GRAPHQL_URL, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'x-hasura-admin-secret': HASURA_ADMIN_SECRET,
+                'x-hasura-admin-secret': GRAPHQL_ADMIN_SECRET,
             },
             body: "{\"query\":\"{test}\",\"variables\":{\"variables\":{\"test\":\"test\"}}}",
         });

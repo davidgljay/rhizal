@@ -7,8 +7,9 @@ services:
       - ./config/signal:/home/.local/share/signal-cli
     command: sh -c "yarn install && yarn build && yarn dev"
     environment:
-      - HASURA_GRAPHQL_URL=${HASURA_GRAPHQL_URL}
-      - HASURA_ADMIN_SECRET=${HASURA_ADMIN_SECRET}
+      - GRAPHQL_URL=${GRAPHQL_URL}
+      - GRAPHQL_ADMIN_SECRET=${GRAPHQL_ADMIN_SECRET}
+      - GRAPHQL_AUTH_HEADER=${GRAPHQL_AUTH_HEADER}
       - ACCOUNT_PHONE=${ACCOUNT_PHONE}
     depends_on:
       - signal-cli
