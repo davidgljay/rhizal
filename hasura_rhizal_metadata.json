@@ -1,0 +1,422 @@
+{
+  "resource_version": 193,
+  "metadata": {
+    "version": 3,
+    "sources": [
+      {
+        "name": "rhizal",
+        "kind": "postgres",
+        "tables": [
+          {
+            "table": {
+              "name": "announcements",
+              "schema": "public"
+            },
+            "object_relationships": [
+              {
+                "name": "author",
+                "using": {
+                  "foreign_key_constraint_on": "id"
+                }
+              },
+              {
+                "name": "community",
+                "using": {
+                  "foreign_key_constraint_on": "community_id"
+                }
+              }
+            ]
+          },
+          {
+            "table": {
+              "name": "communities",
+              "schema": "public"
+            },
+            "object_relationships": [
+              {
+                "name": "onboarding",
+                "using": {
+                  "foreign_key_constraint_on": "onboarding_id"
+                }
+              },
+              {
+                "name": "script",
+                "using": {
+                  "foreign_key_constraint_on": "group_script_id"
+                }
+              }
+            ],
+            "array_relationships": [
+              {
+                "name": "announcements",
+                "using": {
+                  "foreign_key_constraint_on": {
+                    "column": "community_id",
+                    "table": {
+                      "name": "announcements",
+                      "schema": "public"
+                    }
+                  }
+                }
+              },
+              {
+                "name": "events",
+                "using": {
+                  "foreign_key_constraint_on": {
+                    "column": "community_id",
+                    "table": {
+                      "name": "events",
+                      "schema": "public"
+                    }
+                  }
+                }
+              },
+              {
+                "name": "group_threads",
+                "using": {
+                  "foreign_key_constraint_on": {
+                    "column": "community_id",
+                    "table": {
+                      "name": "group_threads",
+                      "schema": "public"
+                    }
+                  }
+                }
+              },
+              {
+                "name": "memberships",
+                "using": {
+                  "foreign_key_constraint_on": {
+                    "column": "community_id",
+                    "table": {
+                      "name": "memberships",
+                      "schema": "public"
+                    }
+                  }
+                }
+              },
+              {
+                "name": "messages",
+                "using": {
+                  "foreign_key_constraint_on": {
+                    "column": "community_id",
+                    "table": {
+                      "name": "messages",
+                      "schema": "public"
+                    }
+                  }
+                }
+              },
+              {
+                "name": "scripts",
+                "using": {
+                  "foreign_key_constraint_on": {
+                    "column": "community_id",
+                    "table": {
+                      "name": "scripts",
+                      "schema": "public"
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "table": {
+              "name": "events",
+              "schema": "public"
+            },
+            "object_relationships": [
+              {
+                "name": "community",
+                "using": {
+                  "foreign_key_constraint_on": "community_id"
+                }
+              }
+            ],
+            "array_relationships": [
+              {
+                "name": "registrations",
+                "using": {
+                  "foreign_key_constraint_on": {
+                    "column": "event_id",
+                    "table": {
+                      "name": "registrations",
+                      "schema": "public"
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "table": {
+              "name": "group_threads",
+              "schema": "public"
+            },
+            "object_relationships": [
+              {
+                "name": "community",
+                "using": {
+                  "foreign_key_constraint_on": "community_id"
+                }
+              }
+            ]
+          },
+          {
+            "table": {
+              "name": "memberships",
+              "schema": "public"
+            },
+            "object_relationships": [
+              {
+                "name": "announcement",
+                "using": {
+                  "foreign_key_constraint_on": {
+                    "column": "id",
+                    "table": {
+                      "name": "announcements",
+                      "schema": "public"
+                    }
+                  }
+                }
+              },
+              {
+                "name": "community",
+                "using": {
+                  "foreign_key_constraint_on": "community_id"
+                }
+              },
+              {
+                "name": "current_script",
+                "using": {
+                  "foreign_key_constraint_on": "current_script_id"
+                }
+              },
+              {
+                "name": "intro",
+                "using": {
+                  "foreign_key_constraint_on": "intro_id"
+                }
+              },
+              {
+                "name": "user",
+                "using": {
+                  "foreign_key_constraint_on": "user_id"
+                }
+              }
+            ],
+            "array_relationships": [
+              {
+                "name": "announcements",
+                "using": {
+                  "foreign_key_constraint_on": {
+                    "column": "id",
+                    "table": {
+                      "name": "announcements",
+                      "schema": "public"
+                    }
+                  }
+                }
+              },
+              {
+                "name": "authored_scripts",
+                "using": {
+                  "foreign_key_constraint_on": {
+                    "column": "created_by",
+                    "table": {
+                      "name": "scripts",
+                      "schema": "public"
+                    }
+                  }
+                }
+              },
+              {
+                "name": "messages",
+                "using": {
+                  "foreign_key_constraint_on": {
+                    "column": "membership_id",
+                    "table": {
+                      "name": "messages",
+                      "schema": "public"
+                    }
+                  }
+                }
+              },
+              {
+                "name": "messages_about",
+                "using": {
+                  "manual_configuration": {
+                    "column_mapping": {
+                      "id": "about_membership_id"
+                    },
+                    "insertion_order": null,
+                    "remote_table": {
+                      "name": "messages",
+                      "schema": "public"
+                    }
+                  }
+                }
+              },
+              {
+                "name": "registrations",
+                "using": {
+                  "foreign_key_constraint_on": {
+                    "column": "membership_id",
+                    "table": {
+                      "name": "registrations",
+                      "schema": "public"
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "table": {
+              "name": "messages",
+              "schema": "public"
+            },
+            "object_relationships": [
+              {
+                "name": "about_membership",
+                "using": {
+                  "manual_configuration": {
+                    "column_mapping": {
+                      "about_membership_id": "id"
+                    },
+                    "insertion_order": null,
+                    "remote_table": {
+                      "name": "memberships",
+                      "schema": "public"
+                    }
+                  }
+                }
+              },
+              {
+                "name": "community",
+                "using": {
+                  "foreign_key_constraint_on": "community_id"
+                }
+              },
+              {
+                "name": "membership",
+                "using": {
+                  "foreign_key_constraint_on": "membership_id"
+                }
+              }
+            ]
+          },
+          {
+            "table": {
+              "name": "registrations",
+              "schema": "public"
+            },
+            "object_relationships": [
+              {
+                "name": "event",
+                "using": {
+                  "foreign_key_constraint_on": "event_id"
+                }
+              },
+              {
+                "name": "membership",
+                "using": {
+                  "foreign_key_constraint_on": "membership_id"
+                }
+              }
+            ]
+          },
+          {
+            "table": {
+              "name": "scripts",
+              "schema": "public"
+            },
+            "object_relationships": [
+              {
+                "name": "community",
+                "using": {
+                  "foreign_key_constraint_on": "community_id"
+                }
+              },
+              {
+                "name": "membership",
+                "using": {
+                  "foreign_key_constraint_on": "created_by"
+                }
+              }
+            ],
+            "array_relationships": [
+              {
+                "name": "onboarding_for",
+                "using": {
+                  "foreign_key_constraint_on": {
+                    "column": "onboarding_id",
+                    "table": {
+                      "name": "communities",
+                      "schema": "public"
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "table": {
+              "name": "users",
+              "schema": "public"
+            },
+            "array_relationships": [
+              {
+                "name": "memberships",
+                "using": {
+                  "foreign_key_constraint_on": {
+                    "column": "user_id",
+                    "table": {
+                      "name": "memberships",
+                      "schema": "public"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "configuration": {
+          "connection_info": {
+            "database_url": {
+              "from_env": "PG_DATABASE_URL"
+            },
+            "isolation_level": "read-committed",
+            "use_prepared_statements": false
+          }
+        }
+      }
+    ],
+    "backend_configs": {
+      "dataconnector": {
+        "athena": {
+          "uri": "http://super-connector-v1.data-connector:8081/api/v1/athena"
+        },
+        "mariadb": {
+          "uri": "http://super-connector-v1.data-connector:8081/api/v1/mariadb"
+        },
+        "mongodb": {
+          "uri": "http://mongodb-connector-v1.data-connector:8081"
+        },
+        "mysql8": {
+          "uri": "http://super-connector-v1.data-connector:8081/api/v1/mysql"
+        },
+        "oracle": {
+          "uri": "http://super-connector-v1.data-connector:8081/api/v1/oracle"
+        },
+        "redshift": {
+          "uri": "http://super-connector-v1.data-connector:8081/api/v1/redshift"
+        },
+        "snowflake": {
+          "uri": "http://super-connector-v1.data-connector:8081/api/v1/snowflake"
+        }
+      }
+    }
+  }
+}
