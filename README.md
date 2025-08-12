@@ -27,4 +27,83 @@ Messages are sent and received via bbernhard/signal-cli-rest-api, which implemen
 
 ## Getting Started
 
-_Instructions coming soon_
+To install a local instance of Rhizal you will need to:
+
+1. Set up an external datastore which accepts GraphQL and tell Rhizal how to access it.
+2. Download this repot and run it using Docker Compose.
+3. Register a number for Rhizal to use on the Signal network.
+
+### Step 1. Setting up a datastore.
+
+Rhizal communicates with a datastore over a secure connection using GraphQL. For development I chose [Hasura](https://cloud.hasura.io/), which is free and which allows for servers hosted in a variety of locations, though this may be insufficiently secure for some applications.
+
+1a. Set up a graphql compatible external datastore and create a .env file with the access credentials or otherwise store them as secure local environment variables. Rhizal expects three environment variables, which are listed in sample.env:
+
+`
+GRAPHQL_ADMIN_SECRET=SECRET_TO_AUTH_GRAPHQL_REQUESTS
+GRAPHQL_URL=https://graphql.request.url
+GRAPHQL_AUTH_HEADER=auth-header-for-graphql-secret
+`
+
+If you want to use Hasura to test Rhizal, you can do so using the following steps:
+
+1. Create an account on [Hasura Cloud](https://cloud.hasura.io/projects).
+2. Select "New Project" and choose a name for your project.
+3. Click the Gear icon on your new project to go to the admin panel to reveal your GraphQL API URL and Admin secret. 
+
+Then create a .env as follows:
+
+`
+GRAPHQL_ADMIN_SECRET=HASURA_ADMIN_SECRET
+GRAPHQL_URL=https://yourapp.hasura.app/v1/graphql
+GRAPHQL_AUTH_HEADER=x-hasura-admin-secret
+`
+
+1b. Initialize the expected data structure in your datastore.
+
+Use the SQL in rhizal_schema.sql to initialize the proper schema in your database.
+Use the metadata in hasura_rhizal_metadata.json to set up the proper GraphQL metadata in a system such as Hasura or Apollo.
+
+### Step 2. Download and initialize Rhizal.
+
+Clone this repository using `https://github.com/davidgljay/rhizal.git`
+Ensure that the .env file from step 1 is in the root directory.
+Ensure that [docker compose is installed](https://docs.docker.com/compose/install/)
+Run using `docker compose up`
+
+
+### Step 3. Registering a Signal Number
+
+Rhizal uses the [Signal CLI REST API](https://github.com/bbernhard/signal-cli-rest-api) to send and receive messages on the Signal network. You will need to register a phone number for Rhizal to use. 
+
+3a. Create a number capable of receiving text messages using a service such as Twilio. 
+
+3b. Complete Signal's Capthca at the following url: https://signalcaptchas.org/registration/generate
+Right click on the link which reads "Open Signal" and  copy the result to your clipboard.
+
+3c. Then run the following command:
+
+`
+docker exec -it rhizal curl -X POST \
+  -H "Content-Type: application/json" \
+  -d '{"captcha": "SIGNALCAPTCHA"}' \
+  http://signal-cli/v1/register/+1234567890
+`
+
+Replacing "+12345678990" with the number you wish to register and "SIGNALCAPTCHA" with the captcha completed above.. This should trigger a verification text message.
+
+3d. Submit the verification code sent to signal with the following command:
+
+`
+docker exec -it rhizal curl -X POST \
+  -H "Content-Type: application/json" \
+  -d '{"pin": "6789"}' \
+  http://signal-cli/v1/register/+1234567890/verify/12345
+`
+
+Where +1234567890 is replaced with the phone number you wish to registerd, "1234" is replaced with the verification code sent via text and "6789" is replaced by a pin created by you and used for account recovery.
+
+
+
+
+
