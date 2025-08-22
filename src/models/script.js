@@ -36,7 +36,7 @@ query GetScript($id:uuid!) {
             phone: membership.user.phone,
             name: membership.name,
             bot_phone: membership.community.bot_phone,
-            message,
+            message: message || '',
             community_id: membership.community.id,
             signal_timestamp
         };
