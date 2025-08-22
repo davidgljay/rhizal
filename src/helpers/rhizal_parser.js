@@ -100,8 +100,9 @@ class RhyzalParser {
             case 'set_variable':
                 //TODO: add tests for setting variable with regex
                 if (script['set_variable']['value'].includes('regex')) {
-                    await this.set_variable(vars.id, script['set_variable']['variable'], this.regex_match(script['set_variable']['value'], vars));
-                    vars[script['set_variable']['variable']] = this.regex_match(script['set_variable']['value'], vars);
+                    const value = this.regex_match(script['set_variable']['value'], vars);
+                    await this.set_variable(vars.id, script['set_variable']['variable'], value);
+                    vars[script['set_variable']['variable']] = value;
                 } else if (vars[script['set_variable']['value']]) {
                     await this.set_variable(vars.id, script['set_variable']['variable'], vars[script['set_variable']['value']]);
                     vars[script['set_variable']['variable']] = vars[script['set_variable']['value']];
@@ -115,9 +116,12 @@ class RhyzalParser {
                     throw new Error('Group ID not found in vars');
                 }
                 if (script['set_group_variable']['value'].includes('regex')) {
-                    await this.set_group_variable(vars.group_id, script['set_group_variable']['variable'], this.regex_match(script['set_group_variable']['value'], vars));
+                    const value = this.regex_match(script['set_group_variable']['value'], vars);
+                    await this.set_group_variable(vars.group_id, script['set_group_variable']['variable'], value);
+                    vars[script['set_group_variable']['variable']] = value;
                 } else {
                     await this.set_group_variable(vars.group_id, script['set_group_variable']['variable'], script['set_group_variable']['value']);
+                    vars[script['set_group_variable']['variable']] = script['set_group_variable']['value'];
                 }
                 break;
             case 'set_message_type':
