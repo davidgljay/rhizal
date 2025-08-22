@@ -74,15 +74,21 @@ class WebSocketManager {
     }
 
     async leave_group(group_id, bot_number) {
-        const leave_endpoint = `https://signal-cli:8080/v1/groups/${bot_number}/${group_id}/quit`;
+        const leave_endpoint = `http://signal-cli:8080/v1/groups/${bot_number}/${group_id}/quit`;
         return await fetch(leave_endpoint, { method: 'POST' })
             .then(response => {
                 if (!response.ok) {
                     console.error('Error leaving group:', response.statusText);
+                    console.error('Response status:', response.status);
+                    return response.text().then(text => {
+                        console.error('Response body:', text);
+                    });
                 }
+                return response;
             })
             .catch(error => {
                 console.error('Error leaving group:', error);
+                throw error;
             });
     }
 
