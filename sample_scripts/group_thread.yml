@@ -29,8 +29,6 @@
                     variable: "hashtag"
                     value: "regex(message, /#\\w+/)"
             - step: 1
-        else:
-            - step: 3
 3:
     send:
         - "Hmm, it looks like that hashtag is already taken. Could you please choose another one?"
