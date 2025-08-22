@@ -80,15 +80,10 @@ class WebSocketManager {
                 if (!response.ok) {
                     console.error('Error leaving group:', response.statusText);
                     console.error('Response status:', response.status);
-                    return response.text().then(text => {
-                        console.error('Response body:', text);
-                    });
                 }
-                return response;
             })
             .catch(error => {
                 console.error('Error leaving group:', error);
-                throw error;
             });
     }
 

@@ -165,7 +165,7 @@ describe('WebSocketManager', () => {
 
             await webSocketManager.leave_group(group_id, bot_phone);
 
-            expect(fetch).toHaveBeenCalledWith(`https://signal-cli:8080/v1/groups/${bot_phone}/${group_id}/quit`, { method: 'POST' });
+            expect(fetch).toHaveBeenCalledWith(`http://signal-cli:8080/v1/groups/${bot_phone}/${group_id}/quit`, { method: 'POST' });
         });
 
         it('should log an error if fetch fails while leaving group', async () => {
@@ -366,3 +366,5 @@ describe('WebSocketManager', () => {
         });
     });
 });
+
+console.log(fetch.mock.calls);
