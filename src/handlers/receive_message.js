@@ -60,6 +60,7 @@ const queries = {
     communities(where: {bot_phone: {_eq: $bot_phone}}) {
         id
         group_script_id
+        bot_phone
         group_threads {
             group_id
             hashtag
