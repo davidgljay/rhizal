@@ -164,6 +164,20 @@ describe('GroupThread', () => {
             expect(mockScriptReceive).toHaveBeenCalledWith('1', message);
         });
 
+        it('should send step 3 if the message contains a hashtag and the hashtag is already taken', async () => {
+            const group_thread = { community: { group_script_id: 'script_id' }, step: '1' };
+            const membership = { id: 'membership_id', community: { group_threads: [{ hashtag: '#test_hashtag' }] } };
+            const message = '#test_hashtag';
+            const signal_timestamp = 1234567890;
+            
+            await GroupThread.run_script(group_thread, membership, message, signal_timestamp);
+
+            expect(Script.init).toHaveBeenCalledWith('script_id');
+            expect(mockGetVars).toHaveBeenCalledWith(membership, message, signal_timestamp);
+            expect(mockScriptSend).toHaveBeenCalledWith('3');
+            expect(mockScriptReceive).not.toHaveBeenCalled();
+        });
+
         it('should handle errors gracefully', async () => {
             const group_thread = { community: { group_script_id: 'script_id' }, step: '0' };
             const membership = { data: { id: 'membership_id' } };

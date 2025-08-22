@@ -12,7 +12,11 @@ class GroupThread {
         if (group_thread.step == '0' && !message) {
             await script.send('0');
             return;
-        } else {
+        } else if (message.match(/#[\w]+/) && membership.community.group_threads && membership.community.group_threads.map(ht => ht.hashtag).includes(message.match(/#[\w]+/)[0])) {
+            await script.send('3');
+            return;
+        }
+        else {
             await script.receive(group_thread.step, message);
         }
     }
