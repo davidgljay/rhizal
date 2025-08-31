@@ -6,13 +6,11 @@ services:
       - .:/usr/src/app
       - ./config/signal:/home/.local/share/signal-cli
     command: sh -c "yarn install && yarn build && yarn start"
-    environment:
-      - GRAPHQL_URL=${GRAPHQL_URL}
-      - GRAPHQL_ADMIN_SECRET=${GRAPHQL_ADMIN_SECRET}
-      - GRAPHQL_AUTH_HEADER=${GRAPHQL_AUTH_HEADER}
-      - ACCOUNT_PHONE=${ACCOUNT_PHONE}
+    env_file:
+      - .env
     depends_on:
       - signal-cli
+      - graphql-engine
     networks:
       - app-network
 
@@ -32,6 +30,8 @@ services:
     # Use environment variables from local .env file
     env_file:
       - .env
+    networks:
+      - app-network
   graphql-engine:
     image: hasura/graphql-engine:v2.46.0
     restart: always
@@ -57,6 +57,8 @@ services:
     depends_on:
       data-connector-agent:
         condition: service_healthy
+    networks:
+      - app-network
   data-connector-agent:
     image: hasura/graphql-data-connector:v2.46.0
     restart: always
