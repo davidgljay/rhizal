@@ -12,9 +12,9 @@ jest.mock('fs');
 jest.mock('path');
 
 // Import the functions after mocking
-const { load_sql_schema, upload_metadata, createsystem } = require('../initialization/init');
+const { load_sql_schema, upload_metadata, createsystem } = require('../initialization/db_init');
 
-describe('init.js', () => {
+describe('db_init.js', () => {
     let mockRequest;
     let mockResponse;
     let mockHttpRequest;
