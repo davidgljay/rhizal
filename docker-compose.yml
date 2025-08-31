@@ -24,7 +24,7 @@ services:
       - MODE=json-rpc
     networks:
       - app-network
-    postgres:
+  postgres:
     image: postgres:15
     restart: always
     volumes:
