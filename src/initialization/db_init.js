@@ -2,90 +2,79 @@
 const fs = require('fs');
 const http = require('http');
 const path = require('path');
+const { Client } = require('pg');
 
 const sqlFilePath = path.join(__dirname, 'rhizal_schema.sql');
 const sql = fs.readFileSync(sqlFilePath, 'utf8');
 
-const load_sql_schema = () => {
 
-    const postData = JSON.stringify({
-        type: "run_sql",
-        args: {
-          source: "default",
-          sql: sql,
-          cascade: false,
-          read_only: false
-        }
-      });
-      
-      const options = {
-        hostname: 'graphql-engine',
-        port: 8080,
-        path: '/v2/query',
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Content-Length': Buffer.byteLength(postData)
-        }
-      };
-      
-      const req = http.request(options, (res) => {
-        let data = '';
-        res.setEncoding('utf8');
-        res.on('data', (chunk) => {
-          data += chunk;
-        });
-        res.on('end', () => {
-          console.log('Response:', data);
-        });
-      });
-      
-      req.on('error', (e) => {
-        console.error(`Problem with request: ${e.message}`);
-      });
-      
-      req.write(postData);
-      req.end();
 
+
+const load_sql_schema = async () => {
+    const client = new Client({
+    host: process.env.PGHOST || 'postgres',
+    port: process.env.PGPORT ? parseInt(process.env.PGPORT) : 5432,
+    user: process.env.PGUSER || 'postgres',
+    password: process.env.POSTGRES_PASSWORD || 'postgres',
+    database: process.env.PGDATABASE || 'postgres',
+    });
+
+    try {
+        await client.connect();
+        await client.query(sql);
+        console.log('SQL schema loaded successfully.');
+    } catch (err) {
+        console.error('Error loading SQL schema:', err);
+    } finally {
+        await client.end();
+    }
 };
 
-const upload_metadata = () => {
-    const metadataFilePath = path.join(__dirname, 'hasura_rhizal_medata.json');
+const upload_metadata = async () => {
+    const metadataFilePath = path.join(__dirname, 'hasura_rhizal_metadata.json');
     const metadata = fs.readFileSync(metadataFilePath, 'utf8');
-    const postData = metadata;
+    const postData = JSON.stringify({
+        type: "replace_metadata",
+        args: JSON.parse(metadata)
+    });
     
     const options = {
-        hostname: 'graphql_engine',
+        hostname: 'graphql-engine',
         port: 8080,
         path: '/v1/metadata',
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'Content-Length': Buffer.byteLength(postData)
+            'Content-Length': Buffer.byteLength(postData),
+            'x-hasura-admin-secret': process.env.HASURA_GRAPHQL_ADMIN_SECRET
         }
     };
 
-    const req = http.request(options, (res) => {
-        let data = '';
-        res.setEncoding('utf8');
-        res.on('data', (chunk) => {
-            data += chunk;
+    // Wrap the request in a Promise so we can await it
+    await new Promise((resolve, reject) => {
+        const req = http.request(options, (res) => {
+            let data = '';
+            res.setEncoding('utf8');
+            res.on('data', (chunk) => {
+                data += chunk;
+            });
+            res.on('end', () => {
+                console.log('Metadata Response:', data);
+                resolve();
+            });
         });
-        res.on('end', () => {
-            console.log('Metadata Response:', data);
-        });
-    });
 
-    req.on('error', (e) => {
-        console.error(`Problem with metadata request: ${e.message}`);
-    });
+        req.on('error', (e) => {
+            console.error(`Problem with metadata request: ${e.message}`);
+            reject(e);
+        });
 
     req.write(postData);
-    req.end();
+    req.end();   
+    });
 };
 
-//TODO: Create initial system
-const createsystem = () => {
+const create_system = async () => {
     // Mutation to create the system community
     const createCommunityMutation = JSON.stringify({
         query: `
@@ -102,13 +91,14 @@ const createsystem = () => {
     });
 
     const options = {
-        hostname: 'graphql_engine',
+        hostname: 'graphql-engine',
         port: 8080,
         path: '/v1/graphql',
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'Content-Length': Buffer.byteLength(createCommunityMutation)
+            'Content-Length': Buffer.byteLength(createCommunityMutation),
+            'x-hasura-admin-secret': process.env.HASURA_GRAPHQL_ADMIN_SECRET
         }
     };
 
@@ -192,18 +182,7 @@ const createsystem = () => {
                     `
                 });
 
-                const scriptOptions = {
-                    hostname: 'graphql_engine',
-                    port: 8080,
-                    path: '/v1/graphql',
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Content-Length': Buffer.byteLength(announcementMutation)
-                    }
-                };
-
-                const scriptReq = http.request(scriptOptions, (scriptRes) => {
+                const scriptReq = http.request(options, (scriptRes) => {
                     let scriptData = '';
                     scriptRes.setEncoding('utf8');
                     scriptRes.on('data', (chunk) => {
@@ -241,7 +220,11 @@ const createsystem = () => {
     });
 
     req.write(createCommunityMutation);
-    req.end();
+    await new Promise((resolve, reject) => {
+        req.on('close', resolve);
+        req.on('error', reject);
+        req.end();
+    });
 };
 
 //TODO: Create announcement script
@@ -252,7 +235,7 @@ const createsystem = () => {
 module.exports = {
     load_sql_schema,
     upload_metadata,
-    createsystem
+    create_system
 };
 
 
