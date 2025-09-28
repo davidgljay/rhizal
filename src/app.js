@@ -9,16 +9,16 @@ Community.get_bot_phones()
         webSocketManager.connect(receive_raw_message, bot_phone);
     });
     })
-    .catch(async (err) => {
-        console.log(err)
-        if (err.message && err.message.includes("field 'communities' not found")) {
-            console.log('Looks like a fresh install!')
-            console.log('Setting up DB schema...')
-            await load_sql_schema();
-            console.log('Loading metadata to Hasura...')
-            await upload_metadata();
-            console.log('Setting up system-level scripts...')
-        } else {
-            throw err;
-        }
-    });
+    // .catch(async (err) => {
+    //     console.log(err)
+    //     if (err.message && err.message.includes("field 'communities' not found")) {
+    //         console.log('Looks like a fresh install!')
+    //         console.log('Setting up DB schema...')
+    //         await load_sql_schema();
+    //         console.log('Loading metadata to Hasura...')
+    //         await upload_metadata();
+    //         console.log('Setting up system-level scripts...')
+    //     } else {
+    //         throw err;
+    //     }
+    // });
