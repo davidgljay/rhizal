@@ -215,4 +215,53 @@ query GetScript($id:uuid!) {
         });
     });
 
+    describe('get', () => {
+        it('should return a new Script instance when the response is successful', async () => {
+            const mockResponse = {
+                data: {
+                    scripts: [{ id: 1, name: 'Test Script', script_json: '{"json": "json content"}' }],
+                },
+            };
+            graphql.mockResolvedValue(mockResponse);
+
+            const scriptInstance = await Script.get('Test Script');
+
+            expect(graphql).toHaveBeenCalledWith(expect.stringContaining('query GetScript($name:String!)'), { name: 'Test Script' });
+            expect(scriptInstance.id).toBe(1);
+            expect(scriptInstance).toBeInstanceOf(Script);
+            expect(scriptInstance.name).toBe('Test Script');
+        });
+    })
+
+    describe('update', () => {
+        it('should update script data successfully', async () => {
+            const mockResponse = {
+                data: {
+                    update_scripts_by_pk: { id: 1, name: 'Test Script' },
+                },
+            };
+            graphql.mockResolvedValue(mockResponse);
+
+            const scriptInstance = await Script.update(mockResponse.data.update_scripts_by_pk);
+
+            expect(graphql).toHaveBeenCalledWith(expect.stringContaining('mutation UpdateScript($id:uuid!, $script_json:jsonb!)'), { id: mockResponse.data.update_scripts_by_pk.id, script_json: mockResponse.data.update_scripts_by_pk.script_json });
+            expect(scriptInstance).toEqual(mockResponse);
+        });
+    })
+
+    describe('create', () => {
+        it('should create script data successfully', async () => {
+            const mockResponse = {
+                data: {
+                    insert_scripts_by_pk: { id: 1, name: 'Test Script' },
+                },
+            };
+            graphql.mockResolvedValue(mockResponse);
+
+            const scriptInstance = await Script.create(mockResponse.data.insert_scripts_by_pk);
+
+            expect(graphql).toHaveBeenCalledWith(expect.stringContaining('mutation CreateScript($script_json:jsonb!)'), { script_json: mockResponse.data.insert_scripts_by_pk.script_json });
+            expect(scriptInstance).toEqual(mockResponse);
+        });
+    })
 });

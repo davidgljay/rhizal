@@ -31,6 +31,34 @@ query GetCommunities($bot_phone:String!) {
         return new Community(community.id, community.name, community);
     }
 
+    static async update(community_config) {
+        const communityData = await graphql(`
+        mutation UpdateCommunity($id:uuid!, $name:String!, $description:String!) {
+            update_communities_by_pk(pk_columns: {id: $id}, _set: {name: $name, description: $description}) {
+                id
+                name
+                description
+            }
+        }
+        `
+        ,{ id: community_config.id, name: community_config.name, description: community_config.description });
+        return communityData.data.update_communities_by_pk;
+    }
+
+    static async create(community_config) {
+        const communityData = await graphql(`
+        mutation CreateCommunity($name:String!, $description:String!) {
+            insert_communities_one(object: {name: $name, description: $description}) {
+                id
+                name
+                description
+            }
+        }
+        `
+        ,{ id: community_config.id, name: community_config.name, description: community_config.description });
+        return communityData.data.insert_communities_one;
+    }
+
     static async get_bot_phones() {
         const query = `
 query GetCommunities {

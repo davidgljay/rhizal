@@ -1,9 +1,0 @@
-mutation InsertCommunity {
-  insert_communities_one(object: {
-    bot_phone: "", 
-    name: "",
-    description: ""})
-  {
-    id
-  }
-}

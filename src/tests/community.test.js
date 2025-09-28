@@ -93,5 +93,48 @@ describe('Community Model', () => {
             expect(bot_phones).toEqual([]);
         });
     })
+
+    describe('update', () => {
+        it('should update community data successfully', async () => {
+            const community_config = {
+                id: 1,
+                name: 'Test Community',
+                description: 'Test Description'
+            };
+            const mockResponse = {
+                data: {
+                    update_communities_by_pk: community_config
+                }
+            };
+            graphql.mockResolvedValue(mockResponse);
+
+            const community = await Community.update(community_config);
+            console.log(community);
+
+            expect(graphql).toHaveBeenCalledWith(expect.stringContaining('mutation UpdateCommunity($id:uuid!, $name:String!, $description:String!)'), { id: community_config.id, name: community_config.name, description: community_config.description });
+            expect(community).toEqual(community_config);
+        });
+    })
+
+    describe('create', () => {
+        it('should create community data successfully', async () => {
+            const community_config = {
+                name: 'Test Community',
+                description: 'Test Description',
+                id: 1
+            };
+            const mockResponse = {
+                data: {
+                    insert_communities_one: community_config
+                }
+            };
+            graphql.mockResolvedValue(mockResponse);
+
+            const community = await Community.create(community_config);
+
+            expect(graphql).toHaveBeenCalledWith(expect.stringContaining('mutation CreateCommunity($name:String!, $description:String!)'), { name: community_config.name, description: community_config.description, id: community_config.id });
+            expect(community).toEqual(community_config);
+        });
+    })
     
 });

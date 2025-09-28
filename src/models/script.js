@@ -12,6 +12,44 @@ class Script {
         this.parser = new RhizalParser(script.script_json);
     }
 
+    static async get(name) {
+        const scriptData = await graphql(`
+query GetScript($name:String!) {
+    scripts(where: {name: {_eq:$name}}) {
+        id
+        name
+        script_json
+        vars_query
+        targets_query
+    }
+}
+`
+        ,{ name });
+        return new Script(scriptData.data.scripts[0]);
+    }
+    static async update(script_config) {
+        return await graphql(`
+        mutation UpdateScript($id:uuid!, $script_json:jsonb!) {
+            update_scripts_by_pk(pk_columns: {id: $id}, _set: {script_json: $script_json}) {
+                id
+                name
+            }
+        }
+        `
+        ,{ id: script_config.id, script_json: script_config.script_json });
+    }
+    static async create(script_config) {
+        return await graphql(`
+        mutation CreateScript($script_json:jsonb!) {
+            insert_scripts_one(object: {script_json: $script_json}) {
+                id
+                name
+            }
+        }
+        `
+        ,{ script_json: script_config.script_json });
+    }
+
     static async init(id) {
         const scriptData = await graphql(`
 query GetScript($id:uuid!) {

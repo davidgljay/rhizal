@@ -231,8 +231,7 @@ const create_system = async () => {
     });
 };
 
-//TODO: Create announcement script
-//TODO: Create community Info
+
 //TODO: Upload and associate community scripts 
 
 // Export functions for testing
