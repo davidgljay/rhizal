@@ -4,13 +4,12 @@ const http = require('http');
 const path = require('path');
 const { Client } = require('pg');
 
-const sqlFilePath = path.join(__dirname, 'rhizal_schema.sql');
-const sql = fs.readFileSync(sqlFilePath, 'utf8');
-
 
 
 
 const load_sql_schema = async () => {
+    const sqlFilePath = path.join(__dirname, 'rhizal_schema.sql');
+    const sql = fs.readFileSync(sqlFilePath, 'utf8');
     const client = new Client({
     host: process.env.PGHOST || 'postgres',
     port: process.env.PGPORT ? parseInt(process.env.PGPORT) : 5432,
@@ -75,34 +74,35 @@ const upload_metadata = async () => {
 };
 
 const create_system = async () => {
-    // Mutation to create the system community
-    const createCommunityMutation = JSON.stringify({
-        query: `
-            mutation CreateSystemCommunity {
-              insert_communities_one(object: {
-                bot_phone: "system",
-                name: "system",
-                description: "Used for system scripts and functions."
-              }) {
-                id
-              }
+    return new Promise((resolve, reject) => {
+        // Mutation to create the system community
+        const createCommunityMutation = JSON.stringify({
+            query: `
+                mutation CreateSystemCommunity {
+                  insert_communities_one(object: {
+                    bot_phone: "system",
+                    name: "system",
+                    description: "Used for system scripts and functions."
+                  }) {
+                    id
+                  }
+                }
+            `
+        });
+
+        const options = {
+            hostname: 'graphql-engine',
+            port: 8080,
+            path: '/v1/graphql',
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Content-Length': Buffer.byteLength(createCommunityMutation),
+                'x-hasura-admin-secret': process.env.HASURA_GRAPHQL_ADMIN_SECRET
             }
-        `
-    });
+        };
 
-    const options = {
-        hostname: 'graphql-engine',
-        port: 8080,
-        path: '/v1/graphql',
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Content-Length': Buffer.byteLength(createCommunityMutation),
-            'x-hasura-admin-secret': process.env.HASURA_GRAPHQL_ADMIN_SECRET
-        }
-    };
-
-    const req = http.request(options, (res) => {
+        const req = http.request(options, (res) => {
         let data = '';
         res.setEncoding('utf8');
         res.on('data', (chunk) => {
@@ -114,6 +114,7 @@ const create_system = async () => {
                 const community_id = response.data && response.data.insert_communities_one && response.data.insert_communities_one.id;
                 if (!community_id) {
                     console.error('Failed to create system community or retrieve id:', data);
+                    reject(new Error('Failed to create system community'));
                     return;
                 }
 
@@ -196,14 +197,18 @@ const create_system = async () => {
                             } else {
                                 console.error('Failed to create announcement script:', scriptData);
                             }
+                            // Resolve the promise after script creation completes
+                            resolve();
                         } catch (err) {
                             console.error('Error parsing announcement script response:', err, scriptData);
+                            reject(err);
                         }
                     });
                 });
 
                 scriptReq.on('error', (e) => {
                     console.error(`Problem with announcement script request: ${e.message}`);
+                    reject(e);
                 });
 
                 scriptReq.write(announcementMutation);
@@ -211,18 +216,17 @@ const create_system = async () => {
 
             } catch (err) {
                 console.error('Error parsing create community response:', err, data);
+                reject(err);
             }
         });
     });
 
-    req.on('error', (e) => {
-        console.error(`Problem with create community request: ${e.message}`);
-    });
+        req.on('error', (e) => {
+            console.error(`Problem with create community request: ${e.message}`);
+            reject(e);
+        });
 
-    req.write(createCommunityMutation);
-    await new Promise((resolve, reject) => {
-        req.on('close', resolve);
-        req.on('error', reject);
+        req.write(createCommunityMutation);
         req.end();
     });
 };
