@@ -32,7 +32,7 @@ describe('script_sync.js', () => {
 
     beforeEach(() => {
         // Reset all mocks
-        jest.clearAllMocks();
+        jest.resetAllMocks();
         
         // Mock path.join
         path.join.mockImplementation((...args) => args.join('/'));
@@ -58,7 +58,7 @@ describe('script_sync.js', () => {
 
     describe('create_or_update_community', () => {
         it('should update existing community', async () => {
-            const mockConfig = 'bot_phone: +1234567890\nname: Test Community';
+            const mockConfig = 'community:\n  bot_phone: +1(234)567-8901\n  name: Test Community';
             fs.readFileSync.mockReturnValue(mockConfig);
             
             Community.get.mockResolvedValue(mockCommunity);
@@ -67,14 +67,14 @@ describe('script_sync.js', () => {
             const result = await create_or_update_community();
 
             expect(fs.readFileSync).toHaveBeenCalledWith(expect.stringContaining('scripts_config/community_config.yml'), 'utf8');
-            expect(Community.get).toHaveBeenCalledWith(mockConfig.bot_phone);
-            expect(Community.update).toHaveBeenCalledWith(mockConfig);
+            expect(Community.get).toHaveBeenCalledWith('+1(234)567-8901');
+            expect(Community.update).toHaveBeenCalledWith({bot_phone: '+1(234)567-8901', name: 'Test Community'});
             expect(Community.create).not.toHaveBeenCalled();
             expect(result).toBe(mockCommunity);
         });
 
         it('should create new community when not found', async () => {
-            const mockConfig = 'bot_phone: +1234567890\nname: Test Community';
+            const mockConfig = 'community:\n  bot_phone: +1(234)567-8901\n  name: Test Community';
             fs.readFileSync.mockReturnValue(mockConfig);
             
             Community.get.mockResolvedValue(null);
@@ -83,14 +83,14 @@ describe('script_sync.js', () => {
             const result = await create_or_update_community();
 
             expect(fs.readFileSync).toHaveBeenCalledWith(expect.stringContaining('/scripts_config/community_config.yml'), 'utf8');
-            expect(Community.get).toHaveBeenCalledWith(mockConfig.bot_phone);
-            expect(Community.create).toHaveBeenCalledWith(mockConfig);
+            expect(Community.get).toHaveBeenCalledWith('+1(234)567-8901');
+            expect(Community.create).toHaveBeenCalledWith({bot_phone: '+1(234)567-8901', name: 'Test Community'});
             expect(Community.update).not.toHaveBeenCalled();
             expect(result).toBe(mockCommunity);
         });
 
         it('should handle community operations errors', async () => {
-            const mockConfig = 'bot_phone: +1234567890\nname: Test Community';
+            const mockConfig = 'community:\n  bot_phone: +1(234)567-8901\n  name: Test Community';
             fs.readFileSync.mockReturnValue(mockConfig);
             
             Community.get.mockRejectedValue(new Error('Database error'));
@@ -150,8 +150,9 @@ describe('script_sync.js', () => {
     });
 
     describe('update_community_and_scripts', () => {
+        const mockConfig = 'community:\n  bot_phone: +1(234)567-8901\n  name: Test Community';
 
-        afterEach(() => {
+        beforeEach(() => {
             jest.resetAllMocks();
         });
 
@@ -163,7 +164,7 @@ describe('script_sync.js', () => {
             
             // Mock file reads
             fs.readFileSync
-                .mockReturnValueOnce('mock community config')
+                .mockReturnValueOnce(mockConfig)
                 .mockReturnValueOnce(mockOnboardingScript)
                 .mockReturnValueOnce(mockGroupScript);
             
@@ -178,7 +179,7 @@ describe('script_sync.js', () => {
             await update_community_and_scripts();
 
             // Verify community creation
-            expect(Community.create).toHaveBeenCalledWith('mock community config');
+            expect(Community.create).toHaveBeenCalledWith({"bot_phone": "+1(234)567-8901", "name": "Test Community"});
             
             // Verify script creations
             expect(Script.create).toHaveBeenCalledTimes(2);
@@ -211,7 +212,7 @@ describe('script_sync.js', () => {
         });
 
         it('should handle community creation errors', async () => {
-            fs.readFileSync.mockReturnValue('mock community config');
+            fs.readFileSync.mockReturnValue(mockConfig);
             Community.get.mockRejectedValue(new Error('Community creation failed'));
 
             await expect(update_community_and_scripts()).rejects.toThrow('Community creation failed');
@@ -221,7 +222,7 @@ describe('script_sync.js', () => {
             const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
             
             fs.readFileSync
-                .mockReturnValueOnce('mock community config')
+                .mockReturnValueOnce(mockConfig)
                 .mockReturnValueOnce('mock onboarding script')
                 .mockReturnValueOnce('mock group script');
             
@@ -240,7 +241,7 @@ describe('script_sync.js', () => {
             const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
             
             fs.readFileSync
-                .mockReturnValueOnce('mock community config')
+                .mockReturnValueOnce(mockConfig)
                 .mockReturnValueOnce('mock onboarding script')
                 .mockReturnValueOnce('mock group script')
             
@@ -254,7 +255,7 @@ describe('script_sync.js', () => {
             await update_community_and_scripts();
 
             // Verify updates instead of creates
-            expect(Community.update).toHaveBeenCalledWith('mock community config');
+            expect(Community.update).toHaveBeenCalledWith({"bot_phone": "+1(234)567-8901", "name": "Test Community"});
             expect(Script.update).toHaveBeenCalledTimes(2);
             
             consoleSpy.mockRestore();
@@ -262,11 +263,13 @@ describe('script_sync.js', () => {
     });
 
     describe('Integration scenarios', () => {
+        const mockConfig = 'community:\n  bot_phone: +1(234)567-8901\n  name: Test Community';
+        
         it('should handle mixed create/update scenarios', async () => {
             const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
             
             fs.readFileSync
-                .mockReturnValueOnce('mock community config')
+                .mockReturnValueOnce(mockConfig)
                 .mockReturnValueOnce('mock onboarding script')
                 .mockReturnValueOnce('mock group script');
             
