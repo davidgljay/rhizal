@@ -6,7 +6,12 @@ const Script = require('../models/script');
 
 const create_or_update_community = async function () {
     const community_config_yaml = fs.readFileSync(path.join(__dirname, '../../scripts_config', 'community_config.yml'), 'utf8');
-    const community_config = yaml.load(community_config_yaml).community;
+    try {
+        const community_config = yaml.load(community_config_yaml).community;
+    } catch (error) {
+        console.error('Error loading community config yaml:', error);
+        throw new Error('Error loading community config yaml');
+    }
     const community = await Community.get(community_config.bot_phone);
     console.log('Retrieved community:', community);
     if (community) {
@@ -28,17 +33,29 @@ const create_or_update_script = async function (script_config) {
 const update_community_and_scripts = async function () {
     const community = await create_or_update_community();
     const onboarding_script_yaml = fs.readFileSync(path.join(__dirname, '../../scripts_config', 'onboarding.yml'), 'utf8');
+    try {
+        const onboarding_script_config = yaml.load(onboarding_script_yaml);
+    } catch (error) {
+        console.error('Error loading onboarding script yaml:', error);
+        throw new Error('Error loading onboarding script yaml');
+    }
     const onboarding_script_config = {
         name: 'onboarding',
         community_id: community.id,
-        script_json: yaml.load(onboarding_script_yaml)
+        script_json: onboarding_script_config
     };
     const onboarding_script_result = await create_or_update_script(onboarding_script_config);
     const group_script_yaml = fs.readFileSync(path.join(__dirname, '../../scripts_config', 'group_thread.yml'), 'utf8');
+    try {
+        const group_script_config = yaml.load(group_script_yaml);
+    } catch (error) {
+        console.error('Error loading group script yaml:', error);
+        throw new Error('Error loading group script yaml');
+    }
     const group_script_config = {
         name: 'group_thread',
         community_id: community.id,
-        script_json: yaml.load(group_script_yaml)
+        script_json: group_script_config
     };
     const group_script_result = await create_or_update_script(group_script_config);
     console.log('Community and scripts updated');
