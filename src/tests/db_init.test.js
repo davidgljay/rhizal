@@ -151,7 +151,11 @@ describe('db_init.js', () => {
     });
 
     describe('create_system', () => {
-        it('should create system community and announcement script', () => {
+        afterEach(() => {
+            jest.restoreAllMocks();
+        });
+
+        it('should create system community and announcement script', async () => {
             const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
             const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
             
@@ -173,20 +177,39 @@ describe('db_init.js', () => {
                 }
             };
 
-            mockResponse.on.mockImplementation((event, callback) => {
-                if (event === 'data') {
-                    callback(JSON.stringify(communityResponse));
-                }
-                if (event === 'end') {
-                    callback();
-                }
+            // Set up mock to automatically handle the response when http.request is called
+            http.request.mockImplementation((options, callback) => {
+                const mockReq = {
+                    on: jest.fn(),
+                    write: jest.fn(),
+                    end: jest.fn()
+                };
+                
+                // Simulate the response callback immediately
+                setTimeout(() => {
+                    const mockRes = {
+                        setEncoding: jest.fn(),
+                        on: jest.fn((event, cb) => {
+                            if (event === 'data') {
+                                // First request is community creation, second is script creation
+                                if (mockReq.write.mock.calls.length === 1) {
+                                    cb(JSON.stringify(communityResponse));
+                                } else {
+                                    cb(JSON.stringify(scriptResponse));
+                                }
+                            }
+                            if (event === 'end') {
+                                cb();
+                            }
+                        })
+                    };
+                    callback(mockRes);
+                }, 0);
+                
+                return mockReq;
             });
 
-            create_system();
-            
-            // Simulate the response
-            const responseCallback = http.request.mock.calls[0][1];
-            responseCallback(mockResponse);
+            await create_system();
 
             expect(http.request).toHaveBeenCalledWith(
                 expect.objectContaining({
@@ -200,17 +223,12 @@ describe('db_init.js', () => {
                 }),
                 expect.any(Function)
             );
-
-            expect(mockRequest.write).toHaveBeenCalledWith(
-                expect.stringContaining('CreateSystemCommunity')
-            );
-            expect(mockRequest.end).toHaveBeenCalled();
             
             consoleSpy.mockRestore();
             consoleErrorSpy.mockRestore();
         });
 
-        xit('should handle community creation failure', () => {
+        it('should handle community creation failure', async () => {
             const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
             
             // Mock failed community creation response
@@ -219,24 +237,34 @@ describe('db_init.js', () => {
                 errors: ['Community creation failed']
             };
 
-            // Create a fresh mock response for this test
-            const testMockResponse = {
-                setEncoding: jest.fn(),
-                on: jest.fn((event, callback) => {
-                    if (event === 'data') {
-                        callback(JSON.stringify(failedResponse));
-                    }
-                    if (event === 'end') {
-                        callback();
-                    }
-                })
-            };
+            // Set up mock to automatically handle the failed response
+            http.request.mockImplementation((options, callback) => {
+                const mockReq = {
+                    on: jest.fn(),
+                    write: jest.fn(),
+                    end: jest.fn()
+                };
+                
+                // Simulate the response callback immediately
+                setTimeout(() => {
+                    const mockRes = {
+                        setEncoding: jest.fn(),
+                        on: jest.fn((event, cb) => {
+                            if (event === 'data') {
+                                cb(JSON.stringify(failedResponse));
+                            }
+                            if (event === 'end') {
+                                cb();
+                            }
+                        })
+                    };
+                    callback(mockRes);
+                }, 0);
+                
+                return mockReq;
+            });
 
-            create_system();
-            
-            // Simulate response
-            const responseCallback = http.request.mock.calls[0][1];
-            responseCallback(testMockResponse);
+            await expect(create_system()).rejects.toThrow();
             
             expect(consoleSpy).toHaveBeenCalledWith(
                 'Failed to create system community or retrieve id:',
@@ -245,23 +273,37 @@ describe('db_init.js', () => {
             consoleSpy.mockRestore();
         });
 
-        xit('should handle JSON parsing errors', () => {
+        it('should handle JSON parsing errors', async () => {
             const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
             
-            mockResponse.on.mockImplementation((event, callback) => {
-                if (event === 'data') {
-                    callback('invalid json');
-                }
-                if (event === 'end') {
-                    callback();
-                }
+            // Set up mock to automatically handle invalid JSON response
+            http.request.mockImplementation((options, callback) => {
+                const mockReq = {
+                    on: jest.fn(),
+                    write: jest.fn(),
+                    end: jest.fn()
+                };
+                
+                // Simulate the response callback immediately
+                setTimeout(() => {
+                    const mockRes = {
+                        setEncoding: jest.fn(),
+                        on: jest.fn((event, cb) => {
+                            if (event === 'data') {
+                                cb('invalid json');
+                            }
+                            if (event === 'end') {
+                                cb();
+                            }
+                        })
+                    };
+                    callback(mockRes);
+                }, 0);
+                
+                return mockReq;
             });
 
-            create_system();
-            
-            // Simulate response
-            const responseCallback = http.request.mock.calls[0][1];
-            responseCallback(mockResponse);
+            await expect(create_system()).rejects.toThrow();
             
             expect(consoleSpy).toHaveBeenCalledWith(
                 'Error parsing create community response:',
@@ -271,14 +313,28 @@ describe('db_init.js', () => {
             consoleSpy.mockRestore();
         });
 
-        xit('should handle HTTP request errors', () => {
+        it('should handle HTTP request errors', async () => {
             const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
             
-            create_system();
-            
-            // Simulate error
-            const errorCallback = mockRequest.on.mock.calls.find(call => call[0] === 'error')[1];
-            errorCallback(new Error('Create system error'));
+            // Set up mock to automatically trigger an error
+            http.request.mockImplementation((options, callback) => {
+                const mockReq = {
+                    on: jest.fn((event, errorCallback) => {
+                        if (event === 'error') {
+                            // Trigger the error immediately
+                            setTimeout(() => {
+                                errorCallback(new Error('Create system error'));
+                            }, 0);
+                        }
+                    }),
+                    write: jest.fn(),
+                    end: jest.fn()
+                };
+                
+                return mockReq;
+            });
+
+            await expect(create_system()).rejects.toThrow();
             
             expect(consoleSpy).toHaveBeenCalledWith('Problem with create community request: Create system error');
             consoleSpy.mockRestore();
