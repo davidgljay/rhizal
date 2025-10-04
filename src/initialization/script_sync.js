@@ -49,7 +49,6 @@ const update_community_and_scripts = async function () {
     const group_script_yaml = fs.readFileSync(path.join(__dirname, '../../scripts_config', 'group_thread.yml'), 'utf8');
     let group_script;
     try {
-        console.log('Loading group script yaml:', group_script_yaml);
         group_script = yaml.load(group_script_yaml);
     } catch (error) {
         console.error('Error loading group script yaml:', error);
@@ -62,9 +61,9 @@ const update_community_and_scripts = async function () {
     };
     const group_script_result = await create_or_update_script(group_script_config);
     console.log('Community and scripts updated');
-    console.log(community);
-    console.log(onboarding_script_result);
-    console.log(group_script_result);
+    console.log('Community config:', community);
+    console.log('Onboarding script id:', onboarding_script_result.id);
+    console.log('Group script id:', group_script_result.id);
 }
 
 module.exports = {

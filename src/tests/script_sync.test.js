@@ -220,9 +220,6 @@ describe('script_sync.js', () => {
             
             // Verify console logs
             expect(consoleSpy).toHaveBeenCalledWith('Community and scripts updated');
-            expect(consoleSpy).toHaveBeenCalledWith(mockCommunity);
-            expect(consoleSpy).toHaveBeenCalledWith(mockScript);
-            expect(consoleSpy).toHaveBeenCalledWith(mockScript);
             
             consoleSpy.mockRestore();
         });
