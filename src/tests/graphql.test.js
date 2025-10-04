@@ -4,12 +4,12 @@ const fetch = require('node-fetch');
 jest.mock('node-fetch');
 
 describe('graphql', () => {
-    const GRAPHQL_URL = 'https://test.hasura.app/v1/graphql';
+    const GRAPHQL_URL = 'http://graphql-engine:8080/v1/graphql';
     const GRAPHQL_ADMIN_SECRET = 'test-secret';
 
     beforeEach(() => {
         process.env.GRAPHQL_URL = GRAPHQL_URL
-        process.env.GRAPHQL_ADMIN_SECRET = GRAPHQL_ADMIN_SECRET;
+        process.env.HASURA_GRAPHQL_ADMIN_SECRET = GRAPHQL_ADMIN_SECRET;
     });
 
     afterEach(() => {

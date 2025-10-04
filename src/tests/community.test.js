@@ -64,7 +64,6 @@ describe('Community Model', () => {
             graphql.mockResolvedValue(mockResponse);
     
             const bot_phones = await Community.get_bot_phones();
-            console.log(bot_phones);
     
             expect(graphql).toHaveBeenCalledWith(expect.stringContaining('query GetCommunities'));
             expect(bot_phones).toEqual(['+1234567890', '+0987654321']);
@@ -109,7 +108,6 @@ describe('Community Model', () => {
             graphql.mockResolvedValue(mockResponse);
 
             const community = await Community.update(community_config);
-            console.log(community);
 
             expect(graphql).toHaveBeenCalledWith(expect.stringContaining('mutation UpdateCommunity($id:uuid!, $name:String!, $description:String!)'), { id: community_config.id, name: community_config.name, description: community_config.description });
             expect(community).toEqual(community_config);
