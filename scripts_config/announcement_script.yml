@@ -9,6 +9,7 @@
       - set_message_type:
           type: "draft_announcement"
       - step: 1
+
 1:
   send:
     - "Thanks! Does this look good? \n\n{{message}}\n\nPlease respond with 'yes' to send or 'no' to cancel."
@@ -19,11 +20,13 @@
       - step: 2
     else:
       - step: 3
-2: 
+
+2:
   send:
     - "Great! Your announcement has been sent to your community."
   on_receive:
     - step: "done"
+
 3:
   send:
     - "Okay, I've canceled the announcement process. You can start it again with #announcement at any time."
