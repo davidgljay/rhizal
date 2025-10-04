@@ -25,7 +25,7 @@ query GetCommunities($bot_phone:String!) {
             throw new Error(response.errors[0].message);
         }
         if (response.data.communities.length === 0) {
-            return [];
+            return null;
         }
         const community = response.data.communities[0];
         return new Community(community.id, community.name, community);
