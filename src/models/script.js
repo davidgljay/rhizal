@@ -25,29 +25,40 @@ query GetScript($name:String!) {
 }
 `
         ,{ name });
+        if (scriptData.data.scripts.length === 0) {
+            return null
+        }
         return new Script(scriptData.data.scripts[0]);
     }
     static async update(script_config) {
-        return await graphql(`
-        mutation UpdateScript($id:uuid!, $script_json:jsonb!) {
+        const scriptData = await graphql(`
+        mutation UpdateScript($id:uuid!, $script_json:String!) {
             update_scripts_by_pk(pk_columns: {id: $id}, _set: {script_json: $script_json}) {
                 id
                 name
+                script_json
+                vars_query
+                targets_query
             }
         }
         `
         ,{ id: script_config.id, script_json: script_config.script_json });
+        return new Script(scriptData.data.update_scripts_by_pk);
     }
     static async create(script_config) {
-        return await graphql(`
-        mutation CreateScript($script_json:jsonb!) {
-            insert_scripts_one(object: {script_json: $script_json}) {
+        const scriptData = await graphql(`
+        mutation CreateScript($script_json:String!, $name:String!, $community_id:uuid!) {
+            insert_scripts_one(object: {script_json: $script_json, name: $name, community_id: $community_id}) {
                 id
                 name
+                script_json
+                vars_query
+                targets_query
             }
         }
         `
-        ,{ script_json: script_config.script_json });
+        ,{ script_json: script_config.script_json, name: script_config.name, community_id: script_config.community_id });
+        return new Script(scriptData.data.insert_scripts_one);
     }
 
     static async init(id) {

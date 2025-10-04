@@ -237,15 +237,15 @@ query GetScript($id:uuid!) {
         it('should update script data successfully', async () => {
             const mockResponse = {
                 data: {
-                    update_scripts_by_pk: { id: 1, name: 'Test Script' },
+                    update_scripts_by_pk: { id: 1, name: 'Test Script', script_json: '{"json": "json content"}' },
                 },
             };
             graphql.mockResolvedValue(mockResponse);
 
             const scriptInstance = await Script.update(mockResponse.data.update_scripts_by_pk);
 
-            expect(graphql).toHaveBeenCalledWith(expect.stringContaining('mutation UpdateScript($id:uuid!, $script_json:jsonb!)'), { id: mockResponse.data.update_scripts_by_pk.id, script_json: mockResponse.data.update_scripts_by_pk.script_json });
-            expect(scriptInstance).toEqual(mockResponse);
+            expect(graphql).toHaveBeenCalledWith(expect.stringContaining('mutation UpdateScript($id:uuid!, $script_json:String!)'), { id: mockResponse.data.update_scripts_by_pk.id, script_json: mockResponse.data.update_scripts_by_pk.script_json });
+            expect(scriptInstance).toBeInstanceOf(Script);
         });
     })
 
@@ -253,15 +253,15 @@ query GetScript($id:uuid!) {
         it('should create script data successfully', async () => {
             const mockResponse = {
                 data: {
-                    insert_scripts_by_pk: { id: 1, name: 'Test Script' },
+                    insert_scripts_one: { id: 1, name: 'Test Script', script_json: '{"json": "json content"}' },
                 },
             };
             graphql.mockResolvedValue(mockResponse);
 
-            const scriptInstance = await Script.create(mockResponse.data.insert_scripts_by_pk);
+            const scriptInstance = await Script.create({name: 'Test Script', community_id: '1', script_json: '{"json": "json content"}'});
 
-            expect(graphql).toHaveBeenCalledWith(expect.stringContaining('mutation CreateScript($script_json:jsonb!)'), { script_json: mockResponse.data.insert_scripts_by_pk.script_json });
-            expect(scriptInstance).toEqual(mockResponse);
+            expect(graphql).toHaveBeenCalledWith(expect.stringContaining('mutation CreateScript($script_json:String!, $name:String!, $community_id:uuid!)'), { community_id: '1', name: 'Test Script', script_json: mockResponse.data.insert_scripts_one.script_json });
+            expect(scriptInstance).toBeInstanceOf(Script);
         });
     })
 });
