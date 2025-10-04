@@ -4,6 +4,19 @@ const http = require('http');
 const path = require('path');
 const { Client } = require('pg');
 
+const wipe_db = async () => {
+    const client = new Client({
+        host: process.env.PGHOST || 'postgres',
+        port: process.env.PGPORT ? parseInt(process.env.PGPORT) : 5432,
+        user: process.env.PGUSER || 'postgres',
+        password: process.env.POSTGRES_PASSWORD || 'postgres',
+        database: process.env.PGDATABASE || 'postgres',
+    });
+    await client.connect();
+    await client.query('DROP SCHEMA public CASCADE;');
+    await client.query('CREATE SCHEMA public;');
+    await client.end();
+}
 
 
 
@@ -238,7 +251,8 @@ const create_system = async () => {
 module.exports = {
     load_sql_schema,
     upload_metadata,
-    create_system
+    create_system,
+    wipe_db
 };
 
 
