@@ -2,6 +2,7 @@
 const fs = require('fs');
 const http = require('http');
 const path = require('path');
+const yaml = require('js-yaml');
 const { Client } = require('pg');
 
 const wipe_db = async () => {
@@ -132,71 +133,41 @@ const create_system = async () => {
                 }
 
                 // Now create the announcement script for this community
-                const scriptJson = {
-                    "0": {
-                        "send": [
-                            "Would you like to send an announcement to your entire community? Just enter the message here and I'll confirm that it looks good before sending. You can also cancel this process with #cancel."
-                        ],
-                        "on_receive": {
-                            "if": "regex(message, /#cancel[^a-zA-Z0-9]/)",
-                            "then": [
-                                { "step": 3 }
-                            ],
-                            "else": [
-                                { "set_message_type": { "type": "draft_announcement" } },
-                                { "step": 1 }
-                            ]
-                        }
-                    },
-                    "1": {
-                        "send": [
-                            "Thanks! Does this look good? \n\n{{message}}\n\nPlease respond with 'yes' to send or 'no' to cancel."
-                        ],
-                        "on_receive": {
-                            "if": "regex(message, /yes/)",
-                            "then": [
-                                { "send_announcement": true },
-                                { "step": 2 }
-                            ],
-                            "else": [
-                                { "step": 3 }
-                            ]
-                        }
-                    },
-                    "2": {
-                        "send": [
-                            "Great! Your announcement has been sent to your community."
-                        ],
-                        "on_receive": [
-                            { "step": "done" }
-                        ]
-                    },
-                    "3": {
-                        "send": [
-                            "Okay, I've canceled the announcement process. You can start it again with #announcement at any time."
-                        ],
-                        "on_receive": [
-                            { "step": "done" }
-                        ]
-                    }
-                };
+                const announcementScript = fs.readFileSync(path.join(__dirname, '../../scripts_config/announcement_script.yml'), 'utf8');
+                const scriptJson = JSON.stringify(yaml.load(announcementScript));
                 const announcementMutation = JSON.stringify({
                     query: `
-                        mutation AnnouncementScript {
+                        mutation AnnouncementScript($community_id: uuid!, $script_json: String!) {
                           insert_scripts_one(
                             object: {
-                              community_id: ${JSON.stringify(community_id)}, 
+                              community_id: $community_id, 
                               name: "announcement", 
-                              script_json: ${JSON.stringify(scriptJson)}
+                              script_json: $script_json
                             }
                           ) {
                             id
                           }
                         }
-                    `
+                    `,
+                    variables: {
+                        community_id: community_id,
+                        script_json: scriptJson
+                    }
                 });
 
-                const scriptReq = http.request(options, (scriptRes) => {
+                const scriptOptions = {
+                    hostname: 'graphql-engine',
+                    port: 8080,
+                    path: '/v1/graphql',
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Content-Length': Buffer.byteLength(announcementMutation),
+                        'x-hasura-admin-secret': process.env.HASURA_GRAPHQL_ADMIN_SECRET
+                    }
+                };
+
+                const scriptReq = http.request(scriptOptions, (scriptRes) => {
                     let scriptData = '';
                     scriptRes.setEncoding('utf8');
                     scriptRes.on('data', (chunk) => {
