@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const yaml = require('js-yaml');
 
 // Mock the fs module
 jest.mock('fs');
@@ -159,8 +160,31 @@ describe('script_sync.js', () => {
         it('should successfully update community and all scripts', async () => {
             const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
             
-            const mockOnboardingScript = 'mock onboarding script content';
-            const mockGroupScript = 'mock group script content';
+            const mockOnboardingScript = `
+0:
+  send:
+    - "Welcome! What's your name?"
+  on_receive:
+    - set_variable:
+        variable: "name"
+        value: "message"
+    - step: 1
+`;
+            const mockGroupScript = `
+0:
+  send:
+    - "Thanks for inviting me! What hashtag should route to this group?"
+  on_receive:
+    - set_group_variable:
+        variable: "hashtag"
+        value: "regex(message, /#\\\\w+/)"
+    - step: 1
+1:
+  send:
+    - "Got it! I'll route {{hashtag}} messages here."
+  on_receive:
+    - step: "done"
+`;
             
             // Mock file reads
             fs.readFileSync
@@ -186,12 +210,12 @@ describe('script_sync.js', () => {
             expect(Script.create).toHaveBeenCalledWith({
                 name: 'onboarding',
                 community_id: mockCommunity.id,
-                script_json: mockOnboardingScript
+                script_json: JSON.stringify(yaml.load(mockOnboardingScript))
             });
             expect(Script.create).toHaveBeenCalledWith({
                 name: 'group_thread',
                 community_id: mockCommunity.id,
-                script_json: mockGroupScript
+                script_json: JSON.stringify(yaml.load(mockGroupScript))
             });
             
             // Verify console logs
