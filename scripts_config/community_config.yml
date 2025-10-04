@@ -1,4 +1,4 @@
 community:
-    bot_phone: "", 
-    name: "",
-    description: ""
+  bot_phone: "+10123456789"
+  name: "Rhizal"
+  description: "Rhizal is a lightweight chatbot for community organizing on Signal."
