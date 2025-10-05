@@ -273,14 +273,16 @@ describe('script_sync.js', () => {
             Script.get.mockResolvedValue(mockScript);
             Script.update.mockResolvedValue(mockScript);
 
-            await update_community_and_scripts();
+            const community_id = await update_community_and_scripts();
 
             // Verify updates instead of creates
             expect(Community.update).toHaveBeenCalledWith({"bot_phone": "+1(234)567-8901", "name": "Test Community"});
             expect(Script.update).toHaveBeenCalledTimes(2);
+            expect(community_id).toBe(mockCommunity);
             
             consoleSpy.mockRestore();
         });
+
     });
 
     describe('Integration scenarios', () => {
