@@ -29,10 +29,11 @@ Messages are sent and received via bbernhard/signal-cli-rest-api, which implemen
 
 To install a local instance of Rhizal you will need to:
 
-1. Find a phone number that can receive text messages to set up your Signal account. This number will need to be able to receive one text message and must not otherwise be associated with a Signal account (as other Signal communications could be disrupted or become confusing if mixed with Rhizal.)
-2. Modify `/scripts_config/community_config.yml` to reflect information about your community, the phone number you will be using and your desired Signal username.
-3. Modify the scripts in `/scripts_config` to meet your goals (see below). This step can also be done later.
-4. Run `npm run rhizal-init` or `yarn rhizal-init` and follow the instructions.
+1. Clone this repo locally with `git clone https://github.com/davidgljay/rhizal.git`
+2. Find a phone number that can receive text messages to set up your Signal account. This number will need to be able to receive one text message and must not otherwise be associated with a Signal account (as other Signal communications could be disrupted or become confusing if mixed with Rhizal.)
+3. Modify `/scripts_config/community_config.yml` to reflect information about your community, the phone number you will be using and your desired Signal username.
+4. Modify the scripts in `/scripts_config` to meet your goals (see below). This step can also be done later.
+5. Run `npm run rhizal-init` or `yarn rhizal-init` and follow the instructions.
 
 If you run into problems, you can use `npm run wipe-db` and `npm run rhizal-init` to try again.
 
