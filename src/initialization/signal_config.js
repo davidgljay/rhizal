@@ -3,6 +3,7 @@ const yaml = require('js-yaml');
 const https = require('https');
 const http = require('http');
 const urlModule = require('url');
+const path = require('path');
 
 async function promptSignalCaptchaUrl() {
     console.log("To register your Signal account, please follow these steps:");
@@ -138,10 +139,78 @@ async function verifySignalRegistrationCode(botPhone, verificationCode) {
     });
 }
 
+async function setSignalProfileName() {
+    // Load community config
+    const configPath = path.join(__dirname, '../../scripts_config/community_config.yml');
+    let configContent;
+    try {
+        configContent = fs.readFileSync(configPath, 'utf8');
+    } catch (err) {
+        throw new Error(`Failed to read community config: ${err.message}`);
+    }
+
+    // Simple YAML parsing for bot_phone and signal_username
+    const botPhoneMatch = configContent.match(/bot_phone:\s*["']?([^\n"']+)["']?/);
+    const usernameMatch = configContent.match(/signal_username:\s*["']?([^\n"']+)["']?/);
+
+    if (!botPhoneMatch || !usernameMatch) {
+        throw new Error("Could not find bot_phone or signal_username in community_config.yml");
+    }
+
+    const botPhone = botPhoneMatch[1].trim();
+    const username = usernameMatch[1].trim();
+
+    const postData = JSON.stringify({ username });
+
+    const urlPath = `/v1/accounts/${encodeURIComponent(botPhone)}/username`;
+
+    await new Promise((resolve, reject) => {
+        const req = http.request({
+            hostname: 'signal-cli',
+            port: 8080,
+            path: urlPath,
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Content-Length': Buffer.byteLength(postData)
+            }
+        }, (res) => {
+            let response = {}
+            res.on('data', chunk => {
+                if (response.body === null) response.body = '';
+                response.body += chunk;
+            });
+            res.on('end', () => {
+                response.statusCode = res.statusCode;
+                response.headers = res.headers;
+                if (res.statusCode >= 200 && res.statusCode < 300) {
+                    console.log("Signal profile name set successfully, you have been assigned the username: " + response.body.username);
+                    resolve();
+                } else {
+                    console.log(response);
+                    reject(new Error(`Failed to set Signal profile name: ${res.statusCode} ${response.body}`));
+                }
+            });
+        });
+        req.on('error', reject);
+        let response = {
+            statusCode: null,
+            headers: null,
+            body: null
+        };
+        
+
+        req.write(postData);
+        req.end();
+    });
+}
+
+
 
 
 module.exports = {
     promptSignalCaptchaUrl,
     getVerificationCodeFromSignalCaptchaUrl,
-    verifySignalRegistrationCode
+    verifySignalRegistrationCode,
+    setSignalProfileName
 }

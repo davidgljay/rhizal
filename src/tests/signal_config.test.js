@@ -9,19 +9,20 @@ jest.mock('js-yaml');
 const signalConfig = require('../initialization/signal_config');
 
 describe('signal_config.js', () => {
-    describe('promptSignalCaptchaUrl', () => {
-        let rlMock;
-        beforeEach(() => {
-            rlMock = {
-                question: jest.fn(),
-                close: jest.fn()
-            };
-            readline.createInterface.mockReturnValue(rlMock);
-        });
+    let rlMock;
+    beforeEach(() => {
+        rlMock = {
+            question: jest.fn(),
+            close: jest.fn()
+        };
+        readline.createInterface.mockReturnValue(rlMock);
+    });
 
-        afterEach(() => {
-            jest.clearAllMocks();
-        });
+    afterEach(() => {
+        jest.clearAllMocks();
+    });
+    describe('promptSignalCaptchaUrl', () => {
+
 
         it('should prompt the user and resolve with the trimmed URL', async () => {
             const userInput = ' sgnl://test-url ';
@@ -221,6 +222,39 @@ describe('signal_config.js', () => {
             await expect(signalConfig.verifySignalRegistrationCode('+123', '123456')).rejects.toThrow(
                 /Failed to verify registration/
             );
+        });
+    });
+
+    describe('setSignalProfileName', () => {
+        beforeEach 
+        it('should set the Signal profile name', async () => {
+            fs.readFileSync.mockReturnValue('community: { bot_phone: "+123", signal_username: "rhizal" }');
+            yaml.load.mockReturnValue({ community: { bot_phone: '+123', signal_username: 'rhizal' } });
+
+            const http = require('http');
+            const reqMock = {
+                on: jest.fn(),
+                write: jest.fn(),
+                end: jest.fn()
+            };
+            const resMock = {
+                statusCode: 200,
+                on: jest.fn()
+            };
+            http.request = jest.fn((opts, cb) => {
+                setImmediate(() => {
+                    cb(resMock);
+                    resMock.on.mock.calls.forEach(([event, handler]) => {
+                        if (event === 'data') handler('');
+                        if (event === 'end') handler();
+                    });
+                });
+                return reqMock;
+            });
+            resMock.on.mockImplementation((event, handler) => {});
+
+            await expect(signalConfig.setSignalProfileName()).resolves.toBeUndefined();
+            expect(http.request).toHaveBeenCalled();
         });
     });
 });
