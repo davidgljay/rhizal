@@ -55,7 +55,7 @@ query GetMembershipFromPhoneNumbers($phone: String!, $bot_phone: String!) {
 
 
     async set_variable(variable, value) {
-        const validVariables = ['name', 'informal_name', 'location', 'email', 'profile', 'step', 'current_script_id'];
+        const validVariables = ['name', 'informal_name', 'location', 'email', 'profile', 'step', 'current_script_id', 'type'];
         const variableTypes = {
             name: 'String',
             informal_name: 'String',
@@ -63,7 +63,8 @@ query GetMembershipFromPhoneNumbers($phone: String!, $bot_phone: String!) {
             email: 'String',
             profile: 'String',
             step: 'String',
-            current_script_id: 'uuid'
+            current_script_id: 'uuid',
+            type: 'String'
         }
         if (!validVariables.includes(variable)) {
             throw new Error(`Invalid variable. Valid variables are: ${validVariables.join(', ')}`);
@@ -79,6 +80,7 @@ mutation updateMembershipVariable($id:uuid!, $value:${variableTypes[variable]}!)
   }
 }
 `;
+
             this[variable] = value;
             const variables = { id: this.id, value};
             return await graphql(mutation, variables);
@@ -87,11 +89,69 @@ mutation updateMembershipVariable($id:uuid!, $value:${variableTypes[variable]}!)
         }
     }
     
-    
+    static async create_admin(user_phone, community) {
+        const createUserAndAdminMutation = `
+mutation CreateUserAndMembership($phone:String!, $community_id:uuid!) {
+  insert_memberships_one(
+    object: {
+        user: {
+            data: {phone: $phone}
+        }, 
+        community_id: $community_id, 
+        type: "admin", 
+        step: "done"
+        }) 
+  {
+    id
+    type
+    step
+    current_script_id
+    user {
+        id
+        phone
+    }
+    community {
+        id
+        bot_phone
+        onboarding_id
+    }
+  }
+}
+`;
+        const mutationResults = await graphql(createUserAndAdminMutation, { phone: user_phone, community_id: community.id});
+        return new Membership(mutationResults.data.insert_memberships_one);
+    }
     
     static async create(user_phone, community, user) {
         try {
-            const createUserAndMembershipMutation = `
+            const createMembershipMutation = `
+mutation CreateMembership($user_id:uuid!, $community_id:uuid!, $current_script_id:uuid!) {
+  insert_memberships_one(
+    object: {
+        user_id: $user_id,
+        community_id: $community_id,
+        type: "member",
+        step: "0",
+        current_script_id: $current_script_id
+    }) {
+        id
+        type
+        step
+        current_script_id
+        user {
+            id
+            phone
+        }
+        community {
+            id
+            bot_phone
+            onboarding_id
+        }
+  }
+}
+`;
+
+const createUserAndMembershipMutation = `
 mutation CreateUserAndMembership($phone:String!, $community_id:uuid!, $current_script_id:uuid!) {
   insert_memberships_one(
     object: {
@@ -117,33 +177,6 @@ mutation CreateUserAndMembership($phone:String!, $community_id:uuid!, $current_s
         bot_phone
         onboarding_id
     }
-  }
-}
-`;
-
-            const createMembershipMutation = `
-mutation CreateMembership($user_id:uuid!, $community_id:uuid!, $current_script_id:uuid!) {
-  insert_memberships_one(
-    object: {
-        user_id: $user_id,
-        community_id: $community_id,
-        type: "member",
-        step: "0",
-        current_script_id: $current_script_id
-    }) {
-        id
-        type
-        step
-        current_script_id
-        user {
-            id
-            phone
-        }
-        community {
-            id
-            bot_phone
-            onboarding_id
-        }
   }
 }
 `;

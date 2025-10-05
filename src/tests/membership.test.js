@@ -139,6 +139,18 @@ mutation updateMembershipVariable($id:uuid!, $value:String!) {
         });
     });
 
+    describe('create_admin', () => {
+        it('should return a Membership object', async () => {
+            const community = { id: 'community_id', bot_phone: 'bot_phone', onboarding: { id: 'onboarding_id' } };
+            graphql.mockResolvedValue({ data: { insert_memberships_one: { id: '12345', type: 'admin', community: community } } });
+            const membership = await Membership.create_admin('+1234567890', community);
+            expect(membership).toBeInstanceOf(Membership);
+            expect(membership.id).toBe('12345');
+            expect(membership.type).toBe('admin');
+            expect(membership.community).toBe(community);
+        });
+    });
+
 
 
 });
