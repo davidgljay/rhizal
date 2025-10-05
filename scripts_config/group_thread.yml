@@ -9,8 +9,10 @@
         if: "regex(message, /#\\w+/)"
         then:
             - set_group_variable:
-                    variable: "hashtag"
-                    value: "regex(message, /#\\w+/)"
+                variable: "hashtag"
+                value: "regex(message, /#\\w+/)"
+            - send_to_admins:
+                preamble: "A new group has been created with hashtag:"
             - step: 1
         else:
             - step: 2

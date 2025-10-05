@@ -29,80 +29,83 @@ Messages are sent and received via bbernhard/signal-cli-rest-api, which implemen
 
 To install a local instance of Rhizal you will need to:
 
-1. Set up an external datastore which accepts GraphQL and tell Rhizal how to access it.
-2. Download this repot and run it using Docker Compose.
-3. Register a number for Rhizal to use on the Signal network.
+1. Find a phone number that can receive text messages to set up your Signal account. This number will need to be able to receive one text message and must not otherwise be associated with a Signal account (as other Signal communications could be disrupted or become confusing if mixed with Rhizal.)
+2. Modify `/scripts_config/community_config.yml` to reflect information about your community, the phone number you will be using and your desired Signal username.
+3. Modify the scripts in `/scripts_config` to meet your goals (see below). This step can also be done later.
+4. Run `npm run rhizal-init` or `yarn rhizal-init` and follow the instructions.
 
-### Step 1. Setting up a datastore.
+If you run into problems, you can use `npm run wipe-db` and `npm run rhizal-init` to try again.
 
-Rhizal communicates with a datastore over a secure connection using GraphQL. For development I chose [Hasura](https://cloud.hasura.io/), which is free and which allows for servers hosted in a variety of locations, though this may be insufficiently secure for some applications.
+## Updating Scripts
 
-1a. Set up a graphql compatible external datastore and create a .env file with the access credentials or otherwise store them as secure local environment variables. Rhizal expects three environment variables, which are listed in sample.env:
+Scripts are written in yaml, you can update them at any time with `npm run script-sync`
 
-`
-GRAPHQL_ADMIN_SECRET=SECRET_TO_AUTH_GRAPHQL_REQUESTS
-GRAPHQL_URL=https://graphql.request.url
-GRAPHQL_AUTH_HEADER=auth-header-for-graphql-secret
-`
+### The Basics
 
-If you want to use Hasura to test Rhizal, you can do so using the following steps:
+Scripts are broken into steps. Each step has two components, `send` and `on_receive`
 
-1. Create an account on [Hasura Cloud](https://cloud.hasura.io/projects).
-2. Select "New Project" and choose a name for your project.
-3. Click the Gear icon on your new project to go to the admin panel to reveal your GraphQL API URL and Admin secret. 
+`send` consists of an array of messages that will be sent in sequence. These messages can include variables, like `name` that refer to a user's name. More on these later.
 
-Then create a .env as follows:
+A send component may look like this:
 
-`
-GRAPHQL_ADMIN_SECRET=HASURA_ADMIN_SECRET
-GRAPHQL_URL=https://yourapp.hasura.app/v1/graphql
-GRAPHQL_AUTH_HEADER=x-hasura-admin-secret
-`
+```
+0:
+  send:
+    - "This is a test script."
+    - "{{name}} how are you doing?"
+```
 
-1b. Initialize the expected data structure in your datastore.
+`on_receive` components take actions when a message is received. The only required action is `step`, which triggers the next step of a script. A basic script may look like this.
 
-Use the SQL in rhizal_schema.sql to initialize the proper schema in your database.
-Use the metadata in hasura_rhizal_metadata.json to set up the proper GraphQL metadata in a system such as Hasura or Apollo.
+```
+0:
+  send:
+    - "How are you today?"
+  on_receive:
+    - step: 1
+1:
+  send:
+    - "Thanks for letting me know!"
+  on_receive:
+    - step: "done"
+```
 
-### Step 2. Download and initialize Rhizal.
+This script will send a single message, wait for the user to respond, then say "Thanks for letting me know!" and complete. note that script completion should always be marked with `step: "done"`
 
-Clone this repository using `https://github.com/davidgljay/rhizal.git`
-Ensure that the .env file from step 1 is in the root directory.
-Ensure that [docker compose is installed](https://docs.docker.com/compose/install/)
-Run using `docker compose up`
+### Advanced Configuration
 
+Many other commands can be run on `on_receive`. Here's a complete list:
 
-### Step 3. Registering a Signal Number
+|**set_variable**| Stores a variable about the user that can be incorporated into messages later. |
+|**set_group_variable**| Sets a variable about the group that the conversation is taking place in. |
+|**set_message_type**| Tags the message when it is saved for easier retrieval later (e.g. saving messages as being tied to onboarding.)|
+|**send_to_admins**| Forwards the messages to admins with a premable.|
+|**if/then/else**| Can be used to create conditional logic.|
 
-Rhizal uses the [Signal CLI REST API](https://github.com/bbernhard/signal-cli-rest-api) to send and receive messages on the Signal network. You will need to register a phone number for Rhizal to use. 
+Here's an example of a more advanced script:
 
-3a. Create a number capable of receiving text messages using a service such as Twilio. 
+```
+0:
+    send:
+        - "Thanks for inviting me to join! This is the Rhizal script. I'll completely ignore everything said in this group unless it contains a hashtag."
+        - "If it does I'll route it to another group, then forget it."
+        - "For example, writing a message with #leadership would route to the leadership group."
+        - "To get you set up, what hashtag should others use to message this group? (e.g. #coolkids)"
+        - "You can always change this in the future by writing #name."
+    on_receive:
+        if: "regex(message, /#\\w+/)"
+        then:
+            - set_group_variable:
+                variable: "hashtag"
+                value: "regex(message, /#\\w+/)"
+            - send_to_admins:
+                preamble: "A new group has been created with hashtag:"
+            - step: 1
+        else:
+            - step: 2
+```
 
-3b. Complete Signal's Capthca at the following url: https://signalcaptchas.org/registration/generate
-Right click on the link which reads "Open Signal" and  copy the result to your clipboard.
-
-3c. Then run the following command:
-
-`
-docker exec -it rhizal curl -X POST \
-  -H "Content-Type: application/json" \
-  -d '{"captcha": "SIGNALCAPTCHA"}' \
-  http://signal-cli/v1/register/+1234567890
-`
-
-Replacing "+12345678990" with the number you wish to register and "SIGNALCAPTCHA" with the captcha completed above.. This should trigger a verification text message.
-
-3d. Submit the verification code sent to signal with the following command:
-
-`
-docker exec -it rhizal curl -X POST \
-  -H "Content-Type: application/json" \
-  -d '{"pin": "6789"}' \
-  http://signal-cli/v1/register/+1234567890/verify/12345
-`
-
-Where +1234567890 is replaced with the phone number you wish to registerd, "1234" is replaced with the verification code sent via text and "6789" is replaced by a pin created by you and used for account recovery.
-
+This script tests the message against a regex to see if it includes a hashtag. If it does, then it sets a group variable based on that hashtag and messages admins about it. Otherwise it redirects to a separate step. Note that becuase the original message is being forwarded we don't need to include the hashtag in this preamble, but we could with `{{hashtag}}` if we wanted to.
 
 
 
