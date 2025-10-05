@@ -52,20 +52,38 @@ describe('signal_config.js', () => {
             jest.clearAllMocks();
         });
 
-        it('should throw if bot_phone is not found in config', async () => {
-            fs.readFileSync.mockReturnValue('community: {}');
-            yaml.load.mockReturnValue({ community: {} });
+        it('should successfully get verification code after POST', async () => {
+            // Mock HTTP POST
+            const http = require('http');
+            const reqMock = {
+                on: jest.fn(),
+                write: jest.fn(),
+                end: jest.fn()
+            };
+            const resMock = {
+                statusCode: 200,
+                on: jest.fn()
+            };
+            http.request = jest.fn((opts, cb) => {
+                setImmediate(() => {
+                    cb(resMock);
+                    resMock.on.mock.calls.forEach(([event, handler]) => {
+                        if (event === 'data') handler('');
+                        if (event === 'end') handler();
+                    });
+                });
+                return reqMock;
+            });
 
-            await expect(signalConfig.getVerificationCodeFromSignalCaptchaUrl('sgnl://test')).rejects.toThrow(
-                /bot_phone not found/
-            );
-        });
+            // Simulate readline for verification code
+            const codeInput = ' 987654 ';
+            rlMock.question.mockImplementation((prompt, cb) => cb(codeInput));
+            resMock.on.mockImplementation((event, handler) => {});
 
-        it('should throw if reading config fails', async () => {
-            fs.readFileSync.mockImplementation(() => { throw new Error('fail'); });
-            await expect(signalConfig.getVerificationCodeFromSignalCaptchaUrl('sgnl://test')).rejects.toThrow(
-                /Failed to read bot_phone/
-            );
+            const result = await signalConfig.getVerificationCodeFromSignalCaptchaUrl('+123', 'sgnl://captcha-url');
+            expect(result).toBe('987654');
+            expect(http.request).toHaveBeenCalled();
+            expect(rlMock.close).toHaveBeenCalled();
         });
 
         it('should POST to signal-cli and prompt for verification code', async () => {
@@ -245,7 +263,7 @@ describe('signal_config.js', () => {
                 setImmediate(() => {
                     cb(resMock);
                     resMock.on.mock.calls.forEach(([event, handler]) => {
-                        if (event === 'data') handler('');
+                        if (event === 'data') handler('{"username": "rhizal"}');
                         if (event === 'end') handler();
                     });
                 });
