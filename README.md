@@ -76,11 +76,13 @@ This script will send a single message, wait for the user to respond, then say "
 
 Many other commands can be run on `on_receive`. Here's a complete list:
 
-|**set_variable**| Stores a variable about the user that can be incorporated into messages later. |
-|**set_group_variable**| Sets a variable about the group that the conversation is taking place in. |
-|**set_message_type**| Tags the message when it is saved for easier retrieval later (e.g. saving messages as being tied to onboarding.)|
-|**send_to_admins**| Forwards the messages to admins with a premable.|
-|**if/then/else**| Can be used to create conditional logic.|
+| Command              | Description                                                                                                 |
+|----------------------|-------------------------------------------------------------------------------------------------------------|
+| `set_variable`       | Stores a variable about the user that can be incorporated into messages later.                              |
+| `set_group_variable` | Sets a variable about the group that the conversation is taking place in.                                   |
+| `set_message_type`   | Tags the message when it is saved for easier retrieval later (e.g. saving messages as being tied to onboarding.) |
+| `send_to_admins`     | Forwards the messages to admins with a preamble.                                                            |
+| `if/then/else`       | Can be used to create conditional logic.                                                                    |
 
 Here's an example of a more advanced script:
 
