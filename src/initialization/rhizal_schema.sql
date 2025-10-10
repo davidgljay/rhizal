@@ -144,7 +144,8 @@ CREATE TABLE public.group_threads (
     group_id text NOT NULL,
     hashtag text,
     community_id uuid NOT NULL,
-    step text
+    step text,
+    role text
 );
 
 
