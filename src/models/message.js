@@ -173,49 +173,49 @@ mutation SetMessageType($signal_timestamp: bigint!, $type: String!) {
 
     static async send_to_admins(community_id, sender_id, text, community = null) {
         let bot_phone;
-        let admins
+        let communityData;
+        
         if (!community) {
-        const SEND_TO_ADMINS = `
+            const SEND_TO_ADMINS = `
 query SendToAdmins($community_id: uuid!) {
     communities(where: {id: {_eq: $community_id}}) {
         id
         bot_phone
-        admins:memberships(where: {type: {_eq: "admin"}}) {
+        admin_groups:group_threads(where: {role: {_eq: "admin"}}) {
             id
-            user {
-                phone
-            }
+            group_id
         }
+
     }
 }`;
 
             const result = await graphql(SEND_TO_ADMINS, { community_id });
-            const communityData = result.data.communities[0];
+            communityData = result.data.communities[0];
             if (!communityData) {
                 console.error('CommunityData not found');
                 return;
             }
-            bot_phone = communityData.bot_phone;
-            admins = communityData.admins;
         } else {
-            bot_phone = community.bot_phone;
-            admins = community.admins;
+            communityData = community;
         }
+        bot_phone = communityData.bot_phone;
         
-
-        for (const admin of admins) {
-            const { phone } = admin.user;
+        // Check if admin group exists
+        if (communityData.admin_groups && communityData.admin_groups.length > 0) {
+            const admin_group = communityData.admin_groups[0];
+            // Send to admin group
             await Message.send(
                 community_id,
-                admin.id, 
-                phone, 
-                bot_phone, 
-                text, 
-                true,
-                sender_id, 
-                "relay_to_admin", 
+                null, // No specific membership_id for group messages
+                'group.' + admin_group.group_id,
+                bot_phone,
+                text,
+                false, // Don't log group messages
+                sender_id,
+                "relay_to_admin_group",
                 0
             );
+            return;
         }
     }
 

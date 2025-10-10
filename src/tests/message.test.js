@@ -209,70 +209,98 @@ describe('Message', () => {
     });
 
     describe('send_to_admins', () => {
-        it('should send a message to all admins of a community', async () => {
-        const mockCommunity = {
-            id: 'community_1',
-            bot_phone: 'bot_phone',
-            admins: [
-            { id: 'admin_1', user: { phone: 'admin1' } },
-            { id: 'admin_2', user: { phone: 'admin2' } }
-            ]
-        };
-        const mockSend = jest.spyOn(Message, 'send').mockResolvedValue({});
+        it('should send a message to admin group if it exists', async () => {
+            const mockCommunity = {
+                id: 'community_1',
+                bot_phone: 'bot_phone',
+                admin_groups: [
+                    { id: 'admin_group_1', group_id: 'admin_group_id_123' }
+                ]
+            };
+            const mockSend = jest.spyOn(Message, 'send').mockResolvedValue({});
 
-        graphql.mockResolvedValue({ data: { communities: [mockCommunity] } });
+            graphql.mockResolvedValue({ data: { communities: [mockCommunity] } });
 
-        await Message.send_to_admins('community_1', 'sender_id', 'Hello, admins!');
+            await Message.send_to_admins('community_1', 'sender_id', 'Hello, admins!');
 
-        expect(graphql).toHaveBeenCalledWith(expect.any(String), { community_id: 'community_1' });
-        expect(mockSend).toHaveBeenCalledTimes(2);
-        expect(mockSend).toHaveBeenNthCalledWith(1, 'community_1', 'admin_1', 'admin1', 'bot_phone', 'Hello, admins!', true, 'sender_id', "relay_to_admin", 0);
-        expect(mockSend).toHaveBeenNthCalledWith(2, 'community_1', 'admin_2', 'admin2', 'bot_phone', 'Hello, admins!', true, 'sender_id', "relay_to_admin", 0);
+            expect(graphql).toHaveBeenCalledWith(expect.any(String), { community_id: 'community_1' });
+            expect(mockSend).toHaveBeenCalledTimes(1);
+            expect(mockSend).toHaveBeenCalledWith(
+                'community_1',
+                null, // No specific membership_id for group messages
+                'group.admin_group_id_123',
+                'bot_phone',
+                'Hello, admins!',
+                false, // Don't log group messages
+                'sender_id',
+                "relay_to_admin_group",
+                0
+            );
 
-        mockSend.mockRestore();
+            mockSend.mockRestore();
         });
 
-        it('should use provided community data if available', async () => {
-        const mockCommunity = {
-            id: 'community_1',
-            bot_phone: 'bot_phone',
-            admins: [
-            { id: 'admin_1', user: { phone: 'admin1' } },
-            { id: 'admin_2', user: { phone: 'admin2' } }
-            ]
-        };
-        const mockSend = jest.spyOn(Message, 'send').mockResolvedValue({});
 
-        await Message.send_to_admins('community_1', 'sender_id', 'Hello, admins!', mockCommunity);
+        it('should use provided community data if available and send to admin group', async () => {
+            const mockCommunity = {
+                id: 'community_1',
+                bot_phone: 'bot_phone',
+                admin_groups: [
+                    { id: 'admin_group_1', group_id: 'admin_group_id_123' }
+                ]
+            };
+            const mockSend = jest.spyOn(Message, 'send').mockResolvedValue({});
 
-        expect(graphql).not.toHaveBeenCalled();
-        expect(mockSend).toHaveBeenCalledTimes(2);
-        expect(mockSend).toHaveBeenNthCalledWith(1, 'community_1', 'admin_1', 'admin1', 'bot_phone', 'Hello, admins!', true, 'sender_id', "relay_to_admin", 0);
-        expect(mockSend).toHaveBeenNthCalledWith(2, 'community_1', 'admin_2', 'admin2', 'bot_phone', 'Hello, admins!', true, 'sender_id', "relay_to_admin", 0);
+            await Message.send_to_admins('community_1', 'sender_id', 'Hello, admins!', mockCommunity);
 
-        mockSend.mockRestore();
+            expect(graphql).not.toHaveBeenCalled();
+            expect(mockSend).toHaveBeenCalledTimes(1);
+            expect(mockSend).toHaveBeenCalledWith(
+                'community_1',
+                null,
+                'group.admin_group_id_123',
+                'bot_phone',
+                'Hello, admins!',
+                false,
+                'sender_id',
+                "relay_to_admin_group",
+                0
+            );
+
+            mockSend.mockRestore();
         });
 
-        it('should not send a message if no admins are found', async () => {
-        const mockCommunity = {
-            id: 'community_1',
-            bot_phone: 'bot_phone',
-            admins: []
-        };
 
-        graphql.mockResolvedValue({ data: { communities: [mockCommunity] } });
+        it('should not send a message if no admins are found and no admin group', async () => {
+            const mockCommunity = {
+                id: 'community_1',
+                bot_phone: 'bot_phone',
+                admin_groups: [],
+                admins: []
+            };
 
-        await Message.send_to_admins('community_1', 'sender_id', 'Hello, admins!');
+            graphql.mockResolvedValue({ data: { communities: [mockCommunity] } });
 
-        expect(graphql).toHaveBeenCalledWith(expect.any(String), { community_id: 'community_1' });
-        expect(Signal.send).not.toHaveBeenCalled();
+            await Message.send_to_admins('community_1', 'sender_id', 'Hello, admins!');
+
+            expect(graphql).toHaveBeenCalledWith(expect.any(String), { community_id: 'community_1' });
+            expect(Signal.send).not.toHaveBeenCalled();
         });
 
         it('should handle errors when fetching community data', async () => {
-        const errorMessage = 'Error fetching community data';
-        graphql.mockRejectedValue(new Error(errorMessage));
+            const errorMessage = 'Error fetching community data';
+            graphql.mockRejectedValue(new Error(errorMessage));
 
-        await expect(Message.send_to_admins('community_1', 'sender_id', 'Hello, admins!')).rejects.toThrow(errorMessage);
+            await expect(Message.send_to_admins('community_1', 'sender_id', 'Hello, admins!')).rejects.toThrow(errorMessage);
+        });
+
+        it('should not send a message if community is not found', async () => {
+            graphql.mockResolvedValue({ data: { communities: [] } });
+
+            await Message.send_to_admins('community_1', 'sender_id', 'Hello, admins!');
+
+            expect(graphql).toHaveBeenCalledWith(expect.any(String), { community_id: 'community_1' });
+            expect(Signal.send).not.toHaveBeenCalled();
         });
     });
 });
