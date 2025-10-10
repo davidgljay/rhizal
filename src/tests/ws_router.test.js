@@ -1,111 +1,304 @@
-import { receive_raw_message } from '../routes//ws';
-import { receive_message, receive_group_message } from '../handlers/receive_message';
+const { receive_raw_message } = require('../routes/ws');
+const GroupThread = require('../models/group_thread');
 
-jest.mock('../handlers/receive_message');
+jest.mock('../models/group_thread');
 
-describe('receive_raw_message', () => {
-    beforeEach(() => {
+describe('WebSocket Router', () => {
+    afterEach(() => {
         jest.clearAllMocks();
     });
 
-    it('should not call receive_message if msg is undefined', async () => {
-        await receive_raw_message(undefined);
-        expect(receive_message).not.toHaveBeenCalled();
-    });
-
-    it('should not call receive_message if msg.envelope is undefined', async () => {
-        await receive_raw_message({ envelope: undefined });
-        expect(receive_message).not.toHaveBeenCalled();
-    });
-
-    it('should not call receive_message if msg.envelope.syncMessage is undefined', async () => {
-        await receive_raw_message({ envelope: { syncMessage: undefined } });
-        expect(receive_message).not.toHaveBeenCalled();
-    });
-
-    it('should call receive_message with correct parameters when msg is valid', async () => {
-        const msg = {
-            envelope: {
-                source: '+11234567890',
-                timestamp: 1741473723341,
-                sourceUuid: 'UUID',
-                sourceName: 'Test User',
-                dataMessage: {
-                    message: 'Test message',
-                    type: 'DELIVER',
+    describe('receive_raw_message', () => {
+        it('should handle group member join events and call handle_member_join_or_leave to add a member', async () => {
+            const mockMessage = {
+                envelope: {
+                    sourceUuid: '+1234567890',
+                    timestamp: 1234567890,
+                    sourceName: 'Test User',
+                    dataMessage: {
+                        groupInfo: {
+                            groupId: 'test_group_id',
+                            revision: 0,
+                            type: 'UPDATE',
+                            members: ['+1234567890']
+                        }
+                    }
                 },
-            },
-            account: '+10987654321'
-        };
+                account: '+0987654321'
+            };
 
-        await receive_raw_message(msg);
+            GroupThread.handle_member_join_or_leave.mockResolvedValue();
 
-        expect(receive_message).toHaveBeenCalledWith(
-            'UUID',
-            '+10987654321',
-            'Test message',
-            1741473723341,
-            'Test User',
-        );
-    });
+            await receive_raw_message(mockMessage);
 
-    it('should call receive_group_message with correct parameters when a group message is sent', async () => {
-        const msg = {
-            envelope: {
-                source: '+11234567890',
-                timestamp: 1741473723341,
-                sourceName: 'Test User',
-                sourceUuid: 'UUID',
-                dataMessage: {
-                    groupInfo: {
-                        groupId: 'group123',
-                    },
-                    message: 'Group test message',
-                    type: 'DELIVER',
+            expect(GroupThread.handle_member_join_or_leave).toHaveBeenCalledWith(
+                Buffer.from('test_group_id').toString('base64'),
+                '+1234567890',
+                '+0987654321',
+                true
+            );
+        });
+
+        it('should handle group member leave events and call handle_member_join_or_leave', async () => {
+            const mockMessage = {
+                envelope: {
+                    sourceUuid: '+1234567890',
+                    timestamp: 1234567890,
+                    sourceName: 'Test User',
+                    dataMessage: {
+                        groupInfo: {
+                            groupId: 'test_group_id',
+                            revision: 0,
+                            type: 'UPDATE',
+                            members: ['+3210987654']
+                        }
+                    }
                 },
-            },
-            account: '+10987654321'
-        };
+                account: '+0987654321'
+            };
 
-        await receive_raw_message(msg);
+            GroupThread.handle_member_join_or_leave.mockResolvedValue();
 
-        expect(receive_group_message).toHaveBeenCalledWith(
-            'group123',
-            'Group test message',
-            'UUID',
-            '+10987654321',
-            'Test User',
-            expect.any(Number)
-        );
-    });
+            await receive_raw_message(mockMessage);
 
-    it('should call receive_group_message with correct parameters when a group joined', async () => {
-        const msg = {
-            envelope: {
-                source: '+11234567890',
-                timestamp: 1741473723341,
-                sourceName: 'Test User',
-                sourceUuid: 'UUID',
-                dataMessage: {
-                    groupInfo: {
-                        groupId: 'group123',
-                    },
-                    type: 'DELIVER',
+            expect(GroupThread.handle_member_join_or_leave).toHaveBeenCalledWith(
+                Buffer.from('test_group_id').toString('base64'),
+                '+1234567890',
+                '+0987654321',
+                false
+            );
+        });
+
+        it('should not call handle_member_join_or_leave for non-join group events', async () => {
+            const mockMessage = {
+                envelope: {
+                    sourceUuid: '+1234567890',
+                    timestamp: 1234567890,
+                    sourceName: 'Test User',
+                    dataMessage: {
+                        groupInfo: {
+                            groupId: 'test_group_id',
+                            revision: 1,
+                            type: 'UPDATE'
+                        }
+                    }
                 },
-            },
-            account: '+10987654321',
-        };
+                account: '+0987654321'
+            };
 
-        await receive_raw_message(msg);
+            await receive_raw_message(mockMessage);
 
-        expect(receive_group_message).toHaveBeenCalledWith(
-            'group123',
-            undefined,
-            'UUID',
-            '+10987654321',
-            'Test User',
-            expect.any(Number)
-        );
+            expect(GroupThread.handle_member_join_or_leave).not.toHaveBeenCalled();
+        });
+
+        it('should not call handle_member_join_or_leave for non-UPDATE group events', async () => {
+            const mockMessage = {
+                envelope: {
+                    sourceUuid: '+1234567890',
+                    timestamp: 1234567890,
+                    sourceName: 'Test User',
+                    dataMessage: {
+                        groupInfo: {
+                            groupId: 'test_group_id',
+                            revision: 0,
+                            type: 'CREATE'
+                        }
+                    }
+                },
+                account: '+0987654321'
+            };
+
+            await receive_raw_message(mockMessage);
+
+            expect(GroupThread.handle_member_join_or_leave).not.toHaveBeenCalled();
+        });
+
+        it('should ignore kick events (revision 21)', async () => {
+            const mockMessage = {
+                envelope: {
+                    sourceUuid: '+1234567890',
+                    timestamp: 1234567890,
+                    sourceName: 'Test User',
+                    dataMessage: {
+                        groupInfo: {
+                            groupId: 'test_group_id',
+                            revision: 21
+                        }
+                    }
+                },
+                account: '+0987654321'
+            };
+
+            await receive_raw_message(mockMessage);
+
+            expect(GroupThread.handle_member_join_or_leave).not.toHaveBeenCalled();
+        });
+
+        it('should handle regular group messages normally', async () => {
+            const mockMessage = {
+                envelope: {
+                    sourceUuid: '+1234567890',
+                    timestamp: 1234567890,
+                    sourceName: 'Test User',
+                    dataMessage: {
+                        message: 'Hello group!',
+                        groupInfo: {
+                            groupId: 'test_group_id',
+                            revision: 1
+                        }
+                    }
+                },
+                account: '+0987654321'
+            };
+
+            // Mock the receive_group_message function
+            const mockReceiveGroupMessage = jest.fn();
+            jest.doMock('../handlers/receive_message', () => ({
+                receive_group_message: mockReceiveGroupMessage
+            }));
+
+            await receive_raw_message(mockMessage);
+
+            expect(GroupThread.handle_member_join_or_leave).not.toHaveBeenCalled();
+        });
+
+        it('should handle individual messages normally', async () => {
+            const mockMessage = {
+                envelope: {
+                    sourceUuid: '+1234567890',
+                    timestamp: 1234567890,
+                    sourceName: 'Test User',
+                    dataMessage: {
+                        message: 'Hello!'
+                    }
+                },
+                account: '+0987654321'
+            };
+
+            // Mock the receive_message function
+            const mockReceiveMessage = jest.fn();
+            jest.doMock('../handlers/receive_message', () => ({
+                receive_message: mockReceiveMessage
+            }));
+
+            await receive_raw_message(mockMessage);
+
+            expect(GroupThread.handle_member_join_or_leave).not.toHaveBeenCalled();
+        });
+
+        it('should handle reply messages normally', async () => {
+            const mockMessage = {
+                envelope: {
+                    sourceUuid: '+1234567890',
+                    timestamp: 1234567890,
+                    sourceName: 'Test User',
+                    dataMessage: {
+                        message: 'Reply message',
+                        quote: {
+                            author: '+0987654321',
+                            id: 1234567890
+                        }
+                    }
+                },
+                account: '+0987654321'
+            };
+
+            // Mock the receive_reply function
+            const mockReceiveReply = jest.fn();
+            jest.doMock('../handlers/receive_message', () => ({
+                receive_reply: mockReceiveReply
+            }));
+
+            await receive_raw_message(mockMessage);
+
+            expect(GroupThread.handle_member_join_or_leave).not.toHaveBeenCalled();
+        });
+
+        it('should return early if message is invalid', async () => {
+            const invalidMessage = null;
+
+            await receive_raw_message(invalidMessage);
+
+            expect(GroupThread.handle_member_join_or_leave).not.toHaveBeenCalled();
+        });
+
+        it('should return early if envelope is missing', async () => {
+            const mockMessage = {
+                account: '+0987654321'
+            };
+
+            await receive_raw_message(mockMessage);
+
+            expect(GroupThread.handle_member_join_or_leave).not.toHaveBeenCalled();
+        });
+
+        it('should return early if dataMessage is missing', async () => {
+            const mockMessage = {
+                envelope: {
+                    sourceUuid: '+1234567890',
+                    timestamp: 1234567890,
+                    sourceName: 'Test User'
+                },
+                account: '+0987654321'
+            };
+
+            await receive_raw_message(mockMessage);
+
+            expect(GroupThread.handle_member_join_or_leave).not.toHaveBeenCalled();
+        });
+
+        it ('shuold not call handle_member_join_or_leave if groupInfo.members is missing for some reason', async () => {
+            const mockMessage = {
+                envelope: {
+                    sourceUuid: '+1234567890',
+                    timestamp: 1234567890,
+                    sourceName: 'Test User',
+                    dataMessage: {
+                        groupInfo: {
+                            groupId: 'test_group_id',
+                            revision: 0,
+                            type: 'UPDATE'
+                        }
+                    }
+        
+                },
+                account: '+0987654321'
+            };
+
+            await receive_raw_message(mockMessage);
+
+            expect(GroupThread.handle_member_join_or_leave).not.toHaveBeenCalled();
+        });
+
+        it('should handle errors in handle_member_join_or_leave gracefully', async () => {
+            const mockMessage = {
+                envelope: {
+                    sourceUuid: '+1234567890',
+                    timestamp: 1234567890,
+                    sourceName: 'Test User',
+                    dataMessage: {
+                        groupInfo: {
+                            groupId: 'test_group_id',
+                            revision: 0,
+                            type: 'UPDATE',
+                            members: ['+1234567890']
+                        }
+                    }
+                },
+                account: '+0987654321'
+            };
+
+            GroupThread.handle_member_join_or_leave.mockRejectedValue(new Error('Database error'));
+
+            // Should not throw
+            await expect(receive_raw_message(mockMessage)).resolves.toBeUndefined();
+
+            expect(GroupThread.handle_member_join_or_leave).toHaveBeenCalledWith(
+                Buffer.from('test_group_id').toString('base64'),
+                '+1234567890',
+                '+0987654321',
+                true
+            );
+        });
     });
-
 });

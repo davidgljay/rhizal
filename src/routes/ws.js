@@ -29,6 +29,7 @@ Example payload from Signal API:
 */
 
 import { receive_message, receive_group_message, receive_reply } from '../handlers/receive_message';
+const GroupThread = require('../models/group_thread');
 
 export async function receive_raw_message(msg) {
     if (!msg || !msg.envelope || !msg.envelope.dataMessage) {
@@ -39,6 +40,24 @@ export async function receive_raw_message(msg) {
         if (groupInfo.revision == 21) {
             return; //If this message is about being kicked out of a group, ignore it.
         }
+        
+        // Check for member join events (revision 0 typically indicates group changes)
+        //TODO: Confirm that this is the proper revision for a member join event.
+        if (groupInfo.revision == 0 && groupInfo.type === 'UPDATE') {
+            // Handle member join event
+            try {
+                const group_id = Buffer.from(groupInfo.groupId).toString('base64');
+                if (groupInfo.members && !groupInfo.members.includes(sourceUuid)) {
+                    await GroupThread.handle_member_join_or_leave(group_id, sourceUuid, account, false);
+                } else if (groupInfo.members && groupInfo.members.includes(sourceUuid)) {
+                    await GroupThread.handle_member_join_or_leave(group_id, sourceUuid, account, true);
+                }
+            } catch (error) {
+                console.error('Error handling member join or leave:', error);
+            }
+            return;
+        }
+        
         receive_group_message(groupInfo.groupId, message, sourceUuid, account, sourceName, timestamp);
         return;
     }
