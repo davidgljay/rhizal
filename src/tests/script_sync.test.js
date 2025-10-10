@@ -1,319 +1,292 @@
-const fs = require('fs');
-const path = require('path');
-const yaml = require('js-yaml');
+const { set_admin } = require('../initialization/script_sync');
+const Membership = require('../models/membership');
+const GroupThread = require('../models/group_thread');
+const readline = require('readline');
 
-// Mock the fs module
-jest.mock('fs');
+jest.mock('../models/membership');
+jest.mock('../models/group_thread');
+jest.mock('readline');
 
-// Mock the path module
-jest.mock('path');
-
-// Mock the Community model
-jest.mock('../models/community', () => ({
-    get: jest.fn(),
-    update: jest.fn(),
-    create: jest.fn()
-}));
-
-// Mock the Script model
-jest.mock('../models/script', () => ({
-    get: jest.fn(),
-    update: jest.fn(),
-    create: jest.fn()
-}));
-
-// Import the functions after mocking
-const { update_community_and_scripts, create_or_update_community, create_or_update_script } = require('../initialization/script_sync');
-const Community = require('../models/community');
-const Script = require('../models/script');
-
-describe('script_sync.js', () => {
-    let mockCommunity;
-    let mockScript;
+describe('Script Sync - Admin Group Creation', () => {
+    let mockReadlineInterface;
+    let mockQuestion;
 
     beforeEach(() => {
-        // Reset all mocks
-        jest.resetAllMocks();
-        
-        // Mock path.join
-        path.join.mockImplementation((...args) => args.join('/'));
-        
-        // Mock fs.readFileSync
-        fs.readFileSync.mockReturnValue('mock file content');
-        
-        // Mock Community instance
-        mockCommunity = {
-            id: 'mock-community-id',
-            bot_phone: '+1234567890',
-            name: 'Test Community'
+        mockQuestion = jest.fn();
+        mockReadlineInterface = {
+            question: mockQuestion,
+            close: jest.fn()
         };
-        
-        // Mock Script instance
-        mockScript = {
-            id: 'mock-script-id',
-            name: 'onboarding',
-            community_id: 'mock-community-id',
-            script_json: 'mock script content'
-        };
+        readline.createInterface.mockReturnValue(mockReadlineInterface);
     });
 
-    describe('create_or_update_community', () => {
-        it('should update existing community', async () => {
-            const mockConfig = 'community:\n  bot_phone: +1(234)567-8901\n  name: Test Community';
-            fs.readFileSync.mockReturnValue(mockConfig);
-            
-            Community.get.mockResolvedValue(mockCommunity);
-            Community.update.mockResolvedValue(mockCommunity);
-
-            const result = await create_or_update_community();
-
-            expect(fs.readFileSync).toHaveBeenCalledWith(expect.stringContaining('scripts_config/community_config.yml'), 'utf8');
-            expect(Community.get).toHaveBeenCalledWith('+1(234)567-8901');
-            expect(Community.update).toHaveBeenCalledWith({bot_phone: '+1(234)567-8901', name: 'Test Community'});
-            expect(Community.create).not.toHaveBeenCalled();
-            expect(result).toBe(mockCommunity);
-        });
-
-        it('should create new community when not found', async () => {
-            const mockConfig = 'community:\n  bot_phone: +1(234)567-8901\n  name: Test Community';
-            fs.readFileSync.mockReturnValue(mockConfig);
-            
-            Community.get.mockResolvedValue(null);
-            Community.create.mockResolvedValue(mockCommunity);
-
-            const result = await create_or_update_community();
-
-            expect(fs.readFileSync).toHaveBeenCalledWith(expect.stringContaining('/scripts_config/community_config.yml'), 'utf8');
-            expect(Community.get).toHaveBeenCalledWith('+1(234)567-8901');
-            expect(Community.create).toHaveBeenCalledWith({bot_phone: '+1(234)567-8901', name: 'Test Community'});
-            expect(Community.update).not.toHaveBeenCalled();
-            expect(result).toBe(mockCommunity);
-        });
-
-        it('should handle community operations errors', async () => {
-            const mockConfig = 'community:\n  bot_phone: +1(234)567-8901\n  name: Test Community';
-            fs.readFileSync.mockReturnValue(mockConfig);
-            
-            Community.get.mockRejectedValue(new Error('Database error'));
-
-            await expect(create_or_update_community()).rejects.toThrow('Database error');
-        });
+    afterEach(() => {
+        jest.clearAllMocks();
     });
 
-    describe('create_or_update_script', () => {
-        it('should update existing script', async () => {
-            const scriptConfig = {
-                name: 'onboarding',
-                community_id: 'mock-community-id',
-                script_json: 'mock script content'
+    describe('set_admin', () => {
+        it('should create admin membership and admin group successfully', async () => {
+            const mockCommunity = {
+                id: 'community_123',
+                name: 'Test Community',
+                bot_phone: '+1234567890'
             };
-            
-            Script.get.mockResolvedValue(mockScript);
-            Script.update.mockResolvedValue(mockScript);
 
-            const result = await create_or_update_script(scriptConfig);
-
-            expect(Script.get).toHaveBeenCalledWith(scriptConfig.name);
-            expect(Script.update).toHaveBeenCalledWith(scriptConfig);
-            expect(Script.create).not.toHaveBeenCalled();
-            expect(result).toBe(mockScript);
-        });
-
-        it('should create new script when not found', async () => {
-            const scriptConfig = {
-                name: 'onboarding',
-                community_id: 'mock-community-id',
-                script_json: 'mock script content'
+            const mockAdminMembership = {
+                id: 'membership_123',
+                type: 'admin',
+                step: 'done'
             };
-            
-            Script.get.mockResolvedValue(null);
-            Script.create.mockResolvedValue(mockScript);
 
-            const result = await create_or_update_script(scriptConfig);
-
-            expect(Script.get).toHaveBeenCalledWith(scriptConfig.name);
-            expect(Script.create).toHaveBeenCalledWith(scriptConfig);
-            expect(Script.update).not.toHaveBeenCalled();
-            expect(result).toBe(mockScript);
-        });
-
-        it('should handle script operations errors', async () => {
-            const scriptConfig = {
-                name: 'onboarding',
-                community_id: 'mock-community-id',
-                script_json: 'mock script content'
+            const mockAdminGroup = {
+                id: 'group_thread_123',
+                group_id: 'admin_group_id_123',
+                role: 'admin',
+                step: 'done'
             };
-            
-            Script.get.mockRejectedValue(new Error('Script database error'));
 
-            await expect(create_or_update_script(scriptConfig)).rejects.toThrow('Script database error');
-        });
-    });
+            Membership.create_admin.mockResolvedValue(mockAdminMembership);
+            GroupThread.create_group_and_invite.mockResolvedValue(mockAdminGroup);
 
-    describe('update_community_and_scripts', () => {
-        const mockConfig = 'community:\n  bot_phone: +1(234)567-8901\n  name: Test Community';
-
-        beforeEach(() => {
-            jest.resetAllMocks();
-        });
-
-        it('should successfully update community and all scripts', async () => {
-            const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
-            
-            const mockOnboardingScript = `
-0:
-  send:
-    - "Welcome! What's your name?"
-  on_receive:
-    - set_variable:
-        variable: "name"
-        value: "message"
-    - step: 1
-`;
-            const mockGroupScript = `
-0:
-  send:
-    - "Thanks for inviting me! What hashtag should route to this group?"
-  on_receive:
-    - set_group_variable:
-        variable: "hashtag"
-        value: "regex(message, /#\\\\w+/)"
-    - step: 1
-1:
-  send:
-    - "Got it! I'll route {{hashtag}} messages here."
-  on_receive:
-    - step: "done"
-`;
-            
-            // Mock file reads
-            fs.readFileSync
-                .mockReturnValueOnce(mockConfig)
-                .mockReturnValueOnce(mockOnboardingScript)
-                .mockReturnValueOnce(mockGroupScript);
-            
-            // Mock Community operations
-            Community.get.mockResolvedValue(null);
-            Community.create.mockResolvedValue(mockCommunity);
-            
-            // Mock Script operations
-            Script.get.mockResolvedValue(null);
-            Script.create.mockResolvedValue(mockScript);
-
-            await update_community_and_scripts();
-
-            // Verify community creation
-            expect(Community.create).toHaveBeenCalledWith({"bot_phone": "+1(234)567-8901", "name": "Test Community"});
-            
-            // Verify script creations
-            expect(Script.create).toHaveBeenCalledTimes(2);
-            expect(Script.create).toHaveBeenCalledWith({
-                name: 'onboarding',
-                community_id: mockCommunity.id,
-                script_json: JSON.stringify(yaml.load(mockOnboardingScript))
-            });
-            expect(Script.create).toHaveBeenCalledWith({
-                name: 'group_thread',
-                community_id: mockCommunity.id,
-                script_json: JSON.stringify(yaml.load(mockGroupScript))
-            });
-            
-            // Verify console logs
-            expect(consoleSpy).toHaveBeenCalledWith('Community and scripts updated');
-            
-            consoleSpy.mockRestore();
-        });
-
-        it('should handle file read errors', async () => {
-            fs.readFileSync.mockImplementation(() => {
-                throw new Error('File not found');
+            // Mock the readline question to resolve with a phone number
+            mockQuestion.mockImplementation((prompt, callback) => {
+                callback('+0987654321');
             });
 
-            await expect(update_community_and_scripts()).rejects.toThrow('File not found');
+            const result = await set_admin(mockCommunity);
+
+            expect(Membership.create_admin).toHaveBeenCalledWith('+0987654321', mockCommunity);
+            expect(GroupThread.create_group_and_invite).toHaveBeenCalledWith(
+                'Test Community Rhizal Admins',
+                '+1234567890',
+                '+0987654321',
+                mockCommunity
+            );
+            expect(result).toEqual({
+                admin_membership: mockAdminMembership,
+                admin_group: mockAdminGroup
+            });
         });
 
-        it('should handle community creation errors', async () => {
-            fs.readFileSync.mockReturnValue(mockConfig);
-            Community.get.mockRejectedValue(new Error('Community creation failed'));
+        it('should handle admin group creation failure gracefully', async () => {
+            const mockCommunity = {
+                id: 'community_123',
+                name: 'Test Community',
+                bot_phone: '+1234567890'
+            };
 
-            await expect(update_community_and_scripts()).rejects.toThrow('Community creation failed');
-        });
+            const mockAdminMembership = {
+                id: 'membership_123',
+                type: 'admin',
+                step: 'done'
+            };
 
-        it('should handle script creation errors', async () => {
-            const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
-            
-            fs.readFileSync
-                .mockReturnValueOnce(mockConfig)
-                .mockReturnValueOnce('mock onboarding script')
-                .mockReturnValueOnce('mock group script');
-            
-            Community.get.mockResolvedValue(null);
-            Community.create.mockResolvedValue(mockCommunity);
-            
-            Script.get.mockResolvedValue(null);
-            Script.create.mockRejectedValue(new Error('Script creation failed'));
+            Membership.create_admin.mockResolvedValue(mockAdminMembership);
+            GroupThread.create_group_and_invite.mockRejectedValue(new Error('Signal API error'));
 
-            await expect(update_community_and_scripts()).rejects.toThrow('Script creation failed');
-            
+            // Mock console methods
+            const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+            const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+
+            // Mock the readline question to resolve with a phone number
+            mockQuestion.mockImplementation((prompt, callback) => {
+                callback('+0987654321');
+            });
+
+            const result = await set_admin(mockCommunity);
+
+            expect(Membership.create_admin).toHaveBeenCalledWith('+0987654321', mockCommunity);
+            expect(GroupThread.create_group_and_invite).toHaveBeenCalledWith(
+                'Test Community Rhizal Admins',
+                '+1234567890',
+                '+0987654321',
+                mockCommunity
+            );
+            expect(result).toEqual({
+                admin_membership: mockAdminMembership,
+                admin_group: null
+            });
+            expect(consoleSpy).toHaveBeenCalledWith('Error creating admin group:', expect.any(Error));
+            expect(consoleLogSpy).toHaveBeenCalledWith('Continuing without admin group...');
+
             consoleSpy.mockRestore();
+            consoleLogSpy.mockRestore();
         });
 
-        it('should update existing community and scripts', async () => {
-            const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
-            
-            fs.readFileSync
-                .mockReturnValueOnce(mockConfig)
-                .mockReturnValueOnce('mock onboarding script')
-                .mockReturnValueOnce('mock group script')
-            
-            // Mock existing community and scripts
-            Community.get.mockResolvedValue(mockCommunity);
-            Community.update.mockResolvedValue(mockCommunity);
-            
-            Script.get.mockResolvedValue(mockScript);
-            Script.update.mockResolvedValue(mockScript);
+        it('should handle empty phone number input', async () => {
+            const mockCommunity = {
+                id: 'community_123',
+                name: 'Test Community',
+                bot_phone: '+1234567890'
+            };
 
-            const community_id = await update_community_and_scripts();
+            // Mock the readline question to resolve with empty string
+            mockQuestion.mockImplementation((prompt, callback) => {
+                callback('');
+            });
 
-            // Verify updates instead of creates
-            expect(Community.update).toHaveBeenCalledWith({"bot_phone": "+1(234)567-8901", "name": "Test Community"});
-            expect(Script.update).toHaveBeenCalledTimes(2);
-            expect(community_id).toBe(mockCommunity);
-            
-            consoleSpy.mockRestore();
+            await expect(set_admin(mockCommunity)).rejects.toThrow('No phone number entered.');
+
+            expect(Membership.create_admin).not.toHaveBeenCalled();
+            expect(GroupThread.create_group_and_invite).not.toHaveBeenCalled();
         });
 
-    });
+        it('should handle whitespace-only phone number input', async () => {
+            const mockCommunity = {
+                id: 'community_123',
+                name: 'Test Community',
+                bot_phone: '+1234567890'
+            };
 
-    describe('Integration scenarios', () => {
-        const mockConfig = 'community:\n  bot_phone: +1(234)567-8901\n  name: Test Community';
-        
-        it('should handle mixed create/update scenarios', async () => {
-            const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
-            
-            fs.readFileSync
-                .mockReturnValueOnce(mockConfig)
-                .mockReturnValueOnce('mock onboarding script')
-                .mockReturnValueOnce('mock group script');
-            
-            // Community exists, onboarding script exists, group script is new
-            Community.get.mockResolvedValue(mockCommunity);
-            Community.update.mockResolvedValue(mockCommunity);
-            
-            Script.get
-                .mockResolvedValueOnce(mockScript) // onboarding exists
-                .mockResolvedValueOnce(null); // group_thread is new
-            
-            Script.update.mockResolvedValue(mockScript);
-            Script.create.mockResolvedValue(mockScript);
+            // Mock the readline question to resolve with whitespace
+            mockQuestion.mockImplementation((prompt, callback) => {
+                callback('   ');
+            });
 
-            await update_community_and_scripts();
+            await expect(set_admin(mockCommunity)).rejects.toThrow('No phone number entered.');
 
-            expect(Community.update).toHaveBeenCalled();
-            expect(Script.update).toHaveBeenCalledTimes(1); // onboarding
-            expect(Script.create).toHaveBeenCalledTimes(1); // group_thread
-            
-            consoleSpy.mockRestore();
+            expect(Membership.create_admin).not.toHaveBeenCalled();
+            expect(GroupThread.create_group_and_invite).not.toHaveBeenCalled();
+        });
+
+        it('should trim phone number input', async () => {
+            const mockCommunity = {
+                id: 'community_123',
+                name: 'Test Community',
+                bot_phone: '+1234567890'
+            };
+
+            const mockAdminMembership = {
+                id: 'membership_123',
+                type: 'admin',
+                step: 'done'
+            };
+
+            const mockAdminGroup = {
+                id: 'group_thread_123',
+                group_id: 'admin_group_id_123',
+                role: 'admin',
+                step: 'done'
+            };
+
+            Membership.create_admin.mockResolvedValue(mockAdminMembership);
+            GroupThread.create_group_and_invite.mockResolvedValue(mockAdminGroup);
+
+            // Mock the readline question to resolve with phone number with whitespace
+            mockQuestion.mockImplementation((prompt, callback) => {
+                callback('  +0987654321  ');
+            });
+
+            const result = await set_admin(mockCommunity);
+
+            expect(Membership.create_admin).toHaveBeenCalledWith('+0987654321', mockCommunity);
+            expect(GroupThread.create_group_and_invite).toHaveBeenCalledWith(
+                'Test Community Rhizal Admins',
+                '+1234567890',
+                '+0987654321',
+                mockCommunity
+            );
+            expect(result).toEqual({
+                admin_membership: mockAdminMembership,
+                admin_group: mockAdminGroup
+            });
+        });
+
+        it('should handle admin membership creation failure', async () => {
+            const mockCommunity = {
+                id: 'community_123',
+                name: 'Test Community',
+                bot_phone: '+1234567890'
+            };
+
+            Membership.create_admin.mockRejectedValue(new Error('Database error'));
+
+            // Mock the readline question to resolve with a phone number
+            mockQuestion.mockImplementation((prompt, callback) => {
+                callback('+0987654321');
+            });
+
+            await expect(set_admin(mockCommunity)).rejects.toThrow('Database error');
+
+            expect(Membership.create_admin).toHaveBeenCalledWith('+0987654321', mockCommunity);
+            expect(GroupThread.create_group_and_invite).not.toHaveBeenCalled();
+        });
+
+        it('should create admin group with correct naming convention', async () => {
+            const mockCommunity = {
+                id: 'community_123',
+                name: 'My Awesome Community',
+                bot_phone: '+1234567890'
+            };
+
+            const mockAdminMembership = {
+                id: 'membership_123',
+                type: 'admin',
+                step: 'done'
+            };
+
+            const mockAdminGroup = {
+                id: 'group_thread_123',
+                group_id: 'admin_group_id_123',
+                role: 'admin',
+                step: 'done'
+            };
+
+            Membership.create_admin.mockResolvedValue(mockAdminMembership);
+            GroupThread.create_group_and_invite.mockResolvedValue(mockAdminGroup);
+
+            // Mock the readline question to resolve with a phone number
+            mockQuestion.mockImplementation((prompt, callback) => {
+                callback('+0987654321');
+            });
+
+            await set_admin(mockCommunity);
+
+            expect(GroupThread.create_group_and_invite).toHaveBeenCalledWith(
+                'My Awesome Community Rhizal Admins',
+                '+1234567890',
+                '+0987654321',
+                mockCommunity
+            );
+        });
+
+        it('should log admin membership creation', async () => {
+            const mockCommunity = {
+                id: 'community_123',
+                name: 'Test Community',
+                bot_phone: '+1234567890'
+            };
+
+            const mockAdminMembership = {
+                id: 'membership_123',
+                type: 'admin',
+                step: 'done'
+            };
+
+            const mockAdminGroup = {
+                id: 'group_thread_123',
+                group_id: 'admin_group_id_123',
+                role: 'admin',
+                step: 'done'
+            };
+
+            Membership.create_admin.mockResolvedValue(mockAdminMembership);
+            GroupThread.create_group_and_invite.mockResolvedValue(mockAdminGroup);
+
+            const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+
+            // Mock the readline question to resolve with a phone number
+            mockQuestion.mockImplementation((prompt, callback) => {
+                callback('+0987654321');
+            });
+
+            await set_admin(mockCommunity);
+
+            expect(consoleLogSpy).toHaveBeenCalledWith('Admin membership created with id:', 'membership_123');
+            expect(consoleLogSpy).toHaveBeenCalledWith('Creating admin group: Test Community Rhizal Admins');
+            expect(consoleLogSpy).toHaveBeenCalledWith('Admin group created with id:', 'group_thread_123');
+
+            consoleLogSpy.mockRestore();
         });
     });
 });

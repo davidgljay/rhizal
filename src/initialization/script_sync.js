@@ -5,6 +5,7 @@ const Community = require('../models/community');
 const Script = require('../models/script');
 const readline = require('readline');
 const Membership = require('../models/membership');
+const GroupThread = require('../models/group_thread');
 
 async function initial_message() {
     console.log("Thank you for trying out Rhizal!");
@@ -121,7 +122,24 @@ const set_admin = async function (community) {
     });
     const admin_membership = await Membership.create_admin(admin_phone, community);
     console.log('Admin membership created with id:', admin_membership.id);
-    return admin_membership;
+    
+    // Create admin group and invite the admin
+    const admin_group_name = `${community.name} Rhizal Admins`;
+    console.log(`Creating admin group: ${admin_group_name}`);
+    try {
+        const admin_group = await GroupThread.create_group_and_invite(
+            admin_group_name, 
+            community.bot_phone, 
+            admin_phone, 
+            community
+        );
+        console.log('Admin group created with id:', admin_group.id);
+        return { admin_membership, admin_group };
+    } catch (error) {
+        console.error('Error creating admin group:', error);
+        console.log('Continuing without admin group...');
+        return { admin_membership, admin_group: null };
+    }
 }
 
 module.exports = {
