@@ -9,6 +9,7 @@ jest.mock('../models/message', () => ({
     send_announcement: jest.fn(),
     set_message_type: jest.fn(),
     send_to_admins: jest.fn(),
+    create: jest.fn(),
 }));
 
 jest.mock('../models/membership', () => ({
@@ -381,6 +382,157 @@ describe('rhyzal_parser', () => {
         it('should throw an error if community_id is not found', async () => {
             const parser = new RhyzalParser(test_json);
             await expect(() => parser.evaluate_receive({send_to_admins: true}, {})).rejects.toThrowError('Community ID not found in vars');
+        });
+    });
+
+    describe('save_message', () => {
+        it('should save a message with all required parameters', async () => {
+            const parser = new RhyzalParser(test_json);
+            const vars = {
+                community_id: 'comm-123',
+                id: 'member-456',
+                message: 'Hello, world!',
+                signal_timestamp: 1234567890,
+                phone: '+1234567890'
+            };
+            
+            await parser.evaluate_receive({save_message: true}, vars);
+            
+            expect(Message.create).toHaveBeenCalledWith(
+                'comm-123',
+                'member-456',
+                'Hello, world!',
+                1234567890,
+                '+1234567890'
+            );
+        });
+
+        it('should extract parameters correctly from vars object', async () => {
+            const parser = new RhyzalParser(test_json);
+            const vars = {
+                community_id: 'community-abc',
+                id: 'membership-def',
+                message: 'Test message content',
+                signal_timestamp: 9876543210,
+                phone: '+9876543210',
+                other_var: 'should_be_ignored'
+            };
+            
+            await parser.evaluate_receive({save_message: true}, vars);
+            
+            expect(Message.create).toHaveBeenCalledWith(
+                'community-abc',
+                'membership-def',
+                'Test message content',
+                9876543210,
+                '+9876543210'
+            );
+        });
+
+        it('should handle empty message content', async () => {
+            const parser = new RhyzalParser(test_json);
+            const vars = {
+                community_id: 'comm-123',
+                id: 'member-456',
+                message: '',
+                signal_timestamp: 1234567890,
+                phone: '+1234567890'
+            };
+            
+            await parser.evaluate_receive({save_message: true}, vars);
+            
+            expect(Message.create).toHaveBeenCalledWith(
+                'comm-123',
+                'member-456',
+                '',
+                1234567890,
+                '+1234567890'
+            );
+        });
+
+        it('should handle numeric signal_timestamp', async () => {
+            const parser = new RhyzalParser(test_json);
+            const vars = {
+                community_id: 'comm-123',
+                id: 'member-456',
+                message: 'Numeric timestamp test',
+                signal_timestamp: 1234567890,
+                phone: '+1234567890'
+            };
+            
+            await parser.evaluate_receive({save_message: true}, vars);
+            
+            expect(Message.create).toHaveBeenCalledWith(
+                'comm-123',
+                'member-456',
+                'Numeric timestamp test',
+                1234567890,
+                '+1234567890'
+            );
+        });
+
+        it('should handle string signal_timestamp', async () => {
+            const parser = new RhyzalParser(test_json);
+            const vars = {
+                community_id: 'comm-123',
+                id: 'member-456',
+                message: 'String timestamp test',
+                signal_timestamp: '1234567890',
+                phone: '+1234567890'
+            };
+            
+            await parser.evaluate_receive({save_message: true}, vars);
+            
+            expect(Message.create).toHaveBeenCalledWith(
+                'comm-123',
+                'member-456',
+                'String timestamp test',
+                '1234567890',
+                '+1234567890'
+            );
+        });
+
+        it('should handle undefined parameters gracefully', async () => {
+            const parser = new RhyzalParser(test_json);
+            const vars = {
+                community_id: undefined,
+                id: undefined,
+                message: undefined,
+                signal_timestamp: undefined,
+                phone: undefined
+            };
+            
+            await parser.evaluate_receive({save_message: true}, vars);
+            
+            expect(Message.create).toHaveBeenCalledWith(
+                undefined,
+                undefined,
+                undefined,
+                undefined,
+                undefined
+            );
+        });
+
+        it('should work with minimal vars object', async () => {
+            const parser = new RhyzalParser(test_json);
+            const vars = {
+                community_id: 'comm-123',
+                id: 'member-456',
+                message: 'Minimal test',
+                signal_timestamp: 1234567890,
+                phone: '+1234567890'
+            };
+            
+            await parser.evaluate_receive({save_message: true}, vars);
+            
+            expect(Message.create).toHaveBeenCalledTimes(1);
+            expect(Message.create).toHaveBeenCalledWith(
+                'comm-123',
+                'member-456',
+                'Minimal test',
+                1234567890,
+                '+1234567890'
+            );
         });
     });
 
