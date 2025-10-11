@@ -150,64 +150,6 @@ mutation CreateAdminGroupThread($community_id: uuid!, $group_id: String!) {
         }
     }
 
-    static async is_registered_user(phone, community_id) {
-        const CHECK_USER_QUERY = `
-query CheckRegisteredUser($phone: String!, $community_id: uuid!) {
-    memberships(where: {user: {phone: {_eq: $phone}}, community_id: {_eq: $community_id}}) {
-        id
-    }
-}`;
-
-        try {
-            const result = await graphql(CHECK_USER_QUERY, { phone, community_id });
-            return result.data.memberships.length > 0;
-        } catch (error) {
-            console.error('Error checking user registration:', error);
-            return false;
-        }
-    }
-
-    static async handle_member_join_or_leave(group_id, member_phone, bot_phone, join = false) {
-        const GET_GROUP_ROLE_QUERY = `
-query GetGroupRole($group_id: String!) {
-    group_threads(where: {group_id: {_eq: $group_id}}) {
-        id
-        role
-        community_id
-    }
-}`;
-
-        try {
-            const result = await graphql(GET_GROUP_ROLE_QUERY, { group_id });
-            
-            if (result.data.group_threads.length === 0) {
-                return; // Group not found in our database
-            }
-
-            const group_thread = result.data.group_threads[0];
-            
-            if (group_thread.role === 'admin') {
-                const is_registered = await this.is_registered_user(member_phone, group_thread.community_id);
-                
-                if (is_registered) {
-                    // Update user's membership type to admin
-                    const Membership = require('./membership');
-                    const membership = await Membership.get(member_phone, bot_phone);
-                    
-                    if (membership) {
-                        if (join) {
-                            await membership.set_variable('type', 'admin');
-                        }
-                        else {
-                            await membership.set_variable('type', 'member');
-                        }
-                    }
-                }
-            }
-        } catch (error) {
-            console.error('Error handling member join:', error);
-        }
-    }
 }
 
 module.exports = GroupThread;
