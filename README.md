@@ -84,7 +84,7 @@ Many other commands can be run on `on_receive`. Here's a complete list:
 | `set_message_type`   | Tags the message when it is saved for easier retrieval later (e.g. saving messages as being tied to onboarding.) |
 | `send_to_admins`     | Forwards the messages to admins with a preamble.                                                            |
 | `if/then/else`       | Can be used to create conditional logic.                                                                    |
-
+| `save_message`       | Saves a message to the database when set to true                                                            |
 Here's an example of a more advanced script:
 
 ```
@@ -103,6 +103,7 @@ Here's an example of a more advanced script:
                 value: "regex(message, /#\\w+/)"
             - send_to_admins:
                 preamble: "A new group has been created with hashtag:"
+            - save_message: true
             - step: 1
         else:
             - step: 2
