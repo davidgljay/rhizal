@@ -57,6 +57,12 @@ export async function receive_raw_message(msg) {
             }
             return;
         }
+
+        if (quote && quote.author == account) {
+            //If it is a reply to a message from Rhizal within a group message, treat it accordingly.
+            receive_reply(message, sourceUuid, account, quote.id, timestamp, sourceName);
+            return;
+        }
         
         receive_group_message(groupInfo.groupId, message, sourceUuid, account, sourceName, timestamp);
         return;
