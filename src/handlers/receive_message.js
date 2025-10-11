@@ -66,6 +66,27 @@ const queries = {
             hashtag
         }
     }
+    memberships(where:{community:{bot_phone:{_eq: $bot_phone}},user:{phone:{_eq:$phone}}}) {
+    id
+    step
+    name
+    type
+    informal_name
+    current_script {
+        id
+        name
+        script_json
+        vars_query
+        targets_query
+    }
+    community {
+        id
+        bot_phone
+    }
+    user {
+        id
+        phone
+    }
 }`,
     replyQuery:
 `query ReplyQuery($bot_phone:String!, $phone:String!, $signal_timestamp:bigint!) {
@@ -107,13 +128,14 @@ export async function receive_message(sender, recipient, message, sent_time, sen
         return;
     }
     await Message.create(community.id, membership.id, message, sent_time, true);
-    if (message.match(/#[\w]+/)) {
-        const hashtag = message.match(/#[\w]+/)[0];
-        const command_triggered = await bot_message_hashtag(hashtag, membership, community, message);
-        if (command_triggered) {
-            return;
-        }
-    }
+    // Disabling ability to use hashtags in one-on-one conversations with the bot, you've gotta do 'em in a group.
+    // if (message.match(/#[\w]+/)) {
+    //     const hashtag = message.match(/#[\w]+/)[0];
+    //     const command_triggered = await bot_message_hashtag(hashtag, membership, community, message);
+    //     if (command_triggered) {
+    //         return;
+    //     }
+    // }
     if (membership.step == 'done') {
         await no_script_message(membership, community, message);
         return;
@@ -133,6 +155,7 @@ export async function receive_group_message(internal_group_id, message, from_pho
     const group_id = Buffer.from(internal_group_id).toString('base64');
     const response = await graphql(queries.receiveGroupMessageQuery, { bot_phone });
     const community = response.data.communities.length > 0 ? response.data.communities[0] : null;
+    let membership = response.data.memberships.length > 0 ? response.data.memberships[0] : null;
     if (!community) {
         return;
     }
@@ -143,6 +166,16 @@ export async function receive_group_message(internal_group_id, message, from_pho
         await GroupThread.leave_group(group_id, bot_phone);
         return;
     }
+
+    //Check if the message includes a hashtag command, if so execute it.
+    if (message && message.match(/#[\w]+/)) {
+        const hashtag = message.match(/#[\w]+/)[0];
+        const command_triggered = await bot_message_hashtag(hashtag, membership, community, message);
+        if (command_triggered) {
+            return;
+        }
+    }
+
     if (group_thread.step !== 'done') {
         await GroupThread.run_script(group_thread, {user: {phone: from_phone}, community}, message, sent_time);
         return;

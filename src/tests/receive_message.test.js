@@ -268,7 +268,7 @@ describe('receive_message', () => {
             expect(mockScriptReceive).toHaveBeenCalledWith('0', message);
         });
 
-        it('should call the appropriate function if the message includes a hashtag', async () => {
+        it('should take no action if the message includes a hashtag', async () => {
             const sender = '1234567890';
             const recipient = '0987654321';
             const message = 'test message with #command';
@@ -276,7 +276,7 @@ describe('receive_message', () => {
             graphql.mockResolvedValue(mockQueryResponse);
             await receive_message(sender, recipient, message, sent_time);
 
-            expect(bot_message_hashtag).toHaveBeenCalledWith('#command', expect.objectContaining({ id: 'membership_1' }), expect.objectContaining({ id: 'community_1' }), message);
+            expect(bot_message_hashtag).not.toHaveBeenCalled();
 
         });
 
@@ -317,7 +317,7 @@ describe('receive_message', () => {
     });
 
     describe('receive_group_message', () => {
-        const mockQueryResponse = { data: {communities: [{ id: 'community_id', bot_phone: '0987654321' }] }};
+        const mockQueryResponse = { data: {communities: [{ id: 'community_1', bot_phone: '0987654321' }], memberships: [ { id: 'membership_1', type: 'member' }] }};
 
         afterEach(() => {
             jest.clearAllMocks();
@@ -341,8 +341,25 @@ describe('receive_message', () => {
             await receive_group_message(group_id, message, from_phone, bot_phone, sender_name, timestamp);
 
             expect(graphql).toHaveBeenCalled();
-            expect(GroupThread.find_or_create_group_thread).toHaveBeenCalledWith(base64_group_id, 'community_id');
-            expect(GroupThread.run_script).toHaveBeenCalledWith(mockGroupThread, {user: {phone: from_phone}, community: { id: 'community_id', bot_phone }}, message, timestamp);
+            expect(GroupThread.find_or_create_group_thread).toHaveBeenCalledWith(base64_group_id, 'community_1');
+            expect(GroupThread.run_script).toHaveBeenCalledWith(mockGroupThread, {user: {phone: from_phone}, community: { id: 'community_1', bot_phone }}, message, timestamp);
+        });
+
+        it('should take the appropriate action if the message includes a hashtag', async () => {
+            const group_id = 'test_group_id';
+            const message = 'test message with #command';
+            const from_phone = '1234567890';
+            const bot_phone = '0987654321';
+            const sender_name = 'Test Sender';
+            const timestamp = 1234567890;
+            graphql.mockResolvedValue(mockQueryResponse);
+            const mockGroupThread = { step: '0' };
+
+            jest.spyOn(GroupThread, 'find_or_create_group_thread').mockResolvedValue(mockGroupThread);
+            await receive_group_message(group_id, message, from_phone, bot_phone, sender_name, timestamp);
+
+            expect(bot_message_hashtag).toHaveBeenCalledWith('#command', expect.objectContaining({ id: 'membership_1' }), expect.objectContaining({ id: 'community_1' }), message);
+
         });
 
         it('should return if there is no message and the group step is done', async () => {

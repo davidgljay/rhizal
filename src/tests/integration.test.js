@@ -620,7 +620,8 @@ describe('Integration Tests for receive_message Handler', () => {
             expect(signal.send).not.toHaveBeenCalled();
         });
 
-        it('should trigger the correct command if the member is an admin and the message includes a hashtag command', async () => {
+        //Disabling this test for now, since this activity should only happen in a group messages at present. Leaving the test in case we bring this functionality back to direct chat with the Rhizal bot.
+        xit('should trigger the correct command if the member is an admin and the message includes a hashtag command', async () => {
             const senderNumber = '1234567890';
             const recipientNumber = '0987654321';
             const sentTime = 1741644982;
@@ -710,7 +711,7 @@ describe('Integration Tests for receive_message Handler', () => {
                     {
                         query: `query RecieveGroupMessageQuery($bot_phone:String!)`,
                         variables: { bot_phone: botNumber },
-                        response: { data: { communities: [{id: communityId, bot_phone: botNumber }] } }
+                        response: { data: { communities: [{id: communityId, bot_phone: botNumber }], memberships: [ { id: 'membership_1', type: 'member' }] } }
                     },
                     {
                         query: expectedQueries.getGroupThread,
@@ -759,7 +760,7 @@ describe('Integration Tests for receive_message Handler', () => {
                     {
                         query: `query RecieveGroupMessageQuery($bot_phone:String!)`,
                         variables: { bot_phone: botNumber },
-                        response: { data: { communities: [{id: communityId, bot_phone: botNumber }] } }
+                        response: { data: { communities: [{id: communityId, bot_phone: botNumber }], memberships: [ { id: 'membership_1', type: 'member' }] } }
                     },
                     {
                         query: expectedQueries.getGroupThread,
@@ -802,7 +803,7 @@ describe('Integration Tests for receive_message Handler', () => {
                     {
                         query: `query RecieveGroupMessageQuery($bot_phone:String!)`,
                         variables: { bot_phone: botNumber },
-                        response: { data: { communities: [{id: communityId, bot_phone: botNumber }] } }
+                        response: { data: { communities: [{id: communityId, bot_phone: botNumber }], memberships: [ { id: 'membership_1', type: 'member' }] } }
                     },
                     {
                         query: expectedQueries.getGroupThread,
@@ -842,7 +843,7 @@ describe('Integration Tests for receive_message Handler', () => {
                     {
                         query: `query RecieveGroupMessageQuery($bot_phone:String!)`,
                         variables: { bot_phone: botNumber },
-                        response: { data: { communities: [{id: communityId, bot_phone: botNumber }] } }
+                        response: { data: { communities: [{id: communityId, bot_phone: botNumber }], memberships: [ { id: 'membership_1', type: 'member' }] } }
                     },
                     {
                         query: expectedQueries.getGroupThread,
@@ -878,7 +879,7 @@ describe('Integration Tests for receive_message Handler', () => {
                     {
                         query: `query RecieveGroupMessageQuery($bot_phone:String!)`,
                         variables: { bot_phone: botNumber },
-                        response: { data: { communities: [{id: communityId, bot_phone: botNumber }] } }
+                        response: { data: { communities: [{id: communityId, bot_phone: botNumber }], memberships: [ { id: 'membership_1', type: 'member' }] } }
                     },
                     {
                         query: expectedQueries.getGroupThread,
@@ -932,7 +933,7 @@ describe('Integration Tests for receive_message Handler', () => {
                     {
                         query: `query RecieveGroupMessageQuery($bot_phone:String!)`,
                         variables: { bot_phone: botNumber },
-                        response: { data: { communities: [{id: communityId, bot_phone: botNumber }] } }
+                        response: { data: { communities: [{id: communityId, bot_phone: botNumber }], memberships: [ { id: 'membership_1', type: 'member' }] } }
                     },
                     {
                         query: expectedQueries.getGroupThread,
@@ -979,7 +980,7 @@ describe('Integration Tests for receive_message Handler', () => {
                     {
                         query: `query RecieveGroupMessageQuery($bot_phone:String!)`,
                         variables: { bot_phone: botNumber },
-                        response: { data: { communities: [{id: communityId, bot_phone: botNumber }] } }
+                        response: { data: { communities: [{id: communityId, bot_phone: botNumber }], memberships: [ { id: 'membership_1', type: 'member' }] } }
                     },
                     {
                         query: expectedQueries.getGroupThread,
@@ -1015,7 +1016,7 @@ describe('Integration Tests for receive_message Handler', () => {
                     {
                         query: `query RecieveGroupMessageQuery($bot_phone:String!)`,
                         variables: { bot_phone: botNumber },
-                        response: { data: { communities: [{id: communityId, bot_phone: botNumber }] } }
+                        response: { data: { communities: [{id: communityId, bot_phone: botNumber }], memberships: [ { id: 'membership_1', type: 'member' }] } }
                     },
                     {
                         query: expectedQueries.getGroupThread,
@@ -1051,7 +1052,7 @@ describe('Integration Tests for receive_message Handler', () => {
                     {
                         query: `query RecieveGroupMessageQuery($bot_phone:String!)`,
                         variables: { bot_phone: botNumber },
-                        response: { data: { communities: [{id: communityId, bot_phone: botNumber }] } }
+                        response: { data: { communities: [{id: communityId, bot_phone: botNumber }], memberships: [ { id: 'membership_1', type: 'member' }] } }
                     },
                     {
                         query: expectedQueries.getGroupThread,
