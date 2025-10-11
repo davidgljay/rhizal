@@ -83,8 +83,8 @@ describe('rhyzal_parser', () => {
             const parser = new RhyzalParser(test_json);
             await parser.send(1, {phone: '+1234567890', bot_phone: '+0987654321', community_id: '123', id: '456'});
     
-            expect(Message.send).toHaveBeenCalledWith('123', '456', '+1234567890', '+0987654321', message1, true);
-            expect(Message.send).toHaveBeenCalledWith('123', '456', '+1234567890', '+0987654321', message2, true);
+            expect(Message.send).toHaveBeenCalledWith('123', '456', '+1234567890', '+0987654321', message1, false);
+            expect(Message.send).toHaveBeenCalledWith('123', '456', '+1234567890', '+0987654321', message2, false);
         });
 
         it('should send a message but not log it if it is going to a group', async () => {
@@ -102,7 +102,7 @@ describe('rhyzal_parser', () => {
             const vars = {var1: 'foo', var2: 'bar', phone: '+1234567890', bot_phone: '+0987654321', community_id: '123', id: '456'};
             const parser = new RhyzalParser(test_json);
             await parser.send(0, vars);
-            expect(Message.send).toHaveBeenCalledWith('123', '456', '+1234567890', '+0987654321', message, true);
+            expect(Message.send).toHaveBeenCalledWith('123', '456', '+1234567890', '+0987654321', message, false);
         });
 
     });
@@ -132,8 +132,8 @@ describe('rhyzal_parser', () => {
             await parser.receive("0", {id: "123", var1: 'foo', phone: '+1234567890', bot_phone: '+0987654321', community_id:'456'});
 
             expect(Message.send).not.toHaveBeenCalledWith('Message with foo to bar!');
-            expect(Message.send).toHaveBeenCalledWith('456', '123', '+1234567890', '+0987654321', 'Another message with no variables!', true);
-            expect(Message.send).toHaveBeenCalledWith('456', '123', '+1234567890', '+0987654321', 'A second message to be sent a few seconds later.', true);
+            expect(Message.send).toHaveBeenCalledWith('456', '123', '+1234567890', '+0987654321', 'Another message with no variables!', false);
+            expect(Message.send).toHaveBeenCalledWith('456', '123', '+1234567890', '+0987654321', 'A second message to be sent a few seconds later.', false);
         });
 
         it ('should update a user\'s status based on a condition', async () => {
@@ -403,7 +403,7 @@ describe('rhyzal_parser', () => {
                 'member-456',
                 'Hello, world!',
                 1234567890,
-                '+1234567890'
+                true
             );
         });
 
@@ -425,7 +425,7 @@ describe('rhyzal_parser', () => {
                 'membership-def',
                 'Test message content',
                 9876543210,
-                '+9876543210'
+                true
             );
         });
 
@@ -446,7 +446,7 @@ describe('rhyzal_parser', () => {
                 'member-456',
                 '',
                 1234567890,
-                '+1234567890'
+                true
             );
         });
 
@@ -467,7 +467,7 @@ describe('rhyzal_parser', () => {
                 'member-456',
                 'Numeric timestamp test',
                 1234567890,
-                '+1234567890'
+                true
             );
         });
 
@@ -488,7 +488,7 @@ describe('rhyzal_parser', () => {
                 'member-456',
                 'String timestamp test',
                 '1234567890',
-                '+1234567890'
+                true
             );
         });
 
@@ -509,7 +509,7 @@ describe('rhyzal_parser', () => {
                 undefined,
                 undefined,
                 undefined,
-                undefined
+                true
             );
         });
 
@@ -531,7 +531,7 @@ describe('rhyzal_parser', () => {
                 'member-456',
                 'Minimal test',
                 1234567890,
-                '+1234567890'
+                true
             );
         });
     });

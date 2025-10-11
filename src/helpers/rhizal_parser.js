@@ -51,10 +51,9 @@ class RhyzalParser {
             const messages = this.script[step].send;
             const { community_id, id } = vars;
             let recipient = vars.phone;
-            let log_message = true;
+            let log_message = false;
             if (vars.group_id) {
                 recipient = 'group.' + vars.group_id;
-                log_message = false;
             };
             for (let i = 0; i < messages.length; i++) {
                 //Send a message with an attachement
@@ -100,8 +99,8 @@ class RhyzalParser {
                 break;
             case 'save_message':
                 if (script['save_message'] == 'true' || script['save_message'] == true) {
-                    const {community_id, id, message, signal_timestamp, phone} = vars;
-                    await this.save_message(community_id, id, message, signal_timestamp, phone);
+                    const {community_id, id, message, signal_timestamp} = vars;
+                    await this.save_message(community_id, id, message, signal_timestamp, true);
                 }
                 break;
             case 'set_variable':

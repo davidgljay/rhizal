@@ -103,10 +103,10 @@ export async function receive_message(sender, recipient, message, sent_time, sen
     }
     if (!membership) {
         membership = await new_member(sender, community, message, user, sent_time);
-        await Message.create(community.id, membership.id, message, sent_time, true);
+        // await Message.create(community.id, membership.id, message, sent_time, true);
         return;
     }
-    await Message.create(community.id, membership.id, message, sent_time, true);
+    // await Message.create(community.id, membership.id, message, sent_time, true);
     if (message.match(/#[\w]+/)) {
         const hashtag = message.match(/#[\w]+/)[0];
         const command_triggered = await bot_message_hashtag(hashtag, membership, community, message);
@@ -190,7 +190,7 @@ export async function receive_reply(message, from_phone, bot_phone, reply_to_tim
     const expandedMessage = `Message from ${membership.name}: ${message}`;
 
     // Relay message to the member that the admin received a message about
-    await Message.send(membership.community_id, membership.id, about_member_phone, bot_phone, expandedMessage, true);
+    await Message.send(membership.community_id, membership.id, about_member_phone, bot_phone, expandedMessage, false);
     
 }
 
