@@ -5,7 +5,7 @@ const Community = require('../models/community');
 const GroupThread = require('../models/group_thread');
 const Signal = require('../apis/signal');
 const { graphql } = require('../apis/graphql');
-const { new_member, no_script_message, receive_message, receive_group_message, receive_reply, relay_message_to_admins  } = require('../handlers/receive_message');
+const { new_member, no_script_message, receive_message, receive_group_message, receive_reply, group_join_or_leave  } = require('../handlers/receive_message');
 const { bot_message_hashtag } = require('../helpers/hashtag_commands');
 
 jest.mock('../models/membership', () => {
@@ -616,5 +616,171 @@ describe('receive_message', () => {
             
         });
 
+    });
+
+    describe('group_join_or_leave', () => {
+        it('should promote registered user to admin when joining admin group', async () => {
+            const group_id = 'group_123';
+            const member_phone = '+1234567890';
+            const bot_phone = '+0987654321';
+
+            const mockGroupResponse = {
+                data: {
+                    group_threads: [{
+                        id: 'group_thread_123',
+                        role: 'admin',
+                        community_id: 'community_123'
+                    }]
+                }
+            };
+            graphql.mockResolvedValueOnce(mockGroupResponse);
+
+            const mockMembership = {
+                id: 'membership_123',
+                set_variable: jest.fn()
+            };
+            Membership.get.mockResolvedValue(mockMembership);
+
+            await group_join_or_leave(group_id, member_phone, bot_phone, true);
+
+            expect(graphql).toHaveBeenCalledWith(
+                expect.stringContaining('query GetGroupRole'),
+                { group_id }
+            );
+            expect(Membership.get).toHaveBeenCalledWith(member_phone, bot_phone);
+            expect(mockMembership.set_variable).toHaveBeenCalledWith('type', 'admin');
+        });
+
+        it('should not promote user if group is not found', async () => {
+            const group_id = 'group_123';
+            const member_phone = '+1234567890';
+            const bot_phone = '+0987654321';
+
+            const mockGroupResponse = {
+                data: {
+                    group_threads: []
+                }
+            };
+            graphql.mockResolvedValue(mockGroupResponse);
+
+            const mockMembershipGet = jest.spyOn(Membership, 'get');
+            Membership.get.mockResolvedValue({id: 'membership_123', type: 'member'});
+            const mockMembershipSetVariable = jest.spyOn(Membership, 'set_variable');
+
+            await group_join_or_leave(group_id, member_phone, bot_phone, true);
+
+            expect(graphql).toHaveBeenCalledWith(
+                expect.stringContaining('query GetGroupRole'),
+                { group_id }
+            );
+            expect(mockMembershipGet).toHaveBeenCalledWith(member_phone, bot_phone);
+            expect(mockMembershipSetVariable).not.toHaveBeenCalled();
+
+            mockMembershipGet.mockRestore();
+        });
+
+        it('should not promote user if group role is not admin', async () => {
+            const group_id = 'group_123';
+            const member_phone = '+1234567890';
+            const bot_phone = '+0987654321';
+
+            const mockGroupResponse = {
+                data: {
+                    group_threads: [{
+                        id: 'group_thread_123',
+                        role: 'member',
+                        community_id: 'community_123'
+                    }]
+                }
+            };
+            graphql.mockResolvedValue(mockGroupResponse);
+            Membership.get.mockResolvedValue({id: 'membership_123', type: 'member'});
+
+            const mockMembershipGet = jest.spyOn(Membership, 'get');
+            const mockMembershipSetVariable = jest.spyOn(Membership, 'set_variable');
+
+            await group_join_or_leave(group_id, member_phone, bot_phone);
+
+            expect(graphql).toHaveBeenCalledWith(
+                expect.stringContaining('query GetGroupRole'),
+                { group_id }
+            );
+            expect(mockMembershipGet).not.toHaveBeenCalled();
+            expect(mockMembershipSetVariable).not.toHaveBeenCalled();
+
+            mockMembershipGet.mockRestore();
+        });
+
+        it('should not promote user if they are not registered', async () => {
+            const group_id = 'group_123';
+            const member_phone = '+1234567890';
+            const bot_phone = '+0987654321';
+
+            const mockGroupResponse = {
+                data: {
+                    group_threads: [{
+                        id: 'group_thread_123',
+                        role: 'admin',
+                        community_id: 'community_123'
+                    }]
+                }
+            };
+            graphql.mockResolvedValueOnce(mockGroupResponse);
+
+            const mockMembershipGet = jest.spyOn(Membership, 'get');
+            Membership.get.mockResolvedValue(null);
+
+            await group_join_or_leave(group_id, member_phone, bot_phone);
+
+            expect(graphql).toHaveBeenCalledWith(
+                expect.stringContaining('query GetGroupRole'),
+                { group_id }
+            );
+            expect(mockMembershipGet).toHaveBeenCalledWith(member_phone, bot_phone);
+
+            mockMembershipGet.mockRestore();
+        });
+
+        it('should handle errors gracefully', async () => {
+            const group_id = 'group_123';
+            const member_phone = '+1234567890';
+            const bot_phone = '+0987654321';
+            const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+
+            graphql.mockRejectedValue(new Error('GraphQL error'));
+
+            await group_join_or_leave(group_id, member_phone, bot_phone);
+
+            expect(consoleSpy).toHaveBeenCalledWith('Error handling member join:', expect.any(Error));
+
+            consoleSpy.mockRestore();
+        });
+
+        it('should demote user to member when leaving admin group', async () => {
+            const group_id = 'group_123';
+            const member_phone = '+1234567890';
+            const bot_phone = '+0987654321';
+
+            const mockGroupResponse = {
+                data: {
+                    group_threads: [{
+                        id: 'group_thread_123',
+                        role: 'admin',
+                        community_id: 'community_123'
+                    }]
+                }
+            };
+            graphql.mockResolvedValueOnce(mockGroupResponse);
+
+
+            const mockMembership = {
+                id: 'membership_123',
+                set_variable: jest.fn()
+            };
+            Membership.get.mockResolvedValue(mockMembership);
+            await group_join_or_leave(group_id, member_phone, bot_phone, false);
+            expect(Membership.get).toHaveBeenCalledWith(member_phone, bot_phone);
+            expect(mockMembership.set_variable).toHaveBeenCalledWith('type', 'member');
+        });
     });
 });

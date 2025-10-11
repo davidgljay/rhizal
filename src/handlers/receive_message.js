@@ -105,8 +105,16 @@ const queries = {
             }
         }
     }
-}`
+}`,
 
+get_group_role_query: `
+query GetGroupRole($group_id: String!) {
+group_threads(where: {group_id: {_eq: $group_id}}) {
+    id
+    role
+    community_id
+}
+}`
 
 }
 
@@ -225,6 +233,36 @@ export async function receive_reply(message, from_phone, bot_phone, reply_to_tim
     // Relay message to the member that the admin received a message about
     await Message.send(membership.community_id, membership.id, about_member_phone, bot_phone, expandedMessage, true);
     
+}
+
+export async function group_join_or_leave(group_id, member_phone, bot_phone, join = false) {
+
+    try {
+        const result = await graphql(queries.get_group_role_query, { group_id });
+        
+        if (result.data.group_threads.length === 0) {
+            return; // Group not found in our database
+        }
+
+        const group_thread = result.data.group_threads[0];
+        
+        if (group_thread.role === 'admin') {
+            
+            // Update user's membership type to admin
+            const membership = await Membership.get(member_phone, bot_phone);
+            
+            if (membership) {
+                if (join) {
+                    await membership.set_variable('type', 'admin');
+                }
+                else {
+                    await membership.set_variable('type', 'member');
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Error handling member join:', error);
+    }
 }
 
 export async function new_member(phone, community, message, user, sent_time) {

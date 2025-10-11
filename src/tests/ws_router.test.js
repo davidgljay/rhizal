@@ -1,7 +1,6 @@
 const { receive_raw_message } = require('../routes/ws');
-const GroupThread = require('../models/group_thread');
-
-jest.mock('../models/group_thread');
+jest.mock('../handlers/receive_message');
+const { group_join_or_leave } = require('../handlers/receive_message');
 
 describe('WebSocket Router', () => {
     afterEach(() => {
@@ -27,11 +26,11 @@ describe('WebSocket Router', () => {
                 account: '+0987654321'
             };
 
-            GroupThread.handle_member_join_or_leave.mockResolvedValue();
+            group_join_or_leave.mockResolvedValue();
 
             await receive_raw_message(mockMessage);
 
-            expect(GroupThread.handle_member_join_or_leave).toHaveBeenCalledWith(
+            expect(group_join_or_leave).toHaveBeenCalledWith(
                 Buffer.from('test_group_id').toString('base64'),
                 '+1234567890',
                 '+0987654321',
@@ -57,11 +56,11 @@ describe('WebSocket Router', () => {
                 account: '+0987654321'
             };
 
-            GroupThread.handle_member_join_or_leave.mockResolvedValue();
+            group_join_or_leave.mockResolvedValue();
 
             await receive_raw_message(mockMessage);
 
-            expect(GroupThread.handle_member_join_or_leave).toHaveBeenCalledWith(
+            expect(group_join_or_leave).toHaveBeenCalledWith(
                 Buffer.from('test_group_id').toString('base64'),
                 '+1234567890',
                 '+0987654321',
@@ -88,7 +87,7 @@ describe('WebSocket Router', () => {
 
             await receive_raw_message(mockMessage);
 
-            expect(GroupThread.handle_member_join_or_leave).not.toHaveBeenCalled();
+            expect(group_join_or_leave).not.toHaveBeenCalled();
         });
 
         it('should not call handle_member_join_or_leave for non-UPDATE group events', async () => {
@@ -110,7 +109,7 @@ describe('WebSocket Router', () => {
 
             await receive_raw_message(mockMessage);
 
-            expect(GroupThread.handle_member_join_or_leave).not.toHaveBeenCalled();
+            expect(group_join_or_leave).not.toHaveBeenCalled();
         });
 
         it('should ignore kick events (revision 21)', async () => {
@@ -131,7 +130,7 @@ describe('WebSocket Router', () => {
 
             await receive_raw_message(mockMessage);
 
-            expect(GroupThread.handle_member_join_or_leave).not.toHaveBeenCalled();
+            expect(group_join_or_leave).not.toHaveBeenCalled();
         });
 
         it('should handle regular group messages normally', async () => {
@@ -159,7 +158,7 @@ describe('WebSocket Router', () => {
 
             await receive_raw_message(mockMessage);
 
-            expect(GroupThread.handle_member_join_or_leave).not.toHaveBeenCalled();
+            expect(group_join_or_leave).not.toHaveBeenCalled();
         });
 
         it('should handle individual messages normally', async () => {
@@ -183,7 +182,7 @@ describe('WebSocket Router', () => {
 
             await receive_raw_message(mockMessage);
 
-            expect(GroupThread.handle_member_join_or_leave).not.toHaveBeenCalled();
+            expect(group_join_or_leave).not.toHaveBeenCalled();
         });
 
         it('should handle reply messages normally', async () => {
@@ -211,7 +210,7 @@ describe('WebSocket Router', () => {
 
             await receive_raw_message(mockMessage);
 
-            expect(GroupThread.handle_member_join_or_leave).not.toHaveBeenCalled();
+            expect(group_join_or_leave).not.toHaveBeenCalled();
         });
 
         it('should return early if message is invalid', async () => {
@@ -219,7 +218,7 @@ describe('WebSocket Router', () => {
 
             await receive_raw_message(invalidMessage);
 
-            expect(GroupThread.handle_member_join_or_leave).not.toHaveBeenCalled();
+            expect(group_join_or_leave).not.toHaveBeenCalled();
         });
 
         it('should return early if envelope is missing', async () => {
@@ -229,7 +228,7 @@ describe('WebSocket Router', () => {
 
             await receive_raw_message(mockMessage);
 
-            expect(GroupThread.handle_member_join_or_leave).not.toHaveBeenCalled();
+            expect(group_join_or_leave).not.toHaveBeenCalled();
         });
 
         it('should return early if dataMessage is missing', async () => {
@@ -244,7 +243,7 @@ describe('WebSocket Router', () => {
 
             await receive_raw_message(mockMessage);
 
-            expect(GroupThread.handle_member_join_or_leave).not.toHaveBeenCalled();
+            expect(group_join_or_leave).not.toHaveBeenCalled();
         });
 
         it ('shuold not call handle_member_join_or_leave if groupInfo.members is missing for some reason', async () => {
@@ -267,7 +266,7 @@ describe('WebSocket Router', () => {
 
             await receive_raw_message(mockMessage);
 
-            expect(GroupThread.handle_member_join_or_leave).not.toHaveBeenCalled();
+            expect(group_join_or_leave).not.toHaveBeenCalled();
         });
 
         it('should handle errors in handle_member_join_or_leave gracefully', async () => {
@@ -288,12 +287,12 @@ describe('WebSocket Router', () => {
                 account: '+0987654321'
             };
 
-            GroupThread.handle_member_join_or_leave.mockRejectedValue(new Error('Database error'));
+            group_join_or_leave.mockRejectedValue(new Error('Database error'));
 
             // Should not throw
             await expect(receive_raw_message(mockMessage)).resolves.toBeUndefined();
 
-            expect(GroupThread.handle_member_join_or_leave).toHaveBeenCalledWith(
+            expect(group_join_or_leave).toHaveBeenCalledWith(
                 Buffer.from('test_group_id').toString('base64'),
                 '+1234567890',
                 '+0987654321',

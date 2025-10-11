@@ -28,8 +28,7 @@ Example payload from Signal API:
     envelope.syncMessage will be undefined if there is no message.
 */
 
-import { receive_message, receive_group_message, receive_reply } from '../handlers/receive_message';
-const GroupThread = require('../models/group_thread');
+import { receive_message, receive_group_message, receive_reply, group_join_or_leave } from '../handlers/receive_message';
 
 export async function receive_raw_message(msg) {
     if (!msg || !msg.envelope || !msg.envelope.dataMessage) {
@@ -48,9 +47,9 @@ export async function receive_raw_message(msg) {
             try {
                 const group_id = Buffer.from(groupInfo.groupId).toString('base64');
                 if (groupInfo.members && !groupInfo.members.includes(sourceUuid)) {
-                    await GroupThread.handle_member_join_or_leave(group_id, sourceUuid, account, false);
+                    await group_join_or_leave(group_id, sourceUuid, account, false);
                 } else if (groupInfo.members && groupInfo.members.includes(sourceUuid)) {
-                    await GroupThread.handle_member_join_or_leave(group_id, sourceUuid, account, true);
+                    await group_join_or_leave(group_id, sourceUuid, account, true);
                 }
             } catch (error) {
                 console.error('Error handling member join or leave:', error);
