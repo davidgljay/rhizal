@@ -99,7 +99,7 @@ class RhyzalParser {
                 await this.send(new_step, vars);
                 break;
             case 'save_message':
-                if (script['save_message'] == 'true') {
+                if (script['save_message'] == 'true' || script['save_message'] == true) {
                     const {community_id, id, message, signal_timestamp, phone} = vars;
                     await this.save_message(community_id, id, message, signal_timestamp, phone);
                 }

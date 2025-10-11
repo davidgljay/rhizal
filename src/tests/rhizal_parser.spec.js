@@ -396,7 +396,7 @@ describe('rhyzal_parser', () => {
                 phone: '+1234567890'
             };
             
-            await parser.evaluate_receive({save_message: true}, vars);
+            await parser.evaluate_receive({save_message: 'true'}, vars);
             
             expect(Message.create).toHaveBeenCalledWith(
                 'comm-123',
@@ -418,7 +418,7 @@ describe('rhyzal_parser', () => {
                 other_var: 'should_be_ignored'
             };
             
-            await parser.evaluate_receive({save_message: true}, vars);
+            await parser.evaluate_receive({save_message: 'true'}, vars);
             
             expect(Message.create).toHaveBeenCalledWith(
                 'community-abc',
@@ -439,7 +439,7 @@ describe('rhyzal_parser', () => {
                 phone: '+1234567890'
             };
             
-            await parser.evaluate_receive({save_message: true}, vars);
+            await parser.evaluate_receive({save_message: 'true'}, vars);
             
             expect(Message.create).toHaveBeenCalledWith(
                 'comm-123',
@@ -460,7 +460,7 @@ describe('rhyzal_parser', () => {
                 phone: '+1234567890'
             };
             
-            await parser.evaluate_receive({save_message: true}, vars);
+            await parser.evaluate_receive({save_message: 'true'}, vars);
             
             expect(Message.create).toHaveBeenCalledWith(
                 'comm-123',
@@ -481,7 +481,7 @@ describe('rhyzal_parser', () => {
                 phone: '+1234567890'
             };
             
-            await parser.evaluate_receive({save_message: true}, vars);
+            await parser.evaluate_receive({save_message: 'true'}, vars);
             
             expect(Message.create).toHaveBeenCalledWith(
                 'comm-123',
@@ -502,7 +502,7 @@ describe('rhyzal_parser', () => {
                 phone: undefined
             };
             
-            await parser.evaluate_receive({save_message: true}, vars);
+            await parser.evaluate_receive({save_message: 'true'}, vars);
             
             expect(Message.create).toHaveBeenCalledWith(
                 undefined,
@@ -523,7 +523,7 @@ describe('rhyzal_parser', () => {
                 phone: '+1234567890'
             };
             
-            await parser.evaluate_receive({save_message: true}, vars);
+            await parser.evaluate_receive({save_message: 'true'}, vars);
             
             expect(Message.create).toHaveBeenCalledTimes(1);
             expect(Message.create).toHaveBeenCalledWith(
