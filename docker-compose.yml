@@ -30,6 +30,12 @@ services:
     # Use environment variables from local .env file
     env_file:
       - .env
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 5s
+      timeout: 10s
+      retries: 5
+      start_period: 5s
     networks:
       - app-network
   graphql-engine:
@@ -56,6 +62,8 @@ services:
       - .env
     depends_on:
       data-connector-agent:
+        condition: service_healthy
+      postgres:
         condition: service_healthy
     networks:
       - app-network
