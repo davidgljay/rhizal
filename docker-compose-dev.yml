@@ -6,11 +6,8 @@ services:
       - .:/usr/src/app
       - ./config/signal:/home/.local/share/signal-cli
     command: sh -c "yarn install && yarn build && yarn dev"
-    environment:
-      - GRAPHQL_URL=${GRAPHQL_URL}
-      - GRAPHQL_ADMIN_SECRET=${GRAPHQL_ADMIN_SECRET}
-      - GRAPHQL_AUTH_HEADER=${GRAPHQL_AUTH_HEADER}
-      - ACCOUNT_PHONE=${ACCOUNT_PHONE}
+    env_file:
+      - .env
     depends_on:
       - signal-cli
     networks:
@@ -21,7 +18,7 @@ services:
     volumes:
       - ./config/signal:/home/.local/share/signal-cli
     ports:
-      - "8080:8080"
+      - "8082:8080"
     environment:
       - MODE=json-rpc
     networks:
@@ -60,7 +57,7 @@ services:
     env_file:
       - .env
     ports:
-      - "8081:8080"
+      - "8085:8080"
     depends_on:
       data-connector-agent:
         condition: service_healthy

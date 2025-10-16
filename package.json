@@ -8,7 +8,7 @@
     "dev-start": "docker compose -f docker-compose-dev.yml up",
     "stop": "docker compose down",
     "docker-build": "yarn build",
-    "build": "babel src --out-dir dist && cp -r src/initialization dist/initialization && cp -r src/scripts_config dist/scripts_config",
+    "build": "babel src --out-dir dist && cp -r src/initialization dist/initialization && cp -r scripts_config dist/scripts_config",
     "wipe-db": "docker-compose run --rm rhizal node src/wipe.js",
     "rhizal-init": "docker-compose run --rm rhizal node src/init.js",
     "script-sync": "docker-compose run --rm rhizal node src/script_sync.js",
