@@ -107,9 +107,9 @@ describe('Community Model', () => {
             };
             graphql.mockResolvedValue(mockResponse);
 
-            const community = await Community.update(community_config);
+                const community = await Community.update(community_config);
 
-            expect(graphql).toHaveBeenCalledWith(expect.stringContaining('mutation UpdateCommunity($id:uuid!, $name:String!, $description:String!)'), { id: community_config.id, name: community_config.name, description: community_config.description });
+                expect(graphql).toHaveBeenCalledWith(expect.stringContaining('mutation UpdateCommunity($id:uuid!, $name:String!, $description:String!, $bot_phone:String!)'), { id: community_config.id, name: community_config.name, description: community_config.description, bot_phone: community_config.bot_phone });
             expect(community).toEqual(community_config);
         });
     })
@@ -130,7 +130,7 @@ describe('Community Model', () => {
 
             const community = await Community.create(community_config);
 
-            expect(graphql).toHaveBeenCalledWith(expect.stringContaining('mutation CreateCommunity($name:String!, $description:String!)'), { name: community_config.name, description: community_config.description, id: community_config.id });
+            expect(graphql).toHaveBeenCalledWith(expect.stringContaining('mutation CreateCommunity($name:String!, $description:String!, $bot_phone:String!)'), { name: community_config.name, description: community_config.description, id: community_config.id, bot_phone: community_config.bot_phone });
             expect(community).toEqual(community_config);
         });
     })

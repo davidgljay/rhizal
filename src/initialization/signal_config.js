@@ -34,7 +34,7 @@ async function promptSignalCaptchaUrl() {
 async function getVerificationCodeFromSignalCaptchaUrl(botphone, signalCaptchaUrl) {
 
     // Prepare the POST request to http://signal-cli:8080
-    const postData = JSON.stringify({ captcha: signalCaptchaUrl });
+    const postData = JSON.stringify({ captcha: signalCaptchaUrl, use_voice: false });
 
     await new Promise((resolve, reject) => {
         const req = http.request({
@@ -96,7 +96,7 @@ async function verifySignalRegistrationCode(botPhone, verificationCode) {
     });
 
     // Prepare the POST request to verify the registration code
-    const verifyUrl = `http://signal-cli:8080/v1/register/${encodeURIComponent(botPhone)}/verify/${encodeURIComponent(verificationCode)}`;
+    const verifyUrl = `http://signal-cli:8080/v1/register/${botPhone}/verify/${encodeURIComponent(verificationCode)}`;
     const parsedUrl = new URL(verifyUrl);
     const lib = parsedUrl.protocol === 'https:' ? https : http;
     const postData = JSON.stringify({ pin: userPin });

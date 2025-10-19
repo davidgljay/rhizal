@@ -207,7 +207,7 @@ query SendToAdmins($community_id: uuid!) {
             await Message.send(
                 community_id,
                 null, // No specific membership_id for group messages
-                'group.' + admin_group.group_id,
+                admin_group.group_id,
                 bot_phone,
                 text,
                 false, // Don't log group messages

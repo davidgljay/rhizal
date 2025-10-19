@@ -204,7 +204,7 @@ describe('GroupThread', () => {
 
             const mockSignalResponse = {
                 ok: true,
-                json: jest.fn().mockResolvedValue([{ id: 'signal_group_id' }])
+                json: jest.fn().mockResolvedValue({ id: 'signal_group_id' })
             };
             fetch.mockResolvedValue(mockSignalResponse);
 
@@ -212,7 +212,7 @@ describe('GroupThread', () => {
                 data: {
                     insert_group_threads_one: {
                         id: 'group_thread_123',
-                        group_id: Buffer.from('signal_group_id').toString('base64'),
+                        group_id: 'signal_group_id'.toString('base64'),
                         step: 'done',
                         role: 'admin',
                         community: {
@@ -240,14 +240,14 @@ describe('GroupThread', () => {
                     permissions: {
                         add_members: "only-admins",
                         edit_group: "only-admins",
-                        send_messages: "all_members"
+                        send_messages: "every-member"
                     }
                 })
             });
 
             expect(graphql).toHaveBeenCalledWith(
                 expect.stringContaining('mutation CreateAdminGroupThread'),
-                { community_id: community.id, group_id: Buffer.from('signal_group_id').toString('base64') }
+                { community_id: community.id, group_id: "signal_group_id" }
             );
 
             expect(result).toEqual(mockGraphQLResponse.data.insert_group_threads_one);

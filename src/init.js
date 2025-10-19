@@ -17,18 +17,15 @@ async function initialize() {
 
     console.log('Updating community and scripts');
     const community = await update_community_and_scripts();
-    await set_admin(community);
 
     console.log('Setting up signal profile');
-    const configPath = path.join(__dirname, '../scripts_config/community_config.yml');
-    const configContent = fs.readFileSync(configPath, 'utf8');
-    const config = yaml.load(configContent);
-    const botPhone = config.community.bot_phone;
+    const botPhone = community.bot_phone;
     const signalCaptchaUrl = await promptSignalCaptchaUrl();
     const verificationCode = await getVerificationCodeFromSignalCaptchaUrl(botPhone, signalCaptchaUrl);
     await verifySignalRegistrationCode(botPhone, verificationCode);
     await setSignalProfileName();
-    await Message.send_to_admins(community_id, null, 'Rhizal has been initialized. You can now start the bot by using "npm start".');
+    await set_admin(community);
+    await Message.send_to_admins(community.id, null, 'Rhizal has been initialized. You can now start the bot by using "npm start".');
     console.log('Setup complete! You should receive a message from Rhizal shortly. Please use "npm start" to start the bot.');
 }
 

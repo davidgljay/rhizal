@@ -228,7 +228,7 @@ describe('Message', () => {
             expect(mockSend).toHaveBeenCalledWith(
                 'community_1',
                 null, // No specific membership_id for group messages
-                'group.admin_group_id_123',
+                'admin_group_id_123',
                 'bot_phone',
                 'Hello, admins!',
                 false, // Don't log group messages
@@ -258,7 +258,7 @@ describe('Message', () => {
             expect(mockSend).toHaveBeenCalledWith(
                 'community_1',
                 null,
-                'group.admin_group_id_123',
+                'admin_group_id_123',
                 'bot_phone',
                 'Hello, admins!',
                 false,

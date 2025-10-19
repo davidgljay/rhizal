@@ -87,42 +87,40 @@ mutation CreateGroupThread($community_id: uuid!, $group_id: String!) {
     }
 
     static async create_group_and_invite(group_name, bot_phone, member_phone, community) {
-        const fetch = require('node-fetch');
-        
-        // Create Signal group via API
-        const create_group_endpoint = `http://signal-cli:8080/v1/groups/${bot_phone}`;
-        const group_data = {
-            name: group_name,
-            members: [member_phone],
-            description: "Members of this group have admin access to the Rhizal bot for " + community.name,
-            expiration_time: 0,
-            group_link: "disabled",
-            permissions: {
-                add_members: "only-admins",
-                edit_group: "only-admins",
-                send_messages: "all_members"
-              }
-            };
-
-        try {
-            const response = await fetch(create_group_endpoint, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(group_data)
-            });
-
-            if (!response.ok) {
-                throw new Error(`Failed to create group: ${response.statusText}`);
+      const fetch = require('node-fetch');
+      
+      // Create Signal group via API
+      const create_group_endpoint = `http://signal-cli:8080/v1/groups/${bot_phone}`;
+      const group_data = {
+          name: group_name,
+          members: [member_phone],
+          description: "Members of this group have admin access to the Rhizal bot for " + community.name,
+          expiration_time: 0,
+          group_link: "disabled",
+          permissions: {
+              add_members: "only-admins",
+              edit_group: "only-admins",
+              send_messages: "every-member"
             }
+          };
 
-            const result = await response.json();
-            //TODO: Confirm that this is the proper format for the response.
-            const group_id = Buffer.from(result[0].id).toString('base64');
+        const response = await fetch(create_group_endpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(group_data)
+        });
 
-            // Store group in database with admin role
-            const CREATE_ADMIN_GROUP_THREAD = `
+        if (!response.ok) {
+            throw new Error(`Failed to create group: ${response.statusText}`);
+        }
+
+        const result = await response.json();
+        const group_id = result.id.toString('base64');
+
+        // Store group in database with admin role
+        const CREATE_ADMIN_GROUP_THREAD = `
 mutation CreateAdminGroupThread($community_id: uuid!, $group_id: String!) {
   insert_group_threads_one(object: {community_id: $community_id, group_id: $group_id, step: "done", role: "admin"}) {
 	id
@@ -141,13 +139,8 @@ mutation CreateAdminGroupThread($community_id: uuid!, $group_id: String!) {
 }
 `;
 
-            const create_result = await graphql(CREATE_ADMIN_GROUP_THREAD, {community_id: community.id, group_id});
-            return create_result.data.insert_group_threads_one;
-
-        } catch (error) {
-            console.error('Error creating admin group:', error);
-            throw error;
-        }
+          const create_result = await graphql(CREATE_ADMIN_GROUP_THREAD, {community_id: community.id, group_id});
+          return create_result.data.insert_group_threads_one;
     }
 
 }
