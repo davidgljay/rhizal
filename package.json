@@ -4,7 +4,7 @@
   "description": "A lightweight chatbot for the Signal platform.",
   "main": "index.js",
   "scripts": {
-    "start": "node dist/app.js",
+    "start": "docker-compose up -d",
     "dev-start": "docker compose -f docker-compose-dev.yml up",
     "stop": "docker compose down",
     "docker-build": "yarn build",

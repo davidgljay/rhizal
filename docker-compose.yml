@@ -5,7 +5,7 @@ services:
     volumes:
       - .:/usr/src/app
       - ./config/signal:/home/.local/share/signal-cli
-    command: sh -c "yarn install && yarn build && yarn start"
+    command: sh -c "yarn install && yarn build && node dist/app.js"
     env_file:
       - .env
     depends_on:
