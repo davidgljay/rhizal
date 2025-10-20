@@ -280,29 +280,6 @@ describe('Integration Tests for receive_message Handler', () => {
                     query: expectedQueries.testVars,
                     variables: { membership_id: "membership_1" },
                     response: { data: { vars: [{ name: 'var1' }] } }
-                }, {
-                    query: expectedQueries.createMessage,
-                    variables: {
-                        community_id: 'community_1',
-                        membership_id: 'membership_1',
-                        signal_timestamp: expect.any(Number),
-                        text: 'Welcome to the service!',
-                        from_user: false,
-                        about_membership_id: null
-                    },
-                    response: { data: { insert_messages_one: { id: "message_2", membership: {id: 'membership_1', user: {phone: '+1234567890'}}, community: { id: 'community_1', bot_phone: '+0987654321'} } } }
-                },
-                {
-                    query: expectedQueries.createMessage,
-                    variables: {
-                        community_id: 'community_1',
-                        membership_id: 'membership_1',
-                        from_user: true,
-                        signal_timestamp: expect.any(Number),
-                        text: 'Hello',
-                        about_membership_id: null
-                    },
-                    response: { data: { insert_messages_one: { id: "message_1", membership: {id: 'membership_1', user: {phone: '+1234567890'}}, community: { id: 'community_1', bot_phone: '+0987654321'} } } }
                 }
             ];
 
@@ -320,7 +297,7 @@ describe('Integration Tests for receive_message Handler', () => {
             }
             expect(graphql).toHaveBeenCalledTimes(mockGraphql.length);
 
-            expect(Message.create).toHaveBeenCalledTimes(2);
+            expect(Message.create).not.toHaveBeenCalled();
             expect(signal.send).toHaveBeenCalledWith([senderNumber], recipientNumber, 'Welcome to the service!');
         });
 
@@ -348,29 +325,6 @@ describe('Integration Tests for receive_message Handler', () => {
                     query: expectedQueries.testVars,
                     variables: { membership_id: "membership_1" },
                     response: { data: { vars: [{ name: 'var1' }] } }
-                }, {
-                    query: expectedQueries.createMessage,
-                    variables: {
-                        community_id: 'community_1',
-                        membership_id: 'membership_1',
-                        signal_timestamp: expect.any(Number),
-                        text: 'Welcome to the service!',
-                        from_user: false,
-                        about_membership_id: null
-                    },
-                    response: { data: { insert_messages_one: { id: "message_2", membership: {id: 'membership_1', user: {phone: '+1234567890'}}, community: { id: 'community_1', bot_phone: '+0987654321'} } } }
-                },
-                {
-                    query: expectedQueries.createMessage,
-                    variables: {
-                        community_id: 'community_1',
-                        membership_id: 'membership_1',
-                        from_user: true,
-                        signal_timestamp: expect.any(Number),
-                        text: 'Hello',
-                        about_membership_id: null
-                    },
-                    response: { data: { insert_messages_one: { id: "message_1", membership: {id: 'membership_1', user: {phone: '+1234567890'}}, community: { id: 'community_1', bot_phone: '+0987654321'} } } }
                 }
             ];
 
@@ -434,6 +388,55 @@ describe('Integration Tests for receive_message Handler', () => {
                     response: mockQueryResponse
                 },
                 {
+                    query: expectedQueries.testVars,
+                    variables: { membership_id: "membership_1" },
+                    response: { data: { vars: [{ var1: 'stuff', var2: "things" }] } }
+                }, 
+                {
+                    query: expectedQueries.updateMembershipVariable,
+                    variables: { id: "membership_1", value: "1" },
+                    response: { data: { updateMembership: { id: "membership_1" } } }
+                }
+            ];
+
+            for (let i = 0; i < mockGraphql.length; i++) {
+                graphql.mockImplementationOnce((...args) => {
+                    return Promise.resolve(mockGraphql[i].response);
+                });
+            }
+
+            await receive_message(senderNumber, recipientNumber, 'Hello', sentTime);
+
+            for (let i = 0; i < mockGraphql.length; i++) {
+                expect(graphql).toHaveBeenNthCalledWith(i + 1, expect.stringContaining(mockGraphql[i].query), mockGraphql[i].variables);
+            }
+            expect(graphql).toHaveBeenCalledTimes(mockGraphql.length);
+            expect(signal.send).toHaveBeenCalledWith([senderNumber], recipientNumber, 'Message with stuff to things!');
+        });
+
+        it('should log a message if the script is configured to do so', async () => {
+            const senderNumber = '1234567890';
+            const recipientNumber = '0987654321';
+            const sentTime = 1741644982;
+
+            let testScript = JSON.parse(JSON.stringify(script));
+            testScript['0']['on_receive'] = [{save_message: 'true'}, {step: '1'}];
+            const testScriptResponse = JSON.parse(JSON.stringify(mockQueryResponse));
+            testScriptResponse.data.communities[0].onboarding.script_json = JSON.stringify(testScript);
+
+
+            const mockGraphql = [
+                {
+                    query: expectedQueries.receiveMessage,
+                    variables: { bot_phone: recipientNumber, phone: senderNumber },
+                    response: testScriptResponse
+                },
+                {
+                    query: expectedQueries.testVars,
+                    variables: { membership_id: "membership_1" },
+                    response: { data: { vars: [{ var1: 'stuff', var2: "things" }] } }
+                }, 
+                {
                     query: expectedQueries.createMessage,
                     variables: {
                         community_id: 'community_1',
@@ -446,26 +449,9 @@ describe('Integration Tests for receive_message Handler', () => {
                     response: { data: { insert_messages_one: { id: "message_1", membership: {id: 'membership_1', user: {phone: '+1234567890'}}, community: { id: 'community_1', bot_phone: '+0987654321'} } } }
                 },
                 {
-                    query: expectedQueries.testVars,
-                    variables: { membership_id: "membership_1" },
-                    response: { data: { vars: [{ var1: 'stuff', var2: "things" }] } }
-                }, 
-                {
                     query: expectedQueries.updateMembershipVariable,
                     variables: { id: "membership_1", value: "1" },
                     response: { data: { updateMembership: { id: "membership_1" } } }
-                },
-                {
-                    query: expectedQueries.createMessage,
-                    variables: {
-                        community_id: 'community_1',
-                        membership_id: 'membership_1',
-                        signal_timestamp: expect.any(Number),
-                        text: 'Message with stuff to things!',
-                        from_user: false,
-                        about_membership_id: null
-                    },
-                    response: { data: { insert_messages_one: { id: "message_2", membership: {id: 'membership_1', user: {phone: '1234567890'}}, community: { id: 'community_1', bot_phone: '0987654321'} } } }
                 }
             ];
 
@@ -499,18 +485,6 @@ describe('Integration Tests for receive_message Handler', () => {
                     response: step1Response
                 },
                 {
-                    query: expectedQueries.createMessage,
-                    variables: {
-                        community_id: 'community_1',
-                        membership_id: 'membership_1',
-                        from_user: true,
-                        signal_timestamp: expect.any(Number),
-                        text: 'yes',
-                        about_membership_id: null
-                    },
-                    response: { data: { insert_messages_one: { id: "message_1", membership: {id: 'membership_1', user: {phone: '+1234567890'}}, community: { id: 'community_1', bot_phone: '+0987654321'} } } }
-                },
-                {
                     query: expectedQueries.testVars,
                     variables: { membership_id: "membership_1" },
                     response: { data: { vars: [{ var1: 'stuff', var2: 'things' }] } }
@@ -519,30 +493,6 @@ describe('Integration Tests for receive_message Handler', () => {
                     query: expectedQueries.updateMembershipVariable,
                     variables: { id: "membership_1", value: "2" },
                     response: { data: { updateMembership: { id: "membership_1" } } }
-                },
-                {
-                    query: expectedQueries.createMessage,
-                    variables: {
-                        community_id: 'community_1',
-                        membership_id: 'membership_1',
-                        signal_timestamp: expect.any(Number),
-                        text: 'Another message with no variables!',
-                        from_user: false,
-                        about_membership_id: null
-                    },
-                    response: { data: { insert_messages_one: { id: "message_2", membership: {id: 'membership_1', user: {phone: '+1234567890'}}, community: { id: 'community_1', bot_phone: '+0987654321'} } } }
-                },
-                {
-                    query: expectedQueries.createMessage,
-                    variables: {
-                        community_id: 'community_1',
-                        membership_id: 'membership_1',
-                        signal_timestamp: expect.any(Number),
-                        text: 'A second message to be sent a few seconds later.',
-                        from_user: false,
-                        about_membership_id: null
-                    },
-                    response: { data: { insert_messages_one: { id: "message_3", membership: {id: 'membership_1', user: {phone: '+1234567890'}}, community: { id: 'community_1', bot_phone: '+0987654321'} } } }
                 },
                 {
                     query: expectedQueries.updateMembershipVariable,
@@ -580,18 +530,6 @@ describe('Integration Tests for receive_message Handler', () => {
                     query: expectedQueries.receiveMessage,
                     variables: { bot_phone: recipientNumber, phone: senderNumber },
                     response: step1Response
-                },
-                {
-                    query: expectedQueries.createMessage,
-                    variables: {
-                        community_id: 'community_1',
-                        membership_id: 'membership_1',
-                        from_user: true,
-                        signal_timestamp: expect.any(Number),
-                        text: 'no',
-                        about_membership_id: null
-                    },
-                    response: { data: { insert_messages_one: { id: "message_1", membership: {id: 'membership_1', user: {phone: '+1234567890'}}, community: { id: 'community_1', bot_phone: '+0987654321'} } } }
                 },
                 {
                     query: expectedQueries.testVars,
@@ -637,18 +575,6 @@ describe('Integration Tests for receive_message Handler', () => {
                     response: hashtagCommandResponse
                 },
                 {
-                    query: expectedQueries.createMessage,
-                    variables: {
-                        community_id: 'community_1',
-                        membership_id: 'membership_1',
-                        from_user: true,
-                        signal_timestamp: expect.any(Number),
-                        text: '#announcement',
-                        about_membership_id: null
-                    },
-                    response: { data: { insert_messages_one: { id: "message_1", membership: {id: 'membership_1', user: {phone: '+1234567890'}}, community: { id: 'community_1', bot_phone: '+0987654321'} } } }
-                },
-                {
                     query: expectedQueries.systemScript,
                     variables: { script_name: 'announcement' },
                     response: { data: { scripts: [{ id: 'script_1', name: 'announcement', script_json: JSON.stringify(announcementScript), vars_query: null }] } }
@@ -663,18 +589,6 @@ describe('Integration Tests for receive_message Handler', () => {
                     query: expectedQueries.updateMembershipVariable,
                     variables: { id: "membership_1", value: "0" },
                     response: { data: { updateMembership: { id: "membership_1" } } }
-                },
-                {
-                    query: expectedQueries.createMessage,
-                    variables: {
-                        community_id: 'community_1',
-                        membership_id: 'membership_1',
-                        signal_timestamp: expect.any(Number),
-                        text: expectedMessage,
-                        from_user: false,
-                        about_membership_id: null
-                    },
-                    response: { data: { insert_messages_one: { id: "message_2", membership: {id: 'membership_1', user: {phone: '+1234567890'}}, community: { id: 'community_1', bot_phone: '+0987654321'} } } }
                 }
             ];
 
@@ -1113,18 +1027,6 @@ describe('Integration Tests for receive_message Handler', () => {
                     query: expectedQueries.replyQuery,
                     variables: { bot_phone, phone, signal_timestamp },
                     response: mockQueryResponse
-                },
-                {
-                    query: expectedQueries.createMessage,
-                    variables: {
-                        community_id: 'community_1',
-                        membership_id: 'membership_1',
-                        from_user: false,
-                        signal_timestamp: expect.any(Number),
-                        text:expectedMessage,
-                        about_membership_id: null
-                    },
-                    response: { data: { insert_messages_one: { id: "message_1", membership: {id: 'membership_1', user: {phone: '+1234567890'}}, community: { id: 'community_1', bot_phone: '+0987654321'} } } }
                 }
             ];
 

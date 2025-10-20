@@ -82,7 +82,7 @@ mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_i
         return result.data.insert_messages_one;
     }
 
-    static async send(community_id, membership_id, to_phone, from_phone, text, log_message = true, about_membership_id = null, message_type = "message", timeout = 1000) {
+    static async send(community_id, membership_id, to_phone, from_phone, text, log_message = false, about_membership_id = null, message_type = "message", timeout = 1000) {
         // Add the message to the queue
         Message.messageQueue = Message.messageQueue.then(async () => {
             Signal.show_typing_indicator(to_phone, from_phone);

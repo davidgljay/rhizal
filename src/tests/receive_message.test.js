@@ -206,12 +206,12 @@ describe('receive_message', () => {
             jest.clearAllMocks();
         });
 
-        it('should log a message', async () => {
+        it('should not log a message', async () => {
             graphql.mockResolvedValue(mockQueryResponse);
 
             await receive_message(sender, recipient, message, sent_time);
 
-            expect(Message.create).toHaveBeenCalledWith("community_1", "membership_1", message, sent_time, true);
+            expect(Message.create).not.toHaveBeenCalled();
         });
 
         it('should get the member and a community', async () => {
@@ -510,7 +510,7 @@ describe('receive_message', () => {
                 '1234567890',
                 bot_phone,
                 'Message from Admin User: Reply message',
-                true
+                false
             );
         });
 

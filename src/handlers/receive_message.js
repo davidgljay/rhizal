@@ -132,10 +132,10 @@ export async function receive_message(sender, recipient, message, sent_time, sen
     }
     if (!membership) {
         membership = await new_member(sender, community, message, user, sent_time);
-        await Message.create(community.id, membership.id, message, sent_time, true);
+        // await Message.create(community.id, membership.id, message, sent_time, true);
         return;
     }
-    await Message.create(community.id, membership.id, message, sent_time, true);
+    //await Message.create(community.id, membership.id, message, sent_time, true);
     // Disabling ability to use hashtags in one-on-one conversations with the bot, you've gotta do 'em in a group.
     // if (message.match(/#[\w]+/)) {
     //     const hashtag = message.match(/#[\w]+/)[0];

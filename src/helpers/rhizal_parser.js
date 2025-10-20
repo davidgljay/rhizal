@@ -19,14 +19,15 @@ class RhyzalParser {
 
     constructor(script_json) {
         let script_obj;
-        const {send, set_message_type, send_announcement} = Message;
+        const {send, set_message_type, send_announcement, send_to_admins} = Message;
         const {set_variable} = Membership;
         this.send_message = send;
         this.send_announcement = send_announcement;
         this.set_message_type = set_message_type;
         this.set_variable = set_variable;
         this.set_group_variable = GroupThread.set_variable;
-        this.send_to_admins = Message.send_to_admins;
+        this.send_to_admins = send_to_admins;
+        this.save_message = Message.create;
         try {
             script_obj = JSON.parse(script_json);
         }
@@ -50,10 +51,9 @@ class RhyzalParser {
             const messages = this.script[step].send;
             const { community_id, id } = vars;
             let recipient = vars.phone;
-            let log_message = true;
+            let log_message = false;
             if (vars.group_id) {
                 recipient = 'group.' + vars.group_id;
-                log_message = false;
             };
             for (let i = 0; i < messages.length; i++) {
                 //Send a message with an attachement
@@ -96,6 +96,12 @@ class RhyzalParser {
                     await this.set_variable(vars.id, 'step', new_step);
                 }
                 await this.send(new_step, vars);
+                break;
+            case 'save_message':
+                if (script['save_message'] == 'true' || script['save_message'] == true) {
+                    const {community_id, id, message, signal_timestamp} = vars;
+                    await this.save_message(community_id, id, message, signal_timestamp, true);
+                }
                 break;
             case 'set_variable':
                 //TODO: add tests for setting variable with regex
