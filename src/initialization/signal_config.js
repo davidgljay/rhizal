@@ -139,17 +139,20 @@ async function setSignalProfileName() {
         throw new Error(`Failed to read community config: ${err.message}`);
     }
 
-    // Simple YAML parsing for bot_phone and signal_username
+    // Simple YAML parsing for bot_phone, signal_username, and signal_profile_name
     const botPhoneMatch = configContent.match(/bot_phone:\s*["']?([^\n"']+)["']?/);
     const usernameMatch = configContent.match(/signal_username:\s*["']?([^\n"']+)["']?/);
+    const profileNameMatch = configContent.match(/signal_profile_name:\s*["']?([^\n"']+)["']?/);
 
-    if (!botPhoneMatch || !usernameMatch) {
-        throw new Error("Could not find bot_phone or signal_username in community_config.yml");
+    if (!botPhoneMatch || !usernameMatch || !profileNameMatch) {
+        throw new Error("Could not find bot_phone, signal_username, or signal_profile_name in community_config.yml");
     }
 
     const botPhone = botPhoneMatch[1].trim();
     const username = usernameMatch[1].trim();
-    console.log('Asking signal-cli to set username to', username, ', it will probably append a number to the end of it.');
+    const profileName = profileNameMatch[1].trim();
+    console.log('Setting Signal username to:', username);
+    console.log('Setting Signal profile name to:', profileName);
 
     const postData = JSON.stringify({ username });
 
@@ -172,26 +175,50 @@ async function setSignalProfileName() {
             });
 
             res.on('end', () => {
-                response.statusCode = res.statusCode;
-                response.headers = res.headers;
                 if (res.statusCode >= 200 && res.statusCode < 300) {
-                    console.log("Signal profile name set successfully, you have been assigned the username: " + JSON.parse(data).username);
+                    console.log("Signal username set successfully, assigned username:", JSON.parse(data).username);
                     resolve();
                 } else {
-                    console.log(response);
-                    reject(new Error(`Failed to set Signal profile name: ${res.statusCode} ${response.body}`));
+                    reject(new Error(`Failed to set Signal username: ${res.statusCode} ${data}`));
                 }
             });
         });
         req.on('error', reject);
-        let response = {
-            statusCode: null,
-            headers: null,
-            body: null
-        };
-        
-
         req.write(postData);
+        req.end();
+    });
+
+    // Now set the profile name
+    const profileData = JSON.stringify({ name: profileName });
+    const profilePath = `/v1/profiles/${botPhone}`;
+
+    await new Promise((resolve, reject) => {
+        const req = http.request({
+            hostname: 'signal-cli',
+            port: 8080,
+            path: profilePath,
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Content-Length': Buffer.byteLength(profileData)
+            }
+        }, (res) => {
+            let data = '';
+            res.on('data', (chunk) => {
+                data += chunk;
+            });
+
+            res.on('end', () => {
+                if (res.statusCode >= 200 && res.statusCode < 300) {
+                    console.log("Signal profile name set successfully to:", profileName);
+                    resolve();
+                } else {
+                    reject(new Error(`Failed to set Signal profile name: ${res.statusCode} ${data}`));
+                }
+            });
+        });
+        req.on('error', reject);
+        req.write(profileData);
         req.end();
     });
 }
