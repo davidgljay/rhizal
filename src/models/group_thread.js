@@ -93,7 +93,7 @@ mutation CreateGroupThread($community_id: uuid!, $group_id: String!) {
       const create_group_endpoint = `http://signal-cli:8080/v1/groups/${bot_phone}`;
       const group_data = {
           name: group_name,
-          members: [member_phone],
+          members: [member_phone, bot_phone],
           description: "Members of this group have admin access to the Rhizal bot for " + community.name,
           expiration_time: 0,
           group_link: "disabled",
