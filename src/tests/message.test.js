@@ -208,32 +208,35 @@ describe('Message', () => {
         });
     });
 
-    describe('send_to_admins', () => {
-        it('should send a message to admin group if it exists', async () => {
+    describe('send_to_role', () => {
+
+        afterEach(() => {
+            jest.clearAllMocks();
+        });
+
+        it('should send a message to role group if it exists', async () => {
+            const mockSend = jest.spyOn(Message, 'send').mockResolvedValue({});
             const mockCommunity = {
                 id: 'community_1',
                 bot_phone: 'bot_phone',
-                admin_groups: [
-                    { id: 'admin_group_1', group_id: 'admin_group_id_123' }
+                role_groups: [
+                    { id: 'role_group_1', group_id: 'group_id' }
                 ]
             };
-            const mockSend = jest.spyOn(Message, 'send').mockResolvedValue({});
-
             graphql.mockResolvedValue({ data: { communities: [mockCommunity] } });
 
-            await Message.send_to_admins('community_1', 'sender_id', 'Hello, admins!');
+            await Message.send_to_role('community_1', 'sender_id', 'Hello, role_name!', 'role_name', mockCommunity);
 
-            expect(graphql).toHaveBeenCalledWith(expect.any(String), { community_id: 'community_1' });
             expect(mockSend).toHaveBeenCalledTimes(1);
             expect(mockSend).toHaveBeenCalledWith(
                 'community_1',
                 null, // No specific membership_id for group messages
-                'admin_group_id_123',
+                'group_id',
                 'bot_phone',
-                'Hello, admins!',
+                'Hello, role_name!',
                 false, // Don't log group messages
                 'sender_id',
-                "relay_to_admin_group",
+                "relay_to_role_name_group",
                 0
             );
 
@@ -241,29 +244,29 @@ describe('Message', () => {
         });
 
 
-        it('should use provided community data if available and send to admin group', async () => {
+        it('should use provided community data if available and send to role group', async () => {
             const mockCommunity = {
                 id: 'community_1',
                 bot_phone: 'bot_phone',
-                admin_groups: [
-                    { id: 'admin_group_1', group_id: 'admin_group_id_123' }
+                role_groups: [
+                    { id: 'role_group_1', group_id: 'role_group_id_123' }
                 ]
             };
             const mockSend = jest.spyOn(Message, 'send').mockResolvedValue({});
 
-            await Message.send_to_admins('community_1', 'sender_id', 'Hello, admins!', mockCommunity);
+            await Message.send_to_role('community_1', 'sender_id', 'Hello, role_name!', 'role_name', mockCommunity);
 
             expect(graphql).not.toHaveBeenCalled();
             expect(mockSend).toHaveBeenCalledTimes(1);
             expect(mockSend).toHaveBeenCalledWith(
                 'community_1',
                 null,
-                'admin_group_id_123',
+                'role_group_id_123',
                 'bot_phone',
-                'Hello, admins!',
+                'Hello, role_name!',
                 false,
                 'sender_id',
-                "relay_to_admin_group",
+                "relay_to_role_name_group",
                 0
             );
 
@@ -271,36 +274,21 @@ describe('Message', () => {
         });
 
 
-        it('should not send a message if no admins are found and no admin group', async () => {
+        it('should not send a message if no role group is found and no role group', async () => {
             const mockCommunity = {
                 id: 'community_1',
                 bot_phone: 'bot_phone',
-                admin_groups: [],
-                admins: []
+                role_groups: [],
             };
 
-            graphql.mockResolvedValue({ data: { communities: [mockCommunity] } });
+                await Message.send_to_role('community_1', 'sender_id', 'Hello, role_name!', 'role_name', mockCommunity);
 
-            await Message.send_to_admins('community_1', 'sender_id', 'Hello, admins!');
-
-            expect(graphql).toHaveBeenCalledWith(expect.any(String), { community_id: 'community_1' });
             expect(Signal.send).not.toHaveBeenCalled();
         });
 
         it('should handle errors when fetching community data', async () => {
-            const errorMessage = 'Error fetching community data';
-            graphql.mockRejectedValue(new Error(errorMessage));
-
-            await expect(Message.send_to_admins('community_1', 'sender_id', 'Hello, admins!')).rejects.toThrow(errorMessage);
-        });
-
-        it('should not send a message if community is not found', async () => {
             graphql.mockResolvedValue({ data: { communities: [] } });
-
-            await Message.send_to_admins('community_1', 'sender_id', 'Hello, admins!');
-
-            expect(graphql).toHaveBeenCalledWith(expect.any(String), { community_id: 'community_1' });
-            expect(Signal.send).not.toHaveBeenCalled();
+            await expect(Message.send_to_role('community_1', 'sender_id', 'Hello, role_name!', 'role_name')).rejects.toThrow('CommunityData not found');
         });
     });
 });

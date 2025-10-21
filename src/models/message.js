@@ -171,17 +171,17 @@ mutation SetMessageType($signal_timestamp: bigint!, $type: String!) {
         return result.data.update_messages.returning[0];
     }
 
-    static async send_to_admins(community_id, sender_id, text, community = null) {
+    static async send_to_role(community_id, sender_id, text, role, community = null) {
         let bot_phone;
         let communityData;
         
         if (!community) {
-            const SEND_TO_ADMINS = `
+            const SEND_TO_ROLE = `
 query SendToAdmins($community_id: uuid!) {
     communities(where: {id: {_eq: $community_id}}) {
         id
         bot_phone
-        admin_groups:group_threads(where: {role: {_eq: "admin"}}) {
+        role_groups:group_threads(where: {role: {_eq: "${role}"}}) {
             id
             group_id
         }
@@ -189,11 +189,10 @@ query SendToAdmins($community_id: uuid!) {
     }
 }`;
 
-            const result = await graphql(SEND_TO_ADMINS, { community_id });
+            const result = await graphql(SEND_TO_ROLE, { community_id });
             communityData = result.data.communities[0];
             if (!communityData) {
-                console.error('CommunityData not found');
-                return;
+                throw new Error('CommunityData not found');
             }
         } else {
             communityData = community;
@@ -201,8 +200,8 @@ query SendToAdmins($community_id: uuid!) {
         bot_phone = communityData.bot_phone;
         
         // Check if admin group exists
-        if (communityData.admin_groups && communityData.admin_groups.length > 0) {
-            const admin_group = communityData.admin_groups[0];
+        if (communityData.role_groups && communityData.role_groups.length > 0) {
+            const admin_group = communityData.role_groups[0];
             // Send to admin group
             await Message.send(
                 community_id,
@@ -212,7 +211,7 @@ query SendToAdmins($community_id: uuid!) {
                 text,
                 false, // Don't log group messages
                 sender_id,
-                "relay_to_admin_group",
+                `relay_to_${role}_group`,
                 0
             );
             return;
