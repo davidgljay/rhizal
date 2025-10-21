@@ -231,7 +231,7 @@ export async function receive_reply(message, from_phone, bot_phone, reply_to_tim
     const expandedMessage = `Message from ${membership.name}: ${message}`;
 
     // Relay message to the member that the admin received a message about
-    await Message.send(membership.community_id, membership.id, about_member_phone, bot_phone, expandedMessage, true);
+    await Message.send(membership.community_id, membership.id, about_member_phone, bot_phone, expandedMessage, false);
     
 }
 
