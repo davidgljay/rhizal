@@ -88,6 +88,7 @@ const update_community_and_scripts = async function () {
         script_json: JSON.stringify(group_script)
     };
     const group_script_result = await create_or_update_script(group_script_config);
+    await Community.update_community_scripts(community.id, onboarding_script_result.id, group_script_result.id);
     console.log('Community and scripts updated');
     console.log('Community config:', community);
     console.log('Onboarding script id:', onboarding_script_result.id);
@@ -127,6 +128,10 @@ const set_admin = async function (community) {
     const admin_group_name = `${community.name} Rhizal Admins`;
     console.log(`Creating admin group: ${admin_group_name}`);
     try {
+        console.log("admin_group_name: " + admin_group_name);
+        console.log("community.bot_phone: " + community.bot_phone);
+        console.log("admin_phone: " + admin_phone);
+        console.log("community: " + JSON.stringify(community));
         const admin_group = await GroupThread.create_group_and_invite(
             admin_group_name, 
             community.bot_phone, 

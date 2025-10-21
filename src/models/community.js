@@ -48,6 +48,19 @@ query GetCommunities($bot_phone:String!) {
         return communityData.data.update_communities_by_pk;
     }
 
+    static async update_community_scripts(community_id, onboarding_id, group_script_id) {
+        const communityData = await graphql(`
+        mutation UpdateCommunityScripts($id:uuid!, $onboarding_id:uuid!, $group_script_id:uuid!) {
+            update_communities_by_pk(pk_columns: {id: $id}, _set: {onboarding_id: $onboarding_id, group_script_id: $group_script_id}) {
+                id
+                onboarding_id
+                group_script_id
+            }
+        }
+        `, { id: community_id, onboarding_id: onboarding_id, group_script_id: group_script_id });
+        return communityData.data.update_communities_by_pk;
+    }
+
     static async create(community_config) {
         const communityData = await graphql(`
         mutation CreateCommunity($name:String!, $description:String!, $bot_phone:String!) {
