@@ -31,8 +31,7 @@ async function initial_message() {
     });
 }
 
-
-const create_or_update_community = async function () {
+const get_community_config = function () {
     const community_config_yaml = fs.readFileSync(path.join(__dirname, '../../scripts_config', 'community_config.yml'), 'utf8');
     let community_config;
     try {
@@ -41,6 +40,12 @@ const create_or_update_community = async function () {
         console.error('Error loading community config yaml:', error);
         throw new Error('Error loading community config yaml');
     }
+    return community_config;
+}
+
+
+const create_or_update_community = async function () {
+    const community_config = get_community_config();
     const community = await Community.get(community_config.bot_phone);
     if (community) {
         return await Community.update(community_config);
@@ -123,23 +128,28 @@ const set_admin = async function (community) {
     });
     const admin_membership = await Membership.create_admin(admin_phone, community);
     console.log('Admin membership created with id:', admin_membership.id);
-    
-    // Create admin group and invite the admin
-    const admin_group_name = `${community.name} Rhizal Admins`;
-    console.log(`Creating admin group: ${admin_group_name}`);
-    try {
-        const admin_group = await GroupThread.create_group_and_invite(
-            admin_group_name, 
-            community.bot_phone, 
-            admin_phone, 
-            community
-        );
-        console.log('Admin group created with id:', admin_group.id);
-        return { admin_membership, admin_group };
-    } catch (error) {
-        console.error('Error creating admin group:', error);
-        console.log('Continuing without admin group...');
-        return { admin_membership, admin_group: null };
+    return admin_phone;
+}
+
+const init_access_groups = async function (community, admin_phone) {
+    const community_config = get_community_config();
+    console.log('Community config:', community_config.access_levels);
+
+    for (const role_name of Object.keys(community_config.access_levels)) {
+        const group_name = `${community.name} rhizal ${role_name}`
+        console.log(`Creating ${role_name} group: ${group_name}`);
+        try {
+            await GroupThread.create_group_and_invite(
+                group_name, 
+                community.bot_phone, 
+                admin_phone,
+                community_config.access_levels[role_name],
+                community
+            );
+        } catch (error) {
+            console.error('Error creating group:', error);
+            break;
+        }
     }
 }
 
@@ -148,6 +158,7 @@ module.exports = {
     update_community_and_scripts,
     create_or_update_community,
     create_or_update_script,
+    init_access_groups,
     set_admin
 }
 

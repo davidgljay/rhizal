@@ -201,6 +201,7 @@ describe('GroupThread', () => {
             const bot_phone = '+1234567890';
             const member_phone = '+0987654321';
             const community = { id: 'community_123', name: 'Test Community' };
+            const role = ['announcements'];
 
             const mockSignalResponse = {
                 ok: true,
@@ -224,7 +225,7 @@ describe('GroupThread', () => {
             };
             graphql.mockResolvedValue(mockGraphQLResponse);
 
-            const result = await GroupThread.create_group_and_invite(group_name, bot_phone, member_phone, community);
+            const result = await GroupThread.create_group_and_invite(group_name, bot_phone, member_phone, role, community);
 
             expect(fetch).toHaveBeenCalledWith(`http://signal-cli:8080/v1/groups/${bot_phone}`, {
                 method: 'POST',
@@ -233,7 +234,7 @@ describe('GroupThread', () => {
                 },
                 body: JSON.stringify({
                     name: group_name,
-                    members: [member_phone],
+                    members: [member_phone, bot_phone],
                     description: "Members of this group have admin access to the Rhizal bot for " + community.name,
                     expiration_time: 0,
                     group_link: "disabled",
@@ -247,7 +248,7 @@ describe('GroupThread', () => {
 
             expect(graphql).toHaveBeenCalledWith(
                 expect.stringContaining('mutation CreateAdminGroupThread'),
-                { community_id: community.id, group_id: "signal_group_id" }
+                { community_id: community.id, group_id: "signal_group_id", role: role }
             );
 
             expect(result).toEqual(mockGraphQLResponse.data.insert_group_threads_one);
@@ -258,6 +259,7 @@ describe('GroupThread', () => {
             const bot_phone = '+1234567890';
             const member_phone = '+0987654321';
             const community_id = 'community_123';
+            const role = ['announcements'];
 
             const mockSignalResponse = {
                 ok: false,
@@ -265,7 +267,7 @@ describe('GroupThread', () => {
             };
             fetch.mockResolvedValue(mockSignalResponse);
 
-            await expect(GroupThread.create_group_and_invite(group_name, bot_phone, member_phone, community_id))
+            await expect(GroupThread.create_group_and_invite(group_name, bot_phone, member_phone, role, community_id))
                 .rejects.toThrow('Failed to create group: Bad Request');
 
             expect(fetch).toHaveBeenCalled();
@@ -277,10 +279,11 @@ describe('GroupThread', () => {
             const bot_phone = '+1234567890';
             const member_phone = '+0987654321';
             const community_id = 'community_123';
+            const role = ['announcements'];
 
             fetch.mockRejectedValue(new Error('Network error'));
 
-            await expect(GroupThread.create_group_and_invite(group_name, bot_phone, member_phone, community_id))
+            await expect(GroupThread.create_group_and_invite(group_name, bot_phone, member_phone, role, community_id))
                 .rejects.toThrow('Network error');
 
             expect(fetch).toHaveBeenCalled();

@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const yaml = require('js-yaml');
 const { load_sql_schema, upload_metadata, create_system } = require('./initialization/db_init');
-const { update_community_and_scripts, initial_message, set_admin } = require('./initialization/script_sync');
+const { update_community_and_scripts, initial_message, set_admin, init_access_groups } = require('./initialization/script_sync');
 const { promptSignalCaptchaUrl, getVerificationCodeFromSignalCaptchaUrl, verifySignalRegistrationCode, setSignalProfileName } = require('./initialization/signal_config');
 const Message = require('./models/message');
 
@@ -20,13 +20,12 @@ async function initialize() {
 
     console.log('Setting up signal profile');
     const botPhone = community.bot_phone;
-    const signalCaptchaUrl = await promptSignalCaptchaUrl();
-    const verificationCode = await getVerificationCodeFromSignalCaptchaUrl(botPhone, signalCaptchaUrl);
-    await verifySignalRegistrationCode(botPhone, verificationCode);
+    // const signalCaptchaUrl = await promptSignalCaptchaUrl();
+    // const verificationCode = await getVerificationCodeFromSignalCaptchaUrl(botPhone, signalCaptchaUrl);
+    // await verifySignalRegistrationCode(botPhone, verificationCode);
     await setSignalProfileName();
-    await set_admin(community);
-    await Message.send_to_admins(community.id, null, 'Rhizal has been initialized. You can now start the bot by using "npm start".');
+    const admin_phone = await set_admin(community);
+    await init_access_groups(community, admin_phone);
     console.log('Setup complete! You should receive a message from Rhizal shortly. Please use "npm start" to start the bot.');
 }
-
 initialize().catch(console.error);

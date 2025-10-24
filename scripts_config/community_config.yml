@@ -2,4 +2,13 @@ community:
   bot_phone: "+10123456789"
   name: "Rhizal"
   description: "Rhizal is a lightweight chatbot for community organizing on Signal."
-  signal_username: "rhizal"
+  signal_username: "rhizal_local"
+  signal_profile_name: "Rhizal Local"
+  access_levels:
+    - admins: 
+      - announcement
+      - group_comms
+    - delegates:
+      - group_comms
+    - greeters:
+      - onboarding
