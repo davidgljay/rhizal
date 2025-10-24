@@ -166,7 +166,7 @@ CREATE TABLE public.memberships (
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     user_id uuid NOT NULL,
     community_id uuid NOT NULL,
-    type text NOT NULL,
+    permissions text[] NOT NULL,
     profile text,
     intro_id uuid,
     email text,

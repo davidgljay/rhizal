@@ -151,6 +151,82 @@ mutation updateMembershipVariable($id:uuid!, $value:String!) {
         });
     });
 
+    describe('add_permissions', () => {
+        it('should call graphql with correct mutation and variables', async () => {
+            const mockResponse = { data: { update_memberships: { returning: [{ id: '123' }] } } };
+            graphql.mockResolvedValue(mockResponse);
+            
+            const result = await Membership.add_permissions('123', 'read,write');
+            
+            const expectedQuery = `
+mutation AddPermissions($id:uuid!, $permissions:String!) {
+  update_memberships(where: {id: {_eq: $id}}, _set: {permissions: $permissions}) {
+    returning {
+      id
+    }
+  }
+}
+`;
+            expect(graphql).toHaveBeenCalledWith(expectedQuery, { id: '123', permissions: 'read,write' });
+            expect(result).toBe(mockResponse);
+        });
 
+        it('should handle different permission formats', async () => {
+            const mockResponse = { data: { update_memberships: { returning: [{ id: '456' }] } } };
+            graphql.mockResolvedValue(mockResponse);
+            
+            await Membership.add_permissions('456', 'admin');
+            
+            expect(graphql).toHaveBeenCalledWith(expect.stringContaining('mutation AddPermissions'), { id: '456', permissions: 'admin' });
+        });
+
+        it('should handle empty permissions string', async () => {
+            const mockResponse = { data: { update_memberships: { returning: [{ id: '789' }] } } };
+            graphql.mockResolvedValue(mockResponse);
+            
+            await Membership.add_permissions('789', '');
+            
+            expect(graphql).toHaveBeenCalledWith(expect.stringContaining('mutation AddPermissions'), { id: '789', permissions: '' });
+        });
+    });
+
+    describe('remove_permissions', () => {
+        it('should call graphql with correct mutation and variables', async () => {
+            const mockResponse = { data: { update_memberships: { returning: [{ id: '123' }] } } };
+            graphql.mockResolvedValue(mockResponse);
+            
+            const result = await Membership.remove_permissions('123', 'read,write');
+            
+            const expectedQuery = `
+mutation RemovePermissions($id:uuid!, $permissions:String!) {
+  update_memberships(where: {id: {_eq: $id}}, _set: {permissions: $permissions}) {
+    returning {
+      id
+    }
+  }
+}
+`;
+            expect(graphql).toHaveBeenCalledWith(expectedQuery, { id: '123', permissions: 'read,write' });
+            expect(result).toBe(mockResponse);
+        });
+
+        it('should handle different permission formats', async () => {
+            const mockResponse = { data: { update_memberships: { returning: [{ id: '456' }] } } };
+            graphql.mockResolvedValue(mockResponse);
+            
+            await Membership.remove_permissions('456', 'admin');
+            
+            expect(graphql).toHaveBeenCalledWith(expect.stringContaining('mutation RemovePermissions'), { id: '456', permissions: 'admin' });
+        });
+
+        it('should handle empty permissions string', async () => {
+            const mockResponse = { data: { update_memberships: { returning: [{ id: '789' }] } } };
+            graphql.mockResolvedValue(mockResponse);
+            
+            await Membership.remove_permissions('789', '');
+            
+            expect(graphql).toHaveBeenCalledWith(expect.stringContaining('mutation RemovePermissions'), { id: '789', permissions: '' });
+        });
+    });
 
 });

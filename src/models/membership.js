@@ -54,6 +54,34 @@ query GetMembershipFromPhoneNumbers($phone: String!, $bot_phone: String!) {
     }
 
 
+    static async add_permissions(id, permissions) {
+        const query = `
+mutation AddPermissions($id:uuid!, $permissions:String!) {
+  update_memberships(where: {id: {_eq: $id}}, _set: {permissions: $permissions}) {
+    returning {
+      id
+    }
+  }
+}
+`;
+        const variables = { id, permissions };
+        return await graphql(query, variables);
+    }
+
+    static async remove_permissions(id, permissions) {
+        const query = `
+mutation RemovePermissions($id:uuid!, $permissions:String!) {
+  update_memberships(where: {id: {_eq: $id}}, _set: {permissions: $permissions}) {
+    returning {
+      id
+    }
+  }
+}
+`;
+        const variables = { id, permissions };
+        return await graphql(query, variables);
+}
+
     async set_variable(variable, value) {
         const validVariables = ['name', 'informal_name', 'location', 'email', 'profile', 'step', 'current_script_id', 'type'];
         const variableTypes = {
@@ -98,7 +126,7 @@ mutation CreateUserAndMembership($phone:String!, $community_id:uuid!) {
             data: {phone: $phone}
         }, 
         community_id: $community_id, 
-        type: "admin", 
+        permissions: ["announcement", "group_comms", "onboarding"], 
         step: "done"
         }) 
   {
@@ -130,7 +158,7 @@ mutation CreateMembership($user_id:uuid!, $community_id:uuid!, $current_script_i
     object: {
         user_id: $user_id,
         community_id: $community_id,
-        type: "member",
+        permissions: [],
         step: "0",
         current_script_id: $current_script_id
     }) {
@@ -160,7 +188,7 @@ mutation CreateUserAndMembership($phone:String!, $community_id:uuid!, $current_s
         }, 
         community_id: $community_id, 
         current_script_id: $current_script_id,
-        type: "member", 
+        permissions: [],
         step: "0"
         }) 
   {
