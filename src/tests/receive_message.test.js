@@ -317,7 +317,7 @@ describe('receive_message', () => {
     });
 
     describe('receive_group_message', () => {
-        const mockQueryResponse = { data: {communities: [{ id: 'community_1', bot_phone: '0987654321' }], memberships: [ { id: 'membership_1', type: 'member' }] }};
+        const mockQueryResponse = { data: {communities: [{ id: 'community_1', bot_phone: '0987654321' }], memberships: [ { id: 'membership_1', permissions: ['group_comms'] }] }};
 
         afterEach(() => {
             jest.clearAllMocks();
@@ -433,14 +433,14 @@ describe('receive_message', () => {
             const sender_name = 'Test Sender';
 
             const mockGroupThread = {
-                step: 'done',
-                community: {
-                    group_threads: [
-                        { group_id: '1', hashtag: '#test_hashtag' },
-                        { group_id: '2', hashtag: '#other_hashtag' },
-                    ],
-                },
-                hashtag: '#other_hashtag',
+                    step: 'done',
+                    community: {
+                        group_threads: [
+                            { group_id: '1', hashtag: '#test_hashtag' },
+                            { group_id: '2', hashtag: '#other_hashtag' },
+                        ],
+                    },
+                    hashtag: '#other_hashtag',
             };
 
             jest.spyOn(GroupThread, 'find_or_create_group_thread').mockResolvedValue(mockGroupThread);
@@ -452,6 +452,18 @@ describe('receive_message', () => {
             const expectedMessage = `Message relayed from ${sender_name} in ${mockGroupThread.hashtag}: ${message}`;
             expect(Message.send).toHaveBeenCalledWith(null, null, 'group.1', bot_phone, expectedMessage, false);
             expect(Message.send).not.toHaveBeenCalledWith(null, null, 'group.2', bot_phone, expectedMessage, false);
+        });
+
+        it('should not relay messages if the member does not have group_comms permission', async () => {
+            const group_id = 'test_group_id';
+            const message = '#test_hashtag Message content';
+            const from_phone = '1234567890';
+            const bot_phone = '0987654321';
+            const sender_name = 'Test Sender';
+            const mockQueryResponse = { data: {communities: [{ id: 'community_1', bot_phone: '0987654321' }], memberships: [ { id: 'membership_1', permissions: [] }] }};
+            graphql.mockResolvedValue(mockQueryResponse);
+            await receive_group_message(group_id, message, from_phone, bot_phone, sender_name);
+            expect(Message.send).not.toHaveBeenCalled();
         });
     });
 

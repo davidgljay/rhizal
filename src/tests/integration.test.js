@@ -930,7 +930,7 @@ describe('Integration Tests for receive_message Handler', () => {
                     {
                         query: `query RecieveGroupMessageQuery($bot_phone:String!)`,
                         variables: { bot_phone: botNumber },
-                        response: { data: { communities: [{id: communityId, bot_phone: botNumber }], memberships: [ { id: 'membership_1', type: 'member' }] } }
+                        response: { data: { communities: [{id: communityId, bot_phone: botNumber }], memberships: [ { id: 'membership_1', permissions: ['group_comms'] }] } }
                     },
                     {
                         query: expectedQueries.getGroupThread,

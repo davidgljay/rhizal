@@ -13,7 +13,7 @@ describe("bot_message_hashtag", () => {
     describe("#announcement", () => {
 
         it("should handle #announcement hashtag correctly", async () => {
-            const mockMembership = { id: 1 , type: 'admin'};
+            const mockMembership = { id: 1 , permissions: ['announcement']};
             const mockCommunity = {};
             const mockMessage = "Test message";
             const mockScript = {
@@ -35,8 +35,8 @@ describe("bot_message_hashtag", () => {
             expect(mockScript.send).toHaveBeenCalledWith("0");
         });
 
-        it("should return false if membership type is not admin", async () => {
-            const mockMembership = { id: 1, type: 'user' };
+        it("should return false if member does not have announcement permission", async () => {
+            const mockMembership = { id: 1, permissions: [] };
             const mockCommunity = {};
             const mockMessage = "Test message";
 
@@ -48,7 +48,7 @@ describe("bot_message_hashtag", () => {
         });
 
         it("should do nothing if system script for #announcement is not found", async () => {
-            const mockMembership = { id: 1 , type: 'admin' };
+            const mockMembership = { id: 1 , permissions: ['announcement'] };
             const mockCommunity = {};
             const mockMessage = "Test message";
 

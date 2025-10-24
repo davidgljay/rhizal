@@ -20,6 +20,7 @@ query GetMembershipFromPhoneNumbers($phone: String!, $bot_phone: String!) {
       type
       name
       step
+      permissions
       current_script_id
       informal_name
 	  intro {
@@ -165,6 +166,7 @@ mutation CreateMembership($user_id:uuid!, $community_id:uuid!, $current_script_i
         id
         type
         step
+        permissions
         current_script_id
         user {
             id
@@ -195,6 +197,7 @@ mutation CreateUserAndMembership($phone:String!, $community_id:uuid!, $current_s
     id
     type
     step
+    permissions
     current_script_id
     user {
         id

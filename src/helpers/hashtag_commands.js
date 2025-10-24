@@ -4,7 +4,7 @@ import Script from "../models/script";
 export async function bot_message_hashtag(hashtag, membership, community, message) {
     switch(hashtag) {
         case '#announcement':
-            if (membership.type !== 'admin') {
+            if (!membership.permissions.includes('announcement')) {
                 return false;
             }
             // Get system script for announcement

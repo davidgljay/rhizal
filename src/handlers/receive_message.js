@@ -70,7 +70,7 @@ const queries = {
     id
     step
     name
-    type
+    permissions
     informal_name
     current_script {
         id
@@ -198,7 +198,7 @@ export async function receive_group_message(internal_group_id, message, from_pho
 
     //Relay message to groups whose hashtags are listed
     const community_hashtags = group_thread.community.group_threads;
-    if (!community_hashtags) {
+    if (!community_hashtags || !membership.permissions.includes('group_comms')) {
         return;
     }
     for (const ht of community_hashtags) {
