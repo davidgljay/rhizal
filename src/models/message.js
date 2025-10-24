@@ -171,17 +171,17 @@ mutation SetMessageType($signal_timestamp: bigint!, $type: String!) {
         return result.data.update_messages.returning[0];
     }
 
-    static async send_to_role(community_id, sender_id, text, role, community = null) {
+    static async send_to_onboarding(community_id, sender_id, text, community = null) {
         let bot_phone;
         let communityData;
         
         if (!community) {
-            const SEND_TO_ROLE = `
-query SendToAdmins($community_id: uuid!) {
+            const SEND_TO_ONBOARDING = `
+query SendToOnboarding($community_id: uuid!) {
     communities(where: {id: {_eq: $community_id}}) {
         id
         bot_phone
-        role_groups:group_threads(where: {role: {_eq: "${role}"}}) {
+        onboarding_groups: group_threads(where: { role: { _ilike: "%onboarding%" } }) {
             id
             group_id
         }
@@ -189,7 +189,7 @@ query SendToAdmins($community_id: uuid!) {
     }
 }`;
 
-            const result = await graphql(SEND_TO_ROLE, { community_id });
+            const result = await graphql(SEND_TO_ONBOARDING, { community_id });
             communityData = result.data.communities[0];
             if (!communityData) {
                 throw new Error('CommunityData not found');
@@ -199,23 +199,20 @@ query SendToAdmins($community_id: uuid!) {
         }
         bot_phone = communityData.bot_phone;
         
-        // Check if admin group exists
-        if (communityData.role_groups && communityData.role_groups.length > 0) {
-            const admin_group = communityData.role_groups[0];
-            // Send to admin group
+        for (const onboarding_group of communityData.onboarding_groups) {
             await Message.send(
                 community_id,
                 null, // No specific membership_id for group messages
-                admin_group.group_id,
+                onboarding_group.group_id,
                 bot_phone,
                 text,
                 false, // Don't log group messages
                 sender_id,
-                `relay_to_${role}_group`,
+                `relay_to_onboarding_group`,
                 0
             );
-            return;
         }
+
     }
 
 

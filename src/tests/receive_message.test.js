@@ -24,7 +24,7 @@ jest.mock('../models/message', () => {
     return {
         create: jest.fn(),
         send: jest.fn(),
-        send_to_admins: jest.fn()
+        send_to_onboarding: jest.fn()
     };
 });
 
@@ -149,7 +149,7 @@ describe('receive_message', () => {
             const community = { id: 'community_1', bot_phone: '0987654321', admins: [] };
             const message = 'Test message';
             await no_script_message(membership, community, message);
-            expect(Message.send_to_admins).toHaveBeenCalledWith('community_1', 'membership_1', 'Message relayed from Test User: \"Test message\" Reply to respond.', community);
+            expect(Message.send_to_onboarding).toHaveBeenCalledWith('community_1', 'membership_1', 'Message relayed from Test User: \"Test message\" Reply to respond.', community);
         });
     });
 
@@ -253,7 +253,7 @@ describe('receive_message', () => {
 
             await receive_message(sender, recipient, message, sent_time);
 
-            expect(Message.send_to_admins).toHaveBeenCalledWith('community_1', 'membership_1', 'Message relayed from Test User: \"test message\" Reply to respond.', doneResponse.data.communities[0]);
+            expect(Message.send_to_onboarding).toHaveBeenCalledWith('community_1', 'membership_1', 'Message relayed from Test User: \"test message\" Reply to respond.', doneResponse.data.communities[0]);
         });
 
         it('should process the member\'s message', async () => {
@@ -679,37 +679,6 @@ describe('receive_message', () => {
             mockMembershipGet.mockRestore();
         });
 
-        it('should not promote user if group role is not admin', async () => {
-            const group_id = 'group_123';
-            const member_phone = '+1234567890';
-            const bot_phone = '+0987654321';
-
-            const mockGroupResponse = {
-                data: {
-                    group_threads: [{
-                        id: 'group_thread_123',
-                        role: 'member',
-                        community_id: 'community_123'
-                    }]
-                }
-            };
-            graphql.mockResolvedValue(mockGroupResponse);
-            Membership.get.mockResolvedValue({id: 'membership_123', type: 'member'});
-
-            const mockMembershipGet = jest.spyOn(Membership, 'get');
-            const mockMembershipSetVariable = jest.spyOn(Membership, 'set_variable');
-
-            await group_join_or_leave(group_id, member_phone, bot_phone);
-
-            expect(graphql).toHaveBeenCalledWith(
-                expect.stringContaining('query GetGroupRole'),
-                { group_id }
-            );
-            expect(mockMembershipGet).not.toHaveBeenCalled();
-            expect(mockMembershipSetVariable).not.toHaveBeenCalled();
-
-            mockMembershipGet.mockRestore();
-        });
 
         it('should not promote user if they are not registered', async () => {
             const group_id = 'group_123';

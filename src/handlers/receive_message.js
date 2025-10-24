@@ -246,7 +246,7 @@ export async function group_join_or_leave(group_id, member_phone, bot_phone, joi
 
         const group_thread = result.data.group_threads[0];
         
-        if (group_thread.role === 'admin') {
+        if (group_thread.role) {
             
             // Update user's membership type to admin
             const membership = await Membership.get(member_phone, bot_phone);
@@ -275,6 +275,6 @@ export async function new_member(phone, community, message, user, sent_time) {
 
 export async function no_script_message(membership, community, message) {
     const relayMessage = `Message relayed from ${membership.name}: "${message}" Reply to respond.`;
-    Message.send_to_admins(community.id, membership.id, relayMessage, community);
+    Message.send_to_onboarding(community.id, membership.id, relayMessage, community);
     return;
 }

@@ -12,7 +12,7 @@
         value: "regex(message, '^[a-zA-Z ]+$')"
     - set_message_type:
         type: "onboarding"
-    - send_to_admins:
+    - send_to_onboarding:
         preamble: "New user onboarding started with name:"
     - step: 1
 
@@ -23,7 +23,7 @@
   on_receive:
     - set_message_type:
         type: "onboarding"
-    - send_to_admins:
+    - send_to_onboarding:
         preamble: "{{name}} referrer:"
     - step: 2
 
@@ -36,7 +36,7 @@
         value: "message"
     - set_message_type:
         type: "onboarding"
-    - send_to_admins:
+    - send_to_onboarding:
         preamble: "Why {{name}} is here:"
     - step: 3
 
@@ -44,6 +44,6 @@
   send:
     - "Thanks for sharing! I'll let the Rhizal team know, they may be in touch. Any more messages you send to me will be relayed on to them."
   on_receive:
-    - send_to_admins:
+    - send_to_onboarding:
         preamble: "Final message:"
     - step: "done"

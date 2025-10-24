@@ -208,87 +208,98 @@ describe('Message', () => {
         });
     });
 
-    describe('send_to_role', () => {
+
+    describe('send_to_onboarding', () => {
 
         afterEach(() => {
             jest.clearAllMocks();
         });
 
-        it('should send a message to role group if it exists', async () => {
+        it('should send a message to onboarding groups if they exist', async () => {
             const mockSend = jest.spyOn(Message, 'send').mockResolvedValue({});
             const mockCommunity = {
                 id: 'community_1',
                 bot_phone: 'bot_phone',
-                role_groups: [
-                    { id: 'role_group_1', group_id: 'group_id' }
+                onboarding_groups: [
+                    { id: 'onboarding_group_1', group_id: 'onboarding_group_id_1' },
+                    { id: 'onboarding_group_2', group_id: 'onboarding_group_id_2' }
                 ]
             };
             graphql.mockResolvedValue({ data: { communities: [mockCommunity] } });
 
-            await Message.send_to_role('community_1', 'sender_id', 'Hello, role_name!', 'role_name', mockCommunity);
+            await Message.send_to_onboarding('community_1', 'sender_id', 'Hello, onboarding!');
 
-            expect(mockSend).toHaveBeenCalledTimes(1);
-            expect(mockSend).toHaveBeenCalledWith(
+            expect(mockSend).toHaveBeenCalledTimes(2);
+            expect(mockSend).toHaveBeenNthCalledWith(1,
                 'community_1',
                 null, // No specific membership_id for group messages
-                'group_id',
+                'onboarding_group_id_1',
                 'bot_phone',
-                'Hello, role_name!',
+                'Hello, onboarding!',
                 false, // Don't log group messages
                 'sender_id',
-                "relay_to_role_name_group",
+                `relay_to_onboarding_group`,
+                0
+            );
+            expect(mockSend).toHaveBeenNthCalledWith(2,
+                'community_1',
+                null, // No specific membership_id for group messages
+                'onboarding_group_id_2',
+                'bot_phone',
+                'Hello, onboarding!',
+                false, // Don't log group messages
+                'sender_id',
+                `relay_to_onboarding_group`,
                 0
             );
 
             mockSend.mockRestore();
         });
 
-
-        it('should use provided community data if available and send to role group', async () => {
+        it('should use provided community data if available and send to onboarding groups', async () => {
             const mockCommunity = {
                 id: 'community_1',
                 bot_phone: 'bot_phone',
-                role_groups: [
-                    { id: 'role_group_1', group_id: 'role_group_id_123' }
+                onboarding_groups: [
+                    { id: 'onboarding_group_1', group_id: 'onboarding_group_id_123' }
                 ]
             };
             const mockSend = jest.spyOn(Message, 'send').mockResolvedValue({});
 
-            await Message.send_to_role('community_1', 'sender_id', 'Hello, role_name!', 'role_name', mockCommunity);
+            await Message.send_to_onboarding('community_1', 'sender_id', 'Hello, onboarding!', mockCommunity);
 
             expect(graphql).not.toHaveBeenCalled();
             expect(mockSend).toHaveBeenCalledTimes(1);
             expect(mockSend).toHaveBeenCalledWith(
                 'community_1',
                 null,
-                'role_group_id_123',
+                'onboarding_group_id_123',
                 'bot_phone',
-                'Hello, role_name!',
+                'Hello, onboarding!',
                 false,
                 'sender_id',
-                "relay_to_role_name_group",
+                "relay_to_onboarding_group",
                 0
             );
 
             mockSend.mockRestore();
         });
 
-
-        it('should not send a message if no role group is found and no role group', async () => {
+        it('should not send a message if no onboarding groups are found', async () => {
             const mockCommunity = {
                 id: 'community_1',
                 bot_phone: 'bot_phone',
-                role_groups: [],
+                onboarding_groups: [],
             };
 
-                await Message.send_to_role('community_1', 'sender_id', 'Hello, role_name!', 'role_name', mockCommunity);
+            await Message.send_to_onboarding('community_1', 'sender_id', 'Hello, onboarding!', mockCommunity);
 
             expect(Signal.send).not.toHaveBeenCalled();
         });
 
         it('should handle errors when fetching community data', async () => {
             graphql.mockResolvedValue({ data: { communities: [] } });
-            await expect(Message.send_to_role('community_1', 'sender_id', 'Hello, role_name!', 'role_name')).rejects.toThrow('CommunityData not found');
+            await expect(Message.send_to_onboarding('community_1', 'sender_id', 'Hello, onboarding!')).rejects.toThrow('CommunityData not found');
         });
     });
 });
