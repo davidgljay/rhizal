@@ -37,6 +37,27 @@ To install a local instance of Rhizal you will need to:
 
 If you run into problems, you can use `npm run wipe-db` and `npm run rhizal-init` to try again.
 
+## Updating community_config.yml
+
+Community_config.yml is laid out as follows:
+
+```
+community:
+  bot_phone: "+10123456789" // The phone number that Rhyzal will use to register with Signal
+  name: "Rhizal" // The name of your community (will appear in group names)
+  description: "Rhizal is a lightweight chatbot for community organizing on Signal." //The description that will appear attached to your signal profile.
+  signal_username: "rhizal_local" // Your preferred username on Signal (will probably have a number appended.)
+  signal_profile_name: "Rhizal Local" // Your preferred Signal profile name
+  access_levels: // A list of groups which will be created to manage access to Rhizal. They can be named arbitrarily.
+    - admins: // This will create an "admins" group with the following permissions
+      - announcement // Can make announcements to all Rhizal members with #announcement
+      - group_comms // Can use hashtags to communicate between groups
+    - delegates:
+      - group_comms
+    - greeters:
+      - onboarding // Will be forwarded onboarding messages as new members join.
+```
+
 ## Updating Scripts
 
 Scripts are written in yaml, you can update them at any time with `npm run script-sync`
