@@ -156,7 +156,8 @@ async function setSignalProfileName() {
 
     const postData = JSON.stringify({ username });
 
-    const urlPath = `/v1/accounts/${encodeURIComponent(botPhone)}/username`;
+    const urlPath = `/v1/accounts/${botPhone}/username`;
+
 
     await new Promise((resolve, reject) => {
         const req = http.request({
@@ -176,6 +177,8 @@ async function setSignalProfileName() {
 
             res.on('end', () => {
                 if (res.statusCode >= 200 && res.statusCode < 300) {
+                    console.log(data);
+                    console.log(JSON.parse(data));
                     console.log("Signal username set successfully, assigned username:", JSON.parse(data).username);
                     resolve();
                 } else {

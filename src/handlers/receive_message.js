@@ -21,12 +21,6 @@ const queries = {
             vars_query
             targets_query
         }
-        admins: memberships(where: {type: {_eq: "admin"}}) {
-            id
-            user {
-                phone
-            }
-        }
     }
     users(where: {phone: {_eq: $phone}}) {
         id
@@ -36,7 +30,7 @@ const queries = {
         id
         step
         name
-        type
+        permissions
         informal_name
         current_script {
             id
@@ -92,7 +86,7 @@ const queries = {
 `query ReplyQuery($bot_phone:String!, $phone:String!, $signal_timestamp:bigint!) {
     memberships(where:{community:{bot_phone:{_eq: $bot_phone}},user:{phone:{_eq:$phone}}}) {
         id
-        type
+        permissions
         name
         community_id
     }
@@ -222,7 +216,7 @@ export async function receive_reply(message, from_phone, bot_phone, reply_to_tim
         // If no reply_to or membership is not an admin, return
         return;
     }
-    if (membership.type !== 'admin') {
+    if (!membership.permissions.includes('onboarding')) {
         // Treat as a normal message
         receive_message(from_phone, bot_phone, message, sent_time, sender_name);
         return;

@@ -38,14 +38,14 @@ describe('Script Sync - Admin Group Creation', () => {
 
             const mockAdminMembership = {
                 id: 'membership_123',
-                type: 'admin',
+                permissions: ['onboarding', 'group_comms', 'announcement'],
                 step: 'done'
             };
 
             const mockAdminGroup = {
                 id: 'group_thread_123',
                 group_id: 'admin_group_id_123',
-                role: 'admin',
+                role: ['onboarding', 'group_comms', 'announcement'],
                 step: 'done'
             };
 

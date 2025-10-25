@@ -999,7 +999,7 @@ describe('Integration Tests for receive_message Handler', () => {
             data: {
                 memberships: [{
                     id: 'membership_1',
-                    type: 'admin',
+                    permissions: ['onboarding', 'group_comms', 'announcement'],
                     name: 'Test Admin',
                     community_id: 'community_1',
                 }],

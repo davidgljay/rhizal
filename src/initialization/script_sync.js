@@ -133,7 +133,6 @@ const set_admin = async function (community) {
 
 const init_access_groups = async function (community, admin_phone) {
     const community_config = get_community_config();
-    console.log('Community config:', community_config.access_levels);
 
     for (const role_name of Object.keys(community_config.access_levels)) {
         const group_name = `${community.name} rhizal ${role_name}`

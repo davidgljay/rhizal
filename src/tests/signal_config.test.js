@@ -244,10 +244,13 @@ describe('signal_config.js', () => {
     });
 
     describe('setSignalProfileName', () => {
-        beforeEach 
+        afterEach(() => {
+            jest.clearAllMocks();
+        });
+
         it('should set the Signal profile name', async () => {
-            fs.readFileSync.mockReturnValue('community: { bot_phone: "+123", signal_username: "rhizal" }');
-            yaml.load.mockReturnValue({ community: { bot_phone: '+123', signal_username: 'rhizal' } });
+            fs.readFileSync.mockReturnValue('community: { bot_phone: "+123", signal_username: "rhizal", signal_profile_name: "Rhizal" }');
+            yaml.load.mockReturnValue({ community: { bot_phone: '+123', signal_username: 'rhizal', signal_profile_name: 'Rhizal' } });
 
             const http = require('http');
             const reqMock = {
@@ -259,16 +262,27 @@ describe('signal_config.js', () => {
                 statusCode: 200,
                 on: jest.fn()
             };
+            let requestCount = 0;
             http.request = jest.fn((opts, cb) => {
                 setImmediate(() => {
                     cb(resMock);
+                    // Simulate the response emitting 'data' and then 'end'
                     resMock.on.mock.calls.forEach(([event, handler]) => {
-                        if (event === 'data') handler('{"username": "rhizal"}');
+                        if (event === 'data') {
+                            // First request (username) returns username data, second request (profile) returns empty
+                            if (requestCount === 0) {
+                                handler('{"username":"rhizal"}');
+                            } else {
+                                handler('');
+                            }
+                        }
                         if (event === 'end') handler();
                     });
+                    requestCount++;
                 });
                 return reqMock;
             });
+
             resMock.on.mockImplementation((event, handler) => {});
 
             await expect(signalConfig.setSignalProfileName()).resolves.toBeUndefined();

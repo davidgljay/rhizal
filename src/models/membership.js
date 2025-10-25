@@ -17,7 +17,7 @@ query GetMembershipFromPhoneNumbers($phone: String!, $bot_phone: String!) {
   memberships(where: {user:{phone: {_eq: $phone}}, community: {bot_phone: {_eq: $bot_phone}}}) {
       id
       profile
-      type
+      permissions
       name
       step
       permissions
@@ -132,8 +132,8 @@ mutation CreateUserAndMembership($phone:String!, $community_id:uuid!) {
         }) 
   {
     id
-    type
     step
+    permissions
     current_script_id
     user {
         id
@@ -164,7 +164,7 @@ mutation CreateMembership($user_id:uuid!, $community_id:uuid!, $current_script_i
         current_script_id: $current_script_id
     }) {
         id
-        type
+        permissions
         step
         permissions
         current_script_id
@@ -195,7 +195,7 @@ mutation CreateUserAndMembership($phone:String!, $community_id:uuid!, $current_s
         }) 
   {
     id
-    type
+    permissions
     step
     permissions
     current_script_id

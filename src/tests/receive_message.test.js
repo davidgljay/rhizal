@@ -473,7 +473,7 @@ describe('receive_message', () => {
                 memberships: [
                     {
                         id: 'membership_1',
-                        type: 'admin',
+                        permissions: ['onboarding'],
                         name: 'Admin User',
                         community_id: 'community_1',
                     },
@@ -603,7 +603,7 @@ describe('receive_message', () => {
                     memberships: [
                         {
                             id: 'membership_1',
-                            type: 'member',
+                            permissions: [],
                             name: 'Regular User',
                             community_id: 'community_1',
                         },
