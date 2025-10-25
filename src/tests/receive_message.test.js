@@ -16,6 +16,8 @@ jest.mock('../models/membership', () => {
             set_variable: jest.fn(),
         })),
         set_variable: jest.fn(),
+        add_permissions: jest.fn(),
+        remove_permissions: jest.fn(),
         get: jest.fn()
     };
 });
@@ -640,7 +642,7 @@ describe('receive_message', () => {
                 data: {
                     group_threads: [{
                         id: 'group_thread_123',
-                        role: 'admin',
+                        permissions: ['announcements'],
                         community_id: 'community_123'
                     }]
                 }
@@ -660,7 +662,7 @@ describe('receive_message', () => {
                 { group_id }
             );
             expect(Membership.get).toHaveBeenCalledWith(member_phone, bot_phone);
-            expect(mockMembership.set_variable).toHaveBeenCalledWith('type', 'admin');
+            expect(Membership.add_permissions).toHaveBeenCalledWith('membership_123', ['announcements']);
         });
 
         it('should not promote user if group is not found', async () => {
@@ -701,7 +703,7 @@ describe('receive_message', () => {
                 data: {
                     group_threads: [{
                         id: 'group_thread_123',
-                        role: 'admin',
+                        permissions: ['announcements'],
                         community_id: 'community_123'
                     }]
                 }
@@ -746,7 +748,7 @@ describe('receive_message', () => {
                 data: {
                     group_threads: [{
                         id: 'group_thread_123',
-                        role: 'admin',
+                        permissions: ['announcements'],
                         community_id: 'community_123'
                     }]
                 }
@@ -761,7 +763,7 @@ describe('receive_message', () => {
             Membership.get.mockResolvedValue(mockMembership);
             await group_join_or_leave(group_id, member_phone, bot_phone, false);
             expect(Membership.get).toHaveBeenCalledWith(member_phone, bot_phone);
-            expect(mockMembership.set_variable).toHaveBeenCalledWith('type', 'member');
+            expect(Membership.remove_permissions).toHaveBeenCalledWith('membership_123', ['announcements']);
         });
     });
 });

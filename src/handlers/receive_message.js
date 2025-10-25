@@ -240,17 +240,18 @@ export async function group_join_or_leave(group_id, member_phone, bot_phone, joi
 
         const group_thread = result.data.group_threads[0];
         
-        if (group_thread.role) {
+        if (group_thread.permissions) {
             
             // Update user's membership type to admin
             const membership = await Membership.get(member_phone, bot_phone);
             
             if (membership) {
+                console.log('membership', membership);
                 if (join) {
-                    await membership.set_variable('type', 'admin');
+                    await Membership.add_permissions(membership.id, group_thread.permissions);
                 }
                 else {
-                    await membership.set_variable('type', 'member');
+                    await Membership.remove_permissions(membership.id, group_thread.permissions);
                 }
             }
         }
