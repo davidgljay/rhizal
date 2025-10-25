@@ -195,7 +195,6 @@ mutation CreateUserAndMembership($phone:String!, $community_id:uuid!, $current_s
         }) 
   {
     id
-    permissions
     step
     permissions
     current_script_id

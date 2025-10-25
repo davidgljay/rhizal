@@ -45,7 +45,7 @@ describe('Script Sync - Admin Group Creation', () => {
             const mockAdminGroup = {
                 id: 'group_thread_123',
                 group_id: 'admin_group_id_123',
-                role: ['onboarding', 'group_comms', 'announcement'],
+                permissions: ['onboarding', 'group_comms', 'announcement'],
                 step: 'done'
             };
 
@@ -108,14 +108,14 @@ describe('Script Sync - Admin Group Creation', () => {
 
             const mockAdminMembership = {
                 id: 'membership_123',
-                type: 'admin',
+                permissions: ['onboarding', 'group_comms', 'announcement'],
                 step: 'done'
             };
 
             const mockAdminGroup = {
                 id: 'group_thread_123',
                 group_id: 'admin_group_id_123',
-                role: 'admin',
+                permissions: ['onboarding', 'group_comms', 'announcement'],
                 step: 'done'
             };
 
@@ -211,7 +211,7 @@ community:
                 .mockResolvedValueOnce(mockGroupResults[1])
                 .mockResolvedValueOnce(mockGroupResults[2]);
 
-            const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+            const consoleLogSpy = jest.spyOn(console, 'log');
 
             await init_access_groups(mockCommunity, mockAdminPhone);
 
