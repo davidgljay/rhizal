@@ -5,10 +5,10 @@ community:
   signal_username: "rhizal_local"
   signal_profile_name: "Rhizal Local"
   access_levels:
-    - admins: 
+    admins: 
       - announcement
       - group_comms
-    - delegates:
+    delegates:
       - group_comms
-    - greeters:
+    greeters:
       - onboarding
