@@ -121,7 +121,7 @@ mutation CreateGroupThread($community_id: uuid!, $group_id: String!) {
 
         // Store group in database with admin role
         const CREATE_ADMIN_GROUP_THREAD = `
-mutation CreateAdminGroupThread($community_id: uuid!, $group_id: String!) {
+mutation CreateAdminGroupThread($community_id: uuid!, $group_id: String!, $permissions: [String!]!) {
   insert_group_threads_one(object: {community_id: $community_id, group_id: $group_id, step: "done", permissions: $permissions}) {
 	id
     group_id
