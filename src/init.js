@@ -20,9 +20,9 @@ async function initialize() {
 
     console.log('Setting up signal profile');
     const botPhone = community.bot_phone;
-    // const signalCaptchaUrl = await promptSignalCaptchaUrl();
-    // const verificationCode = await getVerificationCodeFromSignalCaptchaUrl(botPhone, signalCaptchaUrl);
-    // await verifySignalRegistrationCode(botPhone, verificationCode);
+    const signalCaptchaUrl = await promptSignalCaptchaUrl();
+    const verificationCode = await getVerificationCodeFromSignalCaptchaUrl(botPhone, signalCaptchaUrl);
+    await verifySignalRegistrationCode(botPhone, verificationCode);
     await setSignalProfileName();
     const admin_phone = await set_admin(community);
     await init_access_groups(community, admin_phone);
