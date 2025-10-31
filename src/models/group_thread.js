@@ -86,7 +86,7 @@ mutation CreateGroupThread($community_id: uuid!, $group_id: String!) {
         return create_result.data.insert_group_threads_one;
     }
 
-    static async create_group_and_invite(group_name, bot_phone, member_phone, permissions, community) {
+    static async create_group_and_invite(group_name, bot_phone, member_phone, permissions, community, make_admin = false) {
       const fetch = require('node-fetch');
       
       // Create Signal group via API
@@ -119,6 +119,22 @@ mutation CreateGroupThread($community_id: uuid!, $group_id: String!) {
         const result = await response.json();
         const group_id = result.id.toString('base64');
 
+        if (make_admin) {
+          const make_admin_endpoint = `http://signal-cli:8080/v1/groups/${bot_phone}/${group_id}/admins`;
+          const make_admin_data = {
+            admins: [member_phone]
+          };
+          const make_admin_response = await fetch(make_admin_endpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(make_admin_data)
+          });
+          if (!make_admin_response.ok) {
+            throw new Error(`Failed to make admin: ${make_admin_response.statusText}`);
+          }
+        }
         // Store group in database with admin role
         const CREATE_ADMIN_GROUP_THREAD = `
 mutation CreateAdminGroupThread($community_id: uuid!, $group_id: String!, $permissions: [String!]!) {
