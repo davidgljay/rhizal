@@ -175,13 +175,12 @@ mutation SetMessageType($signal_timestamp: bigint!, $type: String!) {
         let bot_phone;
         let communityData;
         
-        if (!community) {
-            const SEND_TO_ONBOARDING = `
+        const SEND_TO_ONBOARDING = `
 query SendToOnboarding($community_id: uuid!) {
     communities(where: {id: {_eq: $community_id}}) {
         id
         bot_phone
-        onboarding_groups: group_threads(where: { role: { _ilike: "%onboarding%" } }) {
+        onboarding_groups: group_threads(where: { permissions: { _contains: ["onboarding"] } }) {
             id
             group_id
         }
@@ -189,16 +188,17 @@ query SendToOnboarding($community_id: uuid!) {
     }
 }`;
 
-            const result = await graphql(SEND_TO_ONBOARDING, { community_id });
-            communityData = result.data.communities[0];
-            if (!communityData) {
-                throw new Error('CommunityData not found');
-            }
-        } else {
-            communityData = community;
+        const result = await graphql(SEND_TO_ONBOARDING, { community_id });
+        communityData = result.data.communities[0];
+        if (!communityData) {
+            throw new Error('Community not found');
+        }
+        if (communityData.onboarding_groups.length === 0) {
+            throw new Error('No onboarding groups found');
         }
         bot_phone = communityData.bot_phone;
-        
+
+
         for (const onboarding_group of communityData.onboarding_groups) {
             await Message.send(
                 community_id,
