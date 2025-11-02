@@ -129,7 +129,8 @@ export async function receive_message(sender, recipient, message, sent_time, sen
         // await Message.create(community.id, membership.id, message, sent_time, true);
         return;
     }
-    //await Message.create(community.id, membership.id, message, sent_time, true);
+    // Logging the metadata for incoming messages to enable reply handling.
+    await Message.create(community.id, membership.id, '', sent_time, true);
     // Disabling ability to use hashtags in one-on-one conversations with the bot, you've gotta do 'em in a group.
     // if (message.match(/#[\w]+/)) {
     //     const hashtag = message.match(/#[\w]+/)[0];
@@ -207,12 +208,12 @@ export async function receive_group_message(internal_group_id, message, from_pho
 }
 
 export async function receive_reply(message, from_phone, bot_phone, reply_to_timestamp, sent_time, sender_name) {
-
     // Get replyQuery from GraphQL
     const response = await graphql(queries.replyQuery, { phone: from_phone, bot_phone, signal_timestamp: reply_to_timestamp });
     const membership = response.data.memberships.length > 0 ? response.data.memberships[0] : null;
     const reply_to = response.data.messages.length > 0 && response.data.messages[0].about_membership ? response.data.messages[0].about_membership.user.phone : null;
     if (!reply_to || !membership) {
+        //TODO: Looks like we need to save messages in order to manage reply handling. Crap. So JUST timestamp and about_member? And it can presumably by purged eventually though that's tricky...
         // If no reply_to or membership is not an admin, return
         return;
     }
@@ -225,6 +226,7 @@ export async function receive_reply(message, from_phone, bot_phone, reply_to_tim
     const expandedMessage = `Message from ${membership.name}: ${message}`;
 
     // Relay message to the member that the admin received a message about
+    console.log('relaying message to', about_member_phone);
     await Message.send(membership.community_id, membership.id, about_member_phone, bot_phone, expandedMessage, false);
     
 }
