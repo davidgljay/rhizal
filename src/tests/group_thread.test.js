@@ -289,6 +289,138 @@ describe('GroupThread', () => {
             expect(fetch).toHaveBeenCalled();
             expect(graphql).not.toHaveBeenCalled();
         });
+
+        it('should make member admin when make_admin is true', async () => {
+            const group_name = 'Test Admin Group';
+            const bot_phone = '+1234567890';
+            const member_phone = '+0987654321';
+            const community = { id: 'community_123', name: 'Test Community' };
+            const permissions = ['announcements'];
+            const make_admin = true;
+
+            const signal_group_id = Buffer.from('signal_group_id_bytes').toString('base64');
+            const mockCreateGroupResponse = {
+                ok: true,
+                json: jest.fn().mockResolvedValue({ id: Buffer.from('signal_group_id_bytes') })
+            };
+            const mockMakeAdminResponse = {
+                ok: true,
+                json: jest.fn().mockResolvedValue({})
+            };
+
+            fetch
+                .mockResolvedValueOnce(mockCreateGroupResponse)
+                .mockResolvedValueOnce(mockMakeAdminResponse);
+
+            const mockGraphQLResponse = {
+                data: {
+                    insert_group_threads_one: {
+                        id: 'group_thread_123',
+                        group_id: signal_group_id,
+                        step: 'done',
+                        permissions: ['announcements'],
+                        community: {
+                            group_script_id: 'script_123',
+                            group_threads: []
+                        }
+                    }
+                }
+            };
+            graphql.mockResolvedValue(mockGraphQLResponse);
+
+            const result = await GroupThread.create_group_and_invite(
+                group_name, 
+                bot_phone, 
+                member_phone, 
+                permissions, 
+                community, 
+                make_admin
+            );
+
+            // Verify group creation was called
+            expect(fetch).toHaveBeenNthCalledWith(1, `http://signal-cli:8080/v1/groups/${bot_phone}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    name: group_name,
+                    members: [member_phone, bot_phone],
+                    description: "Members of this group have admin access to the Rhizal bot for " + community.name,
+                    expiration_time: 0,
+                    group_link: "disabled",
+                    permissions: {
+                        add_members: "only-admins",
+                        edit_group: "only-admins",
+                        send_messages: "every-member"
+                    }
+                })
+            });
+
+            // Verify make_admin endpoint was called
+            expect(fetch).toHaveBeenNthCalledWith(2, 
+                `http://signal-cli:8080/v1/groups/${bot_phone}/${signal_group_id}/admins`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        admins: [member_phone]
+                    })
+                }
+            );
+
+            // Verify GraphQL mutation was called
+            expect(graphql).toHaveBeenCalledWith(
+                expect.stringContaining('mutation CreateAdminGroupThread'),
+                { community_id: community.id, group_id: signal_group_id, permissions: permissions }
+            );
+
+            expect(result).toEqual(mockGraphQLResponse.data.insert_group_threads_one);
+        });
+
+        it('should handle make_admin API errors gracefully when make_admin is true', async () => {
+            const group_name = 'Test Admin Group';
+            const bot_phone = '+1234567890';
+            const member_phone = '+0987654321';
+            const community = { id: 'community_123', name: 'Test Community' };
+            const permissions = ['announcements'];
+            const make_admin = true;
+
+            const signal_group_id = Buffer.from('signal_group_id_bytes').toString('base64');
+            const mockCreateGroupResponse = {
+                ok: true,
+                json: jest.fn().mockResolvedValue({ id: Buffer.from('signal_group_id_bytes') })
+            };
+            const mockMakeAdminResponse = {
+                ok: false,
+                statusText: 'Forbidden'
+            };
+
+            fetch
+                .mockResolvedValueOnce(mockCreateGroupResponse)
+                .mockResolvedValueOnce(mockMakeAdminResponse);
+
+            await expect(GroupThread.create_group_and_invite(
+                group_name, 
+                bot_phone, 
+                member_phone, 
+                permissions, 
+                community, 
+                make_admin
+            )).rejects.toThrow('Failed to make admin: Forbidden');
+
+            // Verify group creation was called
+            expect(fetch).toHaveBeenCalledTimes(2);
+            // Verify make_admin endpoint was called
+            expect(fetch).toHaveBeenNthCalledWith(2, 
+                `http://signal-cli:8080/v1/groups/${bot_phone}/${signal_group_id}/admins`,
+                expect.any(Object)
+            );
+            // Verify GraphQL mutation was not called due to error
+            expect(graphql).not.toHaveBeenCalled();
+        });
     });
 
 });
