@@ -142,11 +142,11 @@ class RhyzalParser {
                 }
                 await this.send_announcement(vars.community_id, vars.id);
                 break;
-            case 'send_to_admins':
+            case 'send_to_onboarding':
                 if (!vars.community_id) {
                     throw new Error('Community ID not found in vars');
                 }
-                const expandedMessage = this.insert_variables(script['send_to_admins']['preamble'], vars) + '\n\n' + vars.message
+                const expandedMessage = this.insert_variables(script['send_to_onboarding']['preamble'], vars) + '\n\n' + vars.message
                 await this.send_to_admins(vars.community_id, vars.id, expandedMessage);
                 break;
             case 'if': //TODO: add elif to support more complex logic
