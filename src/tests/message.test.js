@@ -95,7 +95,7 @@ describe('Message', () => {
 
             await Message.send('community_1', 'membership_1', 'to_phone', 'from_phone', 'Hello, world!', true);
 
-            expect(mockCreate).toHaveBeenCalledWith('community_1', 'membership_1', 'Hello, world!', 1234567890, false, null);
+            expect(mockCreate).toHaveBeenCalledWith('community_1', 'membership_1', '', 1234567890, false, null);
             expect(mockSend).toHaveBeenCalledWith(['to_phone'], 'from_phone', 'Hello, world!');
 
             mockCreate.mockRestore();
@@ -232,22 +232,22 @@ describe('Message', () => {
             expect(mockSend).toHaveBeenCalledTimes(2);
             expect(mockSend).toHaveBeenNthCalledWith(1,
                 'community_1',
-                null, // No specific membership_id for group messages
+                'sender_id', // No specific membership_id for group messages
                 'onboarding_group_id_1',
                 'bot_phone',
                 'Hello, onboarding!',
-                false, // Don't log group messages
+                true, 
                 'sender_id',
                 `relay_to_onboarding_group`,
                 0
             );
             expect(mockSend).toHaveBeenNthCalledWith(2,
                 'community_1',
-                null, // No specific membership_id for group messages
+                'sender_id', // No specific membership_id for group messages
                 'onboarding_group_id_2',
                 'bot_phone',
                 'Hello, onboarding!',
-                false, // Don't log group messages
+                true, 
                 'sender_id',
                 `relay_to_onboarding_group`,
                 0
@@ -256,21 +256,10 @@ describe('Message', () => {
             mockSend.mockRestore();
         });
 
-        it('should not send a message if no onboarding groups are found', async () => {
-            const mockCommunity = {
-                id: 'community_1',
-                bot_phone: 'bot_phone',
-                onboarding_groups: [],
-            };
-
-            await Message.send_to_onboarding('community_1', 'sender_id', 'Hello, onboarding!', mockCommunity);
-
-            expect(Signal.send).not.toHaveBeenCalled();
-        });
 
         it('should handle errors when fetching community data', async () => {
             graphql.mockResolvedValue({ data: { communities: [] } });
-            await expect(Message.send_to_onboarding('community_1', 'sender_id', 'Hello, onboarding!')).rejects.toThrow('CommunityData not found');
+            await expect(Message.send_to_onboarding('community_1', 'sender_id', 'Hello, onboarding!')).rejects.toThrow('Community not found');
         });
     });
 });

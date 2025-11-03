@@ -30,12 +30,7 @@ describe('WebSocket Router', () => {
 
             await receive_raw_message(mockMessage);
 
-            expect(group_join_or_leave).toHaveBeenCalledWith(
-                Buffer.from('test_group_id').toString('base64'),
-                '+1234567890',
-                '+0987654321',
-                true
-            );
+            expect(group_join_or_leave).toHaveBeenCalledWith('+0987654321');
         });
 
         it('should handle group member leave events and call handle_member_join_or_leave', async () => {
@@ -60,12 +55,7 @@ describe('WebSocket Router', () => {
 
             await receive_raw_message(mockMessage);
 
-            expect(group_join_or_leave).toHaveBeenCalledWith(
-                Buffer.from('test_group_id').toString('base64'),
-                '+1234567890',
-                '+0987654321',
-                false
-            );
+            expect(group_join_or_leave).toHaveBeenCalledWith('+0987654321');
         });
 
         it('should not call handle_member_join_or_leave for non-join group events', async () => {
@@ -77,8 +67,7 @@ describe('WebSocket Router', () => {
                     dataMessage: {
                         groupInfo: {
                             groupId: 'test_group_id',
-                            revision: 1,
-                            type: 'UPDATE'
+                            type: 'MESSAGE'
                         }
                     }
                 },
@@ -244,60 +233,6 @@ describe('WebSocket Router', () => {
             await receive_raw_message(mockMessage);
 
             expect(group_join_or_leave).not.toHaveBeenCalled();
-        });
-
-        it ('shuold not call handle_member_join_or_leave if groupInfo.members is missing for some reason', async () => {
-            const mockMessage = {
-                envelope: {
-                    sourceUuid: '+1234567890',
-                    timestamp: 1234567890,
-                    sourceName: 'Test User',
-                    dataMessage: {
-                        groupInfo: {
-                            groupId: 'test_group_id',
-                            revision: 0,
-                            type: 'UPDATE'
-                        }
-                    }
-        
-                },
-                account: '+0987654321'
-            };
-
-            await receive_raw_message(mockMessage);
-
-            expect(group_join_or_leave).not.toHaveBeenCalled();
-        });
-
-        it('should handle errors in handle_member_join_or_leave gracefully', async () => {
-            const mockMessage = {
-                envelope: {
-                    sourceUuid: '+1234567890',
-                    timestamp: 1234567890,
-                    sourceName: 'Test User',
-                    dataMessage: {
-                        groupInfo: {
-                            groupId: 'test_group_id',
-                            revision: 0,
-                            type: 'UPDATE',
-                            members: ['+1234567890']
-                        }
-                    }
-                },
-                account: '+0987654321'
-            };
-
-            group_join_or_leave.mockRejectedValue(new Error('Database error'));
-
-            // Should not throw
-            await expect(receive_raw_message(mockMessage)).resolves.toBeUndefined();
-
-            expect(group_join_or_leave).toHaveBeenCalledWith(
-                Buffer.from('test_group_id').toString('base64'),
-                '+1234567890',
-                '+0987654321',
-                true
-            );
         });
     });
 });

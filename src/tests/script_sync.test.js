@@ -222,7 +222,8 @@ community:
                 '+0987654321',
                 ['announcement', 'group_comms'],
                 mockCommunity,
-                true
+                true,
+                'admins'
             );
             expect(GroupThread.create_group_and_invite).toHaveBeenNthCalledWith(2,
                 'Test Community rhizal delegates',
@@ -230,7 +231,8 @@ community:
                 '+0987654321',
                 ['group_comms'],
                 mockCommunity,
-                true
+                true,
+                'delegates'
             );
             expect(GroupThread.create_group_and_invite).toHaveBeenNthCalledWith(3,
                 'Test Community rhizal greeters',
@@ -238,7 +240,8 @@ community:
                 '+0987654321',
                 ['onboarding'],
                 mockCommunity,
-                true
+                true,
+                'greeters'
             );
 
             expect(consoleLogSpy).toHaveBeenCalledWith('Creating admins group: Test Community rhizal admins');
@@ -312,7 +315,8 @@ community:
                 '+0987654321',
                 ['announcement', 'group_comms'],
                 communityWithSpaces,
-                true
+                true,
+                'admins'
             );
         });
 
@@ -332,7 +336,8 @@ community:
                 '+0987654321',
                 ['announcement', 'group_comms'],
                 communityWithSpecialChars,
-                true
+                true,
+                'admins'
             );
         });
 
@@ -347,7 +352,8 @@ community:
                 undefined,
                 ['announcement', 'group_comms'],
                 mockCommunity,
-                true
+                true,
+                'admins'
             );
         });
 
@@ -362,7 +368,8 @@ community:
                 null,
                 ['announcement', 'group_comms'],
                 mockCommunity,
-                true
+                true,
+                'admins'
             );
         });
 
@@ -393,7 +400,8 @@ community:
                 '+0987654321',
                 [],
                 mockCommunity,
-                true
+                true,
+                'admins'
             );
             expect(GroupThread.create_group_and_invite).toHaveBeenNthCalledWith(2,
                 'Test Community rhizal delegates',
@@ -401,7 +409,8 @@ community:
                 '+0987654321',
                 ['group_comms'],
                 mockCommunity,
-                true
+                true,
+                'delegates'
             );
         });
 

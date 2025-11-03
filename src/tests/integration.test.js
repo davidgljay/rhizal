@@ -623,9 +623,9 @@ describe('Integration Tests for receive_message Handler', () => {
 
                 const mockGraphql = [
                     {
-                        query: `query RecieveGroupMessageQuery($bot_phone:String!)`,
-                        variables: { bot_phone: botNumber },
-                        response: { data: { communities: [{id: communityId, bot_phone: botNumber }], memberships: [ { id: 'membership_1', type: 'member' }] } }
+                        query: `query RecieveGroupMessageQuery($bot_phone:String!, $phone:String!)`,
+                        variables: { bot_phone: botNumber, phone: senderNumber },
+                        response: { data: { communities: [{id: communityId, bot_phone: botNumber }], memberships: [ { id: 'membership_1', type: 'member', user: { phone: senderNumber }, community: { id: communityId, bot_phone: botNumber }, name: 'Test User' }] } }
                     },
                     {
                         query: expectedQueries.getGroupThread,
@@ -672,9 +672,9 @@ describe('Integration Tests for receive_message Handler', () => {
 
                 const mockGraphql = [
                     {
-                        query: `query RecieveGroupMessageQuery($bot_phone:String!)`,
-                        variables: { bot_phone: botNumber },
-                        response: { data: { communities: [{id: communityId, bot_phone: botNumber }], memberships: [ { id: 'membership_1', type: 'member' }] } }
+                        query: `query RecieveGroupMessageQuery($bot_phone:String!, $phone:String!)`,
+                        variables: { bot_phone: botNumber, phone: senderNumber },
+                        response: { data: { communities: [{id: communityId, bot_phone: botNumber }], memberships: [ { id: 'membership_1', type: 'member', user: { phone: senderNumber }, community: { id: communityId, bot_phone: botNumber }, name: 'Test User' }] } }
                     },
                     {
                         query: expectedQueries.getGroupThread,
@@ -715,8 +715,8 @@ describe('Integration Tests for receive_message Handler', () => {
 
                 const mockGraphql = [
                     {
-                        query: `query RecieveGroupMessageQuery($bot_phone:String!)`,
-                        variables: { bot_phone: botNumber },
+                        query: `query RecieveGroupMessageQuery($bot_phone:String!, $phone:String!)`,
+                        variables: { bot_phone: botNumber, phone: senderNumber },
                         response: { data: { communities: [{id: communityId, bot_phone: botNumber }], memberships: [ { id: 'membership_1', type: 'member' }] } }
                     },
                     {
@@ -755,8 +755,8 @@ describe('Integration Tests for receive_message Handler', () => {
 
                 const mockGraphql = [
                     {
-                        query: `query RecieveGroupMessageQuery($bot_phone:String!)`,
-                        variables: { bot_phone: botNumber },
+                        query: `query RecieveGroupMessageQuery($bot_phone:String!, $phone:String!)`,
+                        variables: { bot_phone: botNumber, phone: senderNumber },
                         response: { data: { communities: [{id: communityId, bot_phone: botNumber }], memberships: [ { id: 'membership_1', type: 'member' }] } }
                     },
                     {
@@ -791,9 +791,14 @@ describe('Integration Tests for receive_message Handler', () => {
 
                 const mockGraphql = [
                     {
-                        query: `query RecieveGroupMessageQuery($bot_phone:String!)`,
-                        variables: { bot_phone: botNumber },
-                        response: { data: { communities: [{id: communityId, bot_phone: botNumber }], memberships: [ { id: 'membership_1', type: 'member' }] } }
+                        query: `query RecieveGroupMessageQuery($bot_phone:String!, $phone:String!)`,
+                        variables: { bot_phone: botNumber, phone: senderNumber },
+                        response: { data: { communities: [{id: communityId, bot_phone: botNumber }], memberships: [ { id: 'membership_1', type: 'member', user: { phone: senderNumber }, community: { id: communityId, bot_phone: botNumber }, name: 'Test User' }] } }
+                    },
+                    {
+                        query: expectedQueries.systemScript,
+                        variables: { script_name: 'announcement' },
+                        response: { data: { scripts: [{ id: 'announcement_script', name: 'announcement', script_json: JSON.stringify(announcementScript), vars_query: null }] } }
                     },
                     {
                         query: expectedQueries.getGroupThread,
@@ -808,12 +813,12 @@ describe('Integration Tests for receive_message Handler', () => {
                     {
                         query: `mutation UpdateGroupThreadVariable($group_id:String!, $value:String!)`,
                         variables: { group_id: base64_group_id, value: '#groupHashtag' },
-                        response: { data: { updateGroupThread: { id: 'thread_1' } } }
+                        response: { data: { update_group_threads: { returning: [{ id: 'thread_1' }] } } }
                     },
                     {
                         query: `mutation UpdateGroupThreadVariable($group_id:String!, $value:String!)`,
                         variables: { group_id: base64_group_id, value: '1' },
-                        response: { data: { updateGroupThread: { id: 'thread_1' } } }
+                        response: { data: { update_group_threads: { returning: [{ id: 'thread_1' }] } } }
                     }
                 ];
 
@@ -845,9 +850,14 @@ describe('Integration Tests for receive_message Handler', () => {
 
                 const mockGraphql = [
                     {
-                        query: `query RecieveGroupMessageQuery($bot_phone:String!)`,
-                        variables: { bot_phone: botNumber },
-                        response: { data: { communities: [{id: communityId, bot_phone: botNumber }], memberships: [ { id: 'membership_1', type: 'member' }] } }
+                        query: `query RecieveGroupMessageQuery($bot_phone:String!, $phone:String!)`,
+                        variables: { bot_phone: botNumber, phone: senderNumber },
+                        response: { data: { communities: [{id: communityId, bot_phone: botNumber }], memberships: [ { id: 'membership_1', type: 'member', user: { phone: senderNumber }, community: { id: communityId, bot_phone: botNumber }, name: 'Test User' }] } }
+                    },
+                    {
+                        query: expectedQueries.systemScript,
+                        variables: { script_name: 'announcement' },
+                        response: { data: { scripts: [{ id: 'announcement_script', name: 'announcement', script_json: JSON.stringify(announcementScript), vars_query: null }] } }
                     },
                     {
                         query: expectedQueries.getGroupThread,
@@ -862,7 +872,7 @@ describe('Integration Tests for receive_message Handler', () => {
                     {
                         query: `mutation UpdateGroupThreadVariable($group_id:String!, $value:String!)`,
                         variables: { group_id: base64_group_id, value: '2' },
-                        response: { data: { updateGroupThread: { id: 'thread_1' } } }
+                        response: { data: { update_group_threads: { returning: [{ id: 'thread_1' }] } } }
                     }
                 ];
 
@@ -892,9 +902,14 @@ describe('Integration Tests for receive_message Handler', () => {
 
                 const mockGraphql = [
                     {
-                        query: `query RecieveGroupMessageQuery($bot_phone:String!)`,
-                        variables: { bot_phone: botNumber },
-                        response: { data: { communities: [{id: communityId, bot_phone: botNumber }], memberships: [ { id: 'membership_1', type: 'member' }] } }
+                        query: `query RecieveGroupMessageQuery($bot_phone:String!, $phone:String!)`,
+                        variables: { bot_phone: botNumber, phone: senderNumber },
+                        response: { data: { communities: [{id: communityId, bot_phone: botNumber }], memberships: [ { id: 'membership_1', type: 'member', user: { phone: senderNumber }, community: { id: communityId, bot_phone: botNumber }, name: 'Test User' }] } }
+                    },
+                    {
+                        query: expectedQueries.systemScript,
+                        variables: { script_name: 'announcement' },
+                        response: { data: { scripts: [{ id: 'announcement_script', name: 'announcement', script_json: JSON.stringify(announcementScript), vars_query: null }] } }
                     },
                     {
                         query: expectedQueries.getGroupThread,
@@ -928,14 +943,19 @@ describe('Integration Tests for receive_message Handler', () => {
 
                 const mockGraphql = [
                     {
-                        query: `query RecieveGroupMessageQuery($bot_phone:String!)`,
-                        variables: { bot_phone: botNumber },
-                        response: { data: { communities: [{id: communityId, bot_phone: botNumber }], memberships: [ { id: 'membership_1', permissions: ['group_comms'] }] } }
+                        query: `query RecieveGroupMessageQuery($bot_phone:String!, $phone:String!)`,
+                        variables: { bot_phone: botNumber, phone: senderNumber },
+                        response: { data: { communities: [{id: communityId, bot_phone: botNumber }], memberships: [ { id: 'membership_1', permissions: ['group_comms'], user: { phone: senderNumber }, community: { id: communityId, bot_phone: botNumber }, name: 'Test User' }] } }
+                    },
+                    {
+                        query: expectedQueries.systemScript,
+                        variables: { script_name: 'announcement' },
+                        response: { data: { scripts: [{ id: 'announcement_script', name: 'announcement', script_json: JSON.stringify(announcementScript), vars_query: null }] } }
                     },
                     {
                         query: expectedQueries.getGroupThread,
                         variables: { group_id: base64_group_id },
-                        response: { data: { group_threads: [{ id: 'thread_1', hashtag: '#groupHash', group_id: base64_group_id, step: 'done', community: { group_script_id: 'script_2', group_threads: [{ group_id: 'group_2', hashtag: '#anotherGroupHashtag' }, { group_id: 'group_3', hashtag: '#funky' }] } }] } }
+                        response: { data: { group_threads: [{ id: 'thread_1', hashtag: '#groupHash', group_id: base64_group_id, step: 'done', community: { group_script_id: 'script_2', group_threads: [{ group_id: Buffer.from('group_2').toString('base64'), hashtag: '#anotherGroupHashtag' }, { group_id: Buffer.from('group_3').toString('base64'), hashtag: '#funky' }] } }] } }
                     }
                 ];
 
@@ -951,7 +971,8 @@ describe('Integration Tests for receive_message Handler', () => {
                     expect(graphql).toHaveBeenNthCalledWith(i + 1, expect.stringContaining(mockGraphql[i].query), mockGraphql[i].variables);
                 }
                 expect(graphql).toHaveBeenCalledTimes(mockGraphql.length);
-                expect(signal.send).toHaveBeenCalledWith(['group.group_2'], botNumber, 'Message relayed from Test User in #groupHash: Lets send this to #anotherGroupHashtag');
+                const target_group_id = Buffer.from('group_2').toString('base64');
+                expect(signal.send).toHaveBeenCalledWith(['group.' + target_group_id], botNumber, 'Message relayed from Test User in #groupHash: Lets send this to #anotherGroupHashtag');
             });
 
             it('should not relay a hashtag if the group is not in the community', async () => {
@@ -964,9 +985,14 @@ describe('Integration Tests for receive_message Handler', () => {
 
                 const mockGraphql = [
                     {
-                        query: `query RecieveGroupMessageQuery($bot_phone:String!)`,
-                        variables: { bot_phone: botNumber },
-                        response: { data: { communities: [{id: communityId, bot_phone: botNumber }], memberships: [ { id: 'membership_1', type: 'member' }] } }
+                        query: `query RecieveGroupMessageQuery($bot_phone:String!, $phone:String!)`,
+                        variables: { bot_phone: botNumber, phone: senderNumber },
+                        response: { data: { communities: [{id: communityId, bot_phone: botNumber }], memberships: [ { id: 'membership_1', type: 'member', user: { phone: senderNumber }, community: { id: communityId, bot_phone: botNumber }, name: 'Test User' }] } }
+                    },
+                    {
+                        query: expectedQueries.systemScript,
+                        variables: { script_name: 'announcement' },
+                        response: { data: { scripts: [{ id: 'announcement_script', name: 'announcement', script_json: JSON.stringify(announcementScript), vars_query: null }] } }
                     },
                     {
                         query: expectedQueries.getGroupThread,
@@ -1019,7 +1045,7 @@ describe('Integration Tests for receive_message Handler', () => {
             const phone = '+1234567890';
             const bot_phone = '+0987654321';
             const signal_timestamp = 1741644982;
-            const message = 'This is a reply'
+            const message = 'This is a reply';
             const expectedMessage = 'Message from Test Admin: ' + message;
 
             const mockGraphql = [

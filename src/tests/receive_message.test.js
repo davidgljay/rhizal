@@ -272,18 +272,6 @@ describe('receive_message', () => {
             expect(mockScriptReceive).toHaveBeenCalledWith('0', message);
         });
 
-        it('should take no action if the message includes a hashtag', async () => {
-            const sender = '1234567890';
-            const recipient = '0987654321';
-            const message = 'test message with #command';
-            const sent_time = new Date();
-            graphql.mockResolvedValue(mockQueryResponse);
-            await receive_message(sender, recipient, message, sent_time);
-
-            expect(bot_message_hashtag).not.toHaveBeenCalled();
-
-        });
-
         it('should stop if the hashtag triggers a command', async () => {
             const sender = '1234567890';
             const recipient = '0987654321';

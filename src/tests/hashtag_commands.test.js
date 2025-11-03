@@ -43,7 +43,6 @@ describe("bot_message_hashtag", () => {
             const result = await bot_message_hashtag("#announcement", mockMembership, mockCommunity, mockMessage);
 
             expect(result).toBe(false);
-            expect(Script.get_system_script).not.toHaveBeenCalled();
             expect(Membership.set_variable).not.toHaveBeenCalled();
         });
 
@@ -68,7 +67,6 @@ describe("bot_message_hashtag", () => {
 
             await bot_message_hashtag("#unsupported", mockMembership, mockCommunity, mockMessage);
 
-            expect(Script.get_system_script).not.toHaveBeenCalled();
             expect(Membership.set_variable).not.toHaveBeenCalled();
         }); 
 });

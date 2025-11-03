@@ -234,10 +234,10 @@ mutation RemovePermissions($id:uuid!, $permissions:String!) {
             const mockResponse = { data: { update_memberships: { returning: [{ id: '123' }] } } };
             graphql.mockResolvedValue(mockResponse);
             
-            const result = await Membership.update_permissions('123', 'read,write');
+            const result = await Membership.update_permissions('123', ['read', 'write']);
             
             const expectedQuery = `
-mutation UpdatePermissions($id:uuid!, $permissions:String!) {
+mutation UpdatePermissions($id:uuid!, $permissions:[String!]) {
   update_memberships(where: {id: {_eq: $id}}, _set: {permissions: $permissions}) {
     returning {
       id
@@ -245,7 +245,7 @@ mutation UpdatePermissions($id:uuid!, $permissions:String!) {
   }
 }
 `;
-            expect(graphql).toHaveBeenCalledWith(expectedQuery, { id: '123', permissions: 'read,write' });
+            expect(graphql).toHaveBeenCalledWith(expectedQuery, { id: '123', permissions: ['read', 'write'] });
             expect(result).toBe(mockResponse);
         });
 
@@ -253,9 +253,9 @@ mutation UpdatePermissions($id:uuid!, $permissions:String!) {
             const mockResponse = { data: { update_memberships: { returning: [{ id: '456' }] } } };
             graphql.mockResolvedValue(mockResponse);
             
-            await Membership.update_permissions('456', 'admin');
+            await Membership.update_permissions('456', ['admin']);
             
-            expect(graphql).toHaveBeenCalledWith(expect.stringContaining('mutation UpdatePermissions'), { id: '456', permissions: 'admin' });
+            expect(graphql).toHaveBeenCalledWith(expect.stringContaining('mutation UpdatePermissions'), { id: '456', permissions: ['admin'] });
         });
 
         it('should handle empty permissions string', async () => {
@@ -264,7 +264,7 @@ mutation UpdatePermissions($id:uuid!, $permissions:String!) {
             
             await Membership.update_permissions('789', '');
             
-            expect(graphql).toHaveBeenCalledWith(expect.stringContaining('mutation UpdatePermissions'), { id: '789', permissions: '' });
+            expect(graphql).toHaveBeenCalledWith(expect.stringContaining('mutation UpdatePermissions'), { id: '789', permissions: [] });
         });
     });
 

@@ -225,7 +225,7 @@ describe('GroupThread', () => {
             };
             graphql.mockResolvedValue(mockGraphQLResponse);
 
-            const result = await GroupThread.create_group_and_invite(group_name, bot_phone, member_phone, permissions, community);
+            const result = await GroupThread.create_group_and_invite(group_name, bot_phone, member_phone, permissions, community, true, 'admin');
 
             expect(fetch).toHaveBeenCalledWith(`http://signal-cli:8080/v1/groups/${bot_phone}`, {
                 method: 'POST',
@@ -248,7 +248,7 @@ describe('GroupThread', () => {
 
             expect(graphql).toHaveBeenCalledWith(
                 expect.stringContaining('mutation CreateAdminGroupThread'),
-                { community_id: community.id, group_id: "signal_group_id", permissions: permissions }
+                { community_id: community.id, group_id: "signal_group_id", permissions: permissions, hashtag: '#admin' }
             );
 
             expect(result).toEqual(mockGraphQLResponse.data.insert_group_threads_one);
@@ -334,7 +334,8 @@ describe('GroupThread', () => {
                 member_phone, 
                 permissions, 
                 community, 
-                make_admin
+                make_admin,
+                'admin'
             );
 
             // Verify group creation was called
@@ -374,7 +375,7 @@ describe('GroupThread', () => {
             // Verify GraphQL mutation was called
             expect(graphql).toHaveBeenCalledWith(
                 expect.stringContaining('mutation CreateAdminGroupThread'),
-                { community_id: community.id, group_id: signal_group_id, permissions: permissions }
+                { community_id: community.id, group_id: signal_group_id, permissions: permissions, hashtag: '#admin' }
             );
 
             expect(result).toEqual(mockGraphQLResponse.data.insert_group_threads_one);
