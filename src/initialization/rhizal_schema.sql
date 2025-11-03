@@ -193,7 +193,7 @@ CREATE TABLE public.messages (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    text text NOT NULL,
+    text text,
     membership_id uuid NOT NULL,
     sent_time timestamp with time zone,
     community_id uuid NOT NULL,

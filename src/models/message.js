@@ -94,7 +94,8 @@ mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_i
                 return;
             }
             if (log_message) {
-                await Message.create(community_id, membership_id, text, timestamp, false, about_membership_id);
+                // Log the message metadata only for now.
+                await Message.create(community_id, membership_id, '', timestamp, false, about_membership_id);
             }
         }).catch(err => {
             console.error('Error sending message:', err);
@@ -171,7 +172,7 @@ mutation SetMessageType($signal_timestamp: bigint!, $type: String!) {
         return result.data.update_messages.returning[0];
     }
 
-    static async send_to_onboarding(community_id, sender_id, text, community = null) {
+    static async send_to_onboarding(community_id, sender_id, text) {
         let bot_phone;
         let communityData;
         
@@ -202,11 +203,11 @@ query SendToOnboarding($community_id: uuid!) {
         for (const onboarding_group of communityData.onboarding_groups) {
             await Message.send(
                 community_id,
-                null, // No specific membership_id for group messages
+                sender_id, //Use the about_message_id for group messages
                 onboarding_group.group_id,
                 bot_phone,
                 text,
-                false, // Don't log group messages
+                true,
                 sender_id,
                 `relay_to_onboarding_group`,
                 0

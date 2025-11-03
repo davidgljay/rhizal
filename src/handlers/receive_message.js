@@ -130,7 +130,7 @@ export async function receive_message(sender, recipient, message, sent_time, sen
         return;
     }
     // Logging the metadata for incoming messages to enable reply handling.
-    await Message.create(community.id, membership.id, '', sent_time, true);
+    // await Message.create(community.id, membership.id, '', sent_time, true);
     // Disabling ability to use hashtags in one-on-one conversations with the bot, you've gotta do 'em in a group.
     // if (message.match(/#[\w]+/)) {
     //     const hashtag = message.match(/#[\w]+/)[0];
@@ -272,6 +272,6 @@ export async function new_member(phone, community, message, user, sent_time) {
 
 export async function no_script_message(membership, community, message) {
     const relayMessage = `Message relayed from ${membership.name}: "${message}" Reply to respond.`;
-    Message.send_to_onboarding(community.id, membership.id, relayMessage, community);
+    Message.send_to_onboarding(community.id, membership.id, relayMessage);
     return;
 }

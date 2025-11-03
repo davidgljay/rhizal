@@ -256,35 +256,6 @@ describe('Message', () => {
             mockSend.mockRestore();
         });
 
-        it('should use provided community data if available and send to onboarding groups', async () => {
-            const mockCommunity = {
-                id: 'community_1',
-                bot_phone: 'bot_phone',
-                onboarding_groups: [
-                    { id: 'onboarding_group_1', group_id: 'onboarding_group_id_123' }
-                ]
-            };
-            const mockSend = jest.spyOn(Message, 'send').mockResolvedValue({});
-
-            await Message.send_to_onboarding('community_1', 'sender_id', 'Hello, onboarding!', mockCommunity);
-
-            expect(graphql).not.toHaveBeenCalled();
-            expect(mockSend).toHaveBeenCalledTimes(1);
-            expect(mockSend).toHaveBeenCalledWith(
-                'community_1',
-                null,
-                'onboarding_group_id_123',
-                'bot_phone',
-                'Hello, onboarding!',
-                false,
-                'sender_id',
-                "relay_to_onboarding_group",
-                0
-            );
-
-            mockSend.mockRestore();
-        });
-
         it('should not send a message if no onboarding groups are found', async () => {
             const mockCommunity = {
                 id: 'community_1',
