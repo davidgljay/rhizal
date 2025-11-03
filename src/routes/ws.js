@@ -41,19 +41,8 @@ export async function receive_raw_message(msg) {
         }
         
         // Check for member join events (revision 0 typically indicates group changes)
-        //TODO: Confirm that this is the proper revision for a member join event.
-        if (groupInfo.revision == 0 && groupInfo.type === 'UPDATE') {
-            // Handle member join event
-            try {
-                const group_id = Buffer.from(groupInfo.groupId).toString('base64');
-                if (groupInfo.members && !groupInfo.members.includes(sourceUuid)) {
-                    await group_join_or_leave(group_id, sourceUuid, account, false);
-                } else if (groupInfo.members && groupInfo.members.includes(sourceUuid)) {
-                    await group_join_or_leave(group_id, sourceUuid, account, true);
-                }
-            } catch (error) {
-                console.error('Error handling member join or leave:', error);
-            }
+        if (groupInfo.type === 'UPDATE') {
+            await group_join_or_leave(account);
             return;
         }
 
