@@ -54,6 +54,20 @@ query GetMembershipFromPhoneNumbers($phone: String!, $bot_phone: String!) {
         return new Membership({id}).set_variable(variable, value);
     }
 
+    static async update_permissions(id, permissions) {
+        const query = `
+mutation UpdatePermissions($id:uuid!, $permissions:[String!]) {
+  update_memberships(where: {id: {_eq: $id}}, _set: {permissions: $permissions}) {
+    returning {
+      id
+    }
+  }
+}
+`;
+        const uniquePermissions = [...new Set(permissions)];
+        const variables = { id, permissions: uniquePermissions};
+        return await graphql(query, variables);
+    }
 
     static async add_permissions(id, permissions) {
         const query = `

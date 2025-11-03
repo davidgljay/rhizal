@@ -18,7 +18,8 @@ jest.mock('../models/membership', () => {
         set_variable: jest.fn(),
         add_permissions: jest.fn(),
         remove_permissions: jest.fn(),
-        get: jest.fn()
+        get: jest.fn(),
+        update_permissions: jest.fn()
     };
 });
 
@@ -34,6 +35,7 @@ jest.mock('../apis/signal', () => ({
     send: jest.fn(),
     show_typing_indicator: jest.fn(),
     emoji_reaction: jest.fn(),
+    get_group_info: jest.fn(),
 }));
 
 
@@ -151,7 +153,7 @@ describe('receive_message', () => {
             const community = { id: 'community_1', bot_phone: '0987654321', admins: [] };
             const message = 'Test message';
             await no_script_message(membership, community, message);
-            expect(Message.send_to_onboarding).toHaveBeenCalledWith('community_1', 'membership_1', 'Message relayed from Test User: \"Test message\" Reply to respond.', community);
+            expect(Message.send_to_onboarding).toHaveBeenCalledWith('community_1', 'membership_1', 'Message relayed from Test User: \"Test message\" Reply to respond.');
         });
     });
 
@@ -255,7 +257,7 @@ describe('receive_message', () => {
 
             await receive_message(sender, recipient, message, sent_time);
 
-            expect(Message.send_to_onboarding).toHaveBeenCalledWith('community_1', 'membership_1', 'Message relayed from Test User: \"test message\" Reply to respond.', doneResponse.data.communities[0]);
+            expect(Message.send_to_onboarding).toHaveBeenCalledWith('community_1', 'membership_1', 'Message relayed from Test User: \"test message\" Reply to respond.');
         });
 
         it('should process the member\'s message', async () => {
@@ -633,137 +635,284 @@ describe('receive_message', () => {
     });
 
     describe('group_join_or_leave', () => {
-        it('should promote registered user to admin when joining admin group', async () => {
-            const group_id = 'group_123';
-            const member_phone = '+1234567890';
-            const bot_phone = '+0987654321';
+        const bot_phone = '0987654321';
 
-            const mockGroupResponse = {
-                data: {
-                    group_threads: [{
-                        id: 'group_thread_123',
-                        permissions: ['announcements'],
-                        community_id: 'community_123'
-                    }]
-                }
-            };
-            graphql.mockResolvedValueOnce(mockGroupResponse);
-
-            const mockMembership = {
-                id: 'membership_123',
-                set_variable: jest.fn()
-            };
-            Membership.get.mockResolvedValue(mockMembership);
-
-            await group_join_or_leave(group_id, member_phone, bot_phone, true);
-
-            expect(graphql).toHaveBeenCalledWith(
-                expect.stringContaining('query GetGroupRole'),
-                { group_id }
-            );
-            expect(Membership.get).toHaveBeenCalledWith(member_phone, bot_phone);
-            expect(Membership.add_permissions).toHaveBeenCalledWith('membership_123', ['announcements']);
+        beforeEach(() => {
+            jest.clearAllMocks();
         });
 
-        it('should not promote user if group is not found', async () => {
-            const group_id = 'group_123';
-            const member_phone = '+1234567890';
-            const bot_phone = '+0987654321';
+        it('should update permissions for members in groups', async () => {
+            const mockGroupsResponse = {
+                data: {
+                    group_threads: [
+                        {
+                            group_id: 'group1',
+                            permissions: ['permission1', 'permission2']
+                        }
+                    ]
+                }
+            };
 
-            const mockGroupResponse = {
+            const mockGroupInfo = {
+                members: ['+1234567890', '+0987654321']
+            };
+
+            const mockMembership1 = {
+                id: 'membership_1',
+                user: { phone: '+1234567890' },
+                permissions: []
+            };
+
+            const mockMembership2 = {
+                id: 'membership_2',
+                user: { phone: '+0987654321' },
+                permissions: []
+            };
+
+            graphql.mockResolvedValue(mockGroupsResponse);
+            Signal.get_group_info.mockResolvedValue(mockGroupInfo);
+            Membership.get
+                .mockResolvedValueOnce(mockMembership1)
+                .mockResolvedValueOnce(mockMembership2);
+            Membership.update_permissions.mockResolvedValue({});
+
+            await group_join_or_leave(bot_phone);
+
+            expect(graphql).toHaveBeenCalledWith(
+                expect.stringContaining('GetPermissionsGroups'),
+                { bot_phone }
+            );
+            expect(Signal.get_group_info).toHaveBeenCalledWith(bot_phone, 'group1');
+            expect(Membership.get).toHaveBeenCalledWith('+1234567890', bot_phone);
+            expect(Membership.get).toHaveBeenCalledWith('+0987654321', bot_phone);
+            expect(Membership.update_permissions).toHaveBeenCalledWith('membership_1', ['permission1', 'permission2']);
+            expect(Membership.update_permissions).toHaveBeenCalledWith('membership_2', ['permission1', 'permission2']);
+        });
+
+        it('should aggregate permissions for members in multiple groups', async () => {
+            const mockGroupsResponse = {
+                data: {
+                    group_threads: [
+                        {
+                            group_id: 'group1',
+                            permissions: ['permission1', 'permission2']
+                        },
+                        {
+                            group_id: 'group2',
+                            permissions: ['permission2', 'permission3']
+                        }
+                    ]
+                }
+            };
+
+            const mockGroupInfo1 = {
+                members: ['+1234567890']
+            };
+
+            const mockGroupInfo2 = {
+                members: ['+1234567890', '+0987654321']
+            };
+
+            const mockMembership1 = {
+                id: 'membership_1',
+                user: { phone: '+1234567890' },
+                permissions: []
+            };
+
+            const mockMembership2 = {
+                id: 'membership_2',
+                user: { phone: '+0987654321' },
+                permissions: []
+            };
+
+            graphql.mockResolvedValue(mockGroupsResponse);
+            Signal.get_group_info
+                .mockResolvedValueOnce(mockGroupInfo1)
+                .mockResolvedValueOnce(mockGroupInfo2);
+            // Membership.get is called once per unique member after all groups are processed
+            Membership.get
+                .mockResolvedValueOnce(mockMembership1)  // +1234567890 (in both groups)
+                .mockResolvedValueOnce(mockMembership2); // +0987654321 (only in group2)
+            Membership.update_permissions.mockResolvedValue({});
+
+            await group_join_or_leave(bot_phone);
+
+            // Member +1234567890 is in both groups, should get combined permissions
+            expect(Membership.update_permissions).toHaveBeenCalledWith(
+                'membership_1',
+                ['permission1', 'permission2', 'permission2', 'permission3']
+            );
+            // Member +0987654321 is only in group2
+            expect(Membership.update_permissions).toHaveBeenCalledWith(
+                'membership_2',
+                ['permission2', 'permission3']
+            );
+        });
+
+        it('should handle empty groups response', async () => {
+            const mockGroupsResponse = {
                 data: {
                     group_threads: []
                 }
             };
-            graphql.mockResolvedValue(mockGroupResponse);
 
-            const mockMembershipGet = jest.spyOn(Membership, 'get');
-            Membership.get.mockResolvedValue({id: 'membership_123', type: 'member'});
-            const mockMembershipSetVariable = jest.spyOn(Membership, 'set_variable');
+            graphql.mockResolvedValue(mockGroupsResponse);
 
-            await group_join_or_leave(group_id, member_phone, bot_phone, true);
+            await group_join_or_leave(bot_phone);
 
             expect(graphql).toHaveBeenCalledWith(
-                expect.stringContaining('query GetGroupRole'),
-                { group_id }
+                expect.stringContaining('GetPermissionsGroups'),
+                { bot_phone }
             );
-            expect(mockMembershipGet).toHaveBeenCalledWith(member_phone, bot_phone);
-            expect(mockMembershipSetVariable).not.toHaveBeenCalled();
-
-            mockMembershipGet.mockRestore();
+            expect(Signal.get_group_info).not.toHaveBeenCalled();
+            expect(Membership.get).not.toHaveBeenCalled();
+            expect(Membership.update_permissions).not.toHaveBeenCalled();
         });
 
-
-        it('should not promote user if they are not registered', async () => {
-            const group_id = 'group_123';
-            const member_phone = '+1234567890';
-            const bot_phone = '+0987654321';
-
-            const mockGroupResponse = {
+        it('should skip members not found in membership table', async () => {
+            const mockGroupsResponse = {
                 data: {
-                    group_threads: [{
-                        id: 'group_thread_123',
-                        permissions: ['announcements'],
-                        community_id: 'community_123'
-                    }]
+                    group_threads: [
+                        {
+                            group_id: 'group1',
+                            permissions: ['permission1']
+                        }
+                    ]
                 }
             };
-            graphql.mockResolvedValueOnce(mockGroupResponse);
 
-            const mockMembershipGet = jest.spyOn(Membership, 'get');
-            Membership.get.mockResolvedValue(null);
+            const mockGroupInfo = {
+                members: ['+1234567890', '+0987654321']
+            };
 
-            await group_join_or_leave(group_id, member_phone, bot_phone);
+            graphql.mockResolvedValue(mockGroupsResponse);
+            Signal.get_group_info.mockResolvedValue(mockGroupInfo);
+            Membership.get
+                .mockResolvedValueOnce(null)  // First member not found
+                .mockResolvedValueOnce({      // Second member found
+                    id: 'membership_2',
+                    user: { phone: '+0987654321' },
+                    permissions: []
+                });
+            Membership.update_permissions.mockResolvedValue({});
 
-            expect(graphql).toHaveBeenCalledWith(
-                expect.stringContaining('query GetGroupRole'),
-                { group_id }
-            );
-            expect(mockMembershipGet).toHaveBeenCalledWith(member_phone, bot_phone);
+            await group_join_or_leave(bot_phone);
 
-            mockMembershipGet.mockRestore();
+            // Should only update permissions for the member that was found
+            expect(Membership.get).toHaveBeenCalledTimes(2);
+            expect(Membership.update_permissions).toHaveBeenCalledTimes(1);
+            expect(Membership.update_permissions).toHaveBeenCalledWith('membership_2', ['permission1']);
         });
 
-        it('should handle errors gracefully', async () => {
-            const group_id = 'group_123';
-            const member_phone = '+1234567890';
-            const bot_phone = '+0987654321';
-            const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
-
-            graphql.mockRejectedValue(new Error('GraphQL error'));
-
-            await group_join_or_leave(group_id, member_phone, bot_phone);
-
-            expect(consoleSpy).toHaveBeenCalledWith('Error handling member join:', expect.any(Error));
-
-            consoleSpy.mockRestore();
-        });
-
-        it('should demote user to member when leaving admin group', async () => {
-            const group_id = 'group_123';
-            const member_phone = '+1234567890';
-            const bot_phone = '+0987654321';
-
-            const mockGroupResponse = {
+        it('should handle groups with no members', async () => {
+            const mockGroupsResponse = {
                 data: {
-                    group_threads: [{
-                        id: 'group_thread_123',
-                        permissions: ['announcements'],
-                        community_id: 'community_123'
-                    }]
+                    group_threads: [
+                        {
+                            group_id: 'group1',
+                            permissions: ['permission1']
+                        }
+                    ]
                 }
             };
-            graphql.mockResolvedValueOnce(mockGroupResponse);
 
+            const mockGroupInfo = {
+                members: []
+            };
+
+            graphql.mockResolvedValue(mockGroupsResponse);
+            Signal.get_group_info.mockResolvedValue(mockGroupInfo);
+
+            await group_join_or_leave(bot_phone);
+
+            expect(Signal.get_group_info).toHaveBeenCalledWith(bot_phone, 'group1');
+            expect(Membership.get).not.toHaveBeenCalled();
+            expect(Membership.update_permissions).not.toHaveBeenCalled();
+        });
+
+        it('should handle multiple members in a single group', async () => {
+            const mockGroupsResponse = {
+                data: {
+                    group_threads: [
+                        {
+                            group_id: 'group1',
+                            permissions: ['permission1', 'permission2']
+                        }
+                    ]
+                }
+            };
+
+            const mockGroupInfo = {
+                members: ['+1111111111', '+2222222222', '+3333333333']
+            };
+
+            const mockMembership1 = {
+                id: 'membership_1',
+                user: { phone: '+1111111111' },
+                permissions: []
+            };
+
+            const mockMembership2 = {
+                id: 'membership_2',
+                user: { phone: '+2222222222' },
+                permissions: []
+            };
+
+            const mockMembership3 = {
+                id: 'membership_3',
+                user: { phone: '+3333333333' },
+                permissions: []
+            };
+
+            graphql.mockResolvedValue(mockGroupsResponse);
+            Signal.get_group_info.mockResolvedValue(mockGroupInfo);
+            Membership.get
+                .mockResolvedValueOnce(mockMembership1)
+                .mockResolvedValueOnce(mockMembership2)
+                .mockResolvedValueOnce(mockMembership3);
+            Membership.update_permissions.mockResolvedValue({});
+
+            await group_join_or_leave(bot_phone);
+
+            expect(Membership.get).toHaveBeenCalledTimes(3);
+            expect(Membership.update_permissions).toHaveBeenCalledTimes(3);
+            expect(Membership.update_permissions).toHaveBeenCalledWith('membership_1', ['permission1', 'permission2']);
+            expect(Membership.update_permissions).toHaveBeenCalledWith('membership_2', ['permission1', 'permission2']);
+            expect(Membership.update_permissions).toHaveBeenCalledWith('membership_3', ['permission1', 'permission2']);
+        });
+
+        it('should handle groups with empty permissions arrays', async () => {
+            const mockGroupsResponse = {
+                data: {
+                    group_threads: [
+                        {
+                            group_id: 'group1',
+                            permissions: []
+                        }
+                    ]
+                }
+            };
+
+            const mockGroupInfo = {
+                members: ['+1234567890']
+            };
 
             const mockMembership = {
-                id: 'membership_123',
-                set_variable: jest.fn()
+                id: 'membership_1',
+                user: { phone: '+1234567890' },
+                permissions: []
             };
+
+            graphql.mockResolvedValue(mockGroupsResponse);
+            Signal.get_group_info.mockResolvedValue(mockGroupInfo);
             Membership.get.mockResolvedValue(mockMembership);
-            await group_join_or_leave(group_id, member_phone, bot_phone, false);
-            expect(Membership.get).toHaveBeenCalledWith(member_phone, bot_phone);
-            expect(Membership.remove_permissions).toHaveBeenCalledWith('membership_123', ['announcements']);
+            Membership.update_permissions.mockResolvedValue({});
+
+            await group_join_or_leave(bot_phone);
+
+            expect(Membership.update_permissions).toHaveBeenCalledWith('membership_1', []);
         });
+
     });
+
 });

@@ -160,6 +160,21 @@ class WebSocketManager {
             }
         };
     };
+
+    async get_group_info(bot_phone, group_id) {
+        const get_group_info_endpoint = `http://signal-cli:8080/v1/groups/${bot_phone}/${group_id}`;
+        return await fetch(get_group_info_endpoint, { method: 'GET' })
+            .then(response => {
+                if (!response.ok) {
+                    console.error('Error getting group info:', response.statusText);
+                    console.error('Response status:', response.status);
+                }
+                return response.json();
+            })
+            .catch(error => {
+                console.error('Error getting group info:', error);
+            });
+    }
 }
 
 const webSocketManager = new WebSocketManager();

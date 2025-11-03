@@ -365,6 +365,66 @@ describe('WebSocketManager', () => {
             expect(mockConsoleError).toHaveBeenCalledWith(expect.any(Error));
         });
     });
+
+    describe('get_group_info', () => {
+        beforeEach(() => {
+            fetch.mockClear();
+        });
+
+        it('should get group info using fetch with correct endpoint', async () => {
+            const bot_phone = '+1234567890';
+            const group_id = 'test_group_id';
+            const mockGroupInfo = {
+                id: group_id,
+                name: 'Test Group',
+                members: ['+1234567890', '+0987654321']
+            };
+            const mockResponse = {
+                ok: true,
+                json: jest.fn().mockResolvedValue(mockGroupInfo)
+            };
+            fetch.mockResolvedValue(mockResponse);
+
+            const result = await webSocketManager.get_group_info(bot_phone, group_id);
+
+            expect(fetch).toHaveBeenCalledWith(
+                `http://signal-cli:8080/v1/groups/${bot_phone}/${group_id}`,
+                { method: 'GET' }
+            );
+            expect(result).toEqual(mockGroupInfo);
+        });
+
+        it('should log an error if fetch response is not ok', async () => {
+            const bot_phone = '+1234567890';
+            const group_id = 'test_group_id';
+            const mockResponse = {
+                ok: false,
+                status: 404,
+                statusText: 'Not Found',
+                json: jest.fn().mockResolvedValue({})
+            };
+            fetch.mockResolvedValue(mockResponse);
+            console.error = jest.fn();
+
+            await webSocketManager.get_group_info(bot_phone, group_id);
+
+            expect(console.error).toHaveBeenCalledWith('Error getting group info:', 'Not Found');
+            expect(console.error).toHaveBeenCalledWith('Response status:', 404);
+        });
+
+        it('should log an error if fetch fails', async () => {
+            const bot_phone = '+1234567890';
+            const group_id = 'test_group_id';
+            const errorMessage = 'Network error';
+            fetch.mockRejectedValue(new Error(errorMessage));
+            console.error = jest.fn();
+
+            const result = await webSocketManager.get_group_info(bot_phone, group_id);
+
+            expect(console.error).toHaveBeenCalledWith('Error getting group info:', expect.any(Error));
+            expect(result).toBeUndefined();
+        });
+    });
 });
 
 console.log(fetch.mock.calls);

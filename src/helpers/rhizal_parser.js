@@ -147,7 +147,7 @@ class RhyzalParser {
                     throw new Error('Community ID not found in vars');
                 }
                 const expandedMessage = this.insert_variables(script['send_to_onboarding']['preamble'], vars) + '\n\n' + vars.message
-                await this.send_to_onboarding(vars.community_id, vars.id, expandedMessage, vars.signal_timestamp);
+                await this.send_to_onboarding(vars.community_id, vars.id, expandedMessage);
                 break;
             case 'if': //TODO: add elif to support more complex logic
                 if (this.evaluate_condition(script.if, vars)) {

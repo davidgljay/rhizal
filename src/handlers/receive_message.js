@@ -108,8 +108,16 @@ group_threads(where: {group_id: {_eq: $group_id}}) {
     role
     community_id
 }
-}`
+}`,
 
+get_permissions_groups_query: `
+query GetPermissionsGroups($bot_phone:String!) {
+group_threads(where: {community:{bot_phone:{_eq: $bot_phone}}, permissions: {_neq: []}}) {
+    group_id
+    permissions
+}
+}
+`,
 }
 
 
@@ -231,36 +239,27 @@ export async function receive_reply(message, from_phone, bot_phone, reply_to_tim
     
 }
 
-export async function group_join_or_leave(group_id, member_phone, bot_phone, join = false) {
-
-    try {
-        const result = await graphql(queries.get_group_role_query, { group_id });
-        
-        if (result.data.group_threads.length === 0) {
-            return; // Group not found in our database
-        }
-
-        const group_thread = result.data.group_threads[0];
-        
-        if (group_thread.permissions) {
-            
-            // Update user's membership type to admin
-            const membership = await Membership.get(member_phone, bot_phone);
-            
-            if (membership) {
-                console.log('membership', membership);
-                if (join) {
-                    await Membership.add_permissions(membership.id, group_thread.permissions);
-                }
-                else {
-                    await Membership.remove_permissions(membership.id, group_thread.permissions);
-                }
+export async function group_join_or_leave(bot_phone) {
+    // Perform an audit of all group permissions to ensure that the user has the correct permissions.
+    const groups = await graphql(queries.get_permissions_groups_query, { bot_phone });
+    const member_permissions = {};
+    for (const group of groups.data.group_threads) {
+        const group_info = await Signal.get_group_info(bot_phone, group.group_id);
+        for (const member of group_info.members) {
+            if (member_permissions[member]) {
+                member_permissions[member] = member_permissions[member].concat(group.permissions);
+            } else {
+                member_permissions[member] = group.permissions;
             }
         }
-    } catch (error) {
-        console.error('Error handling member join:', error);
     }
-}
+    for (const member of Object.keys(member_permissions)) {
+        const membership = await Membership.get(member, bot_phone);
+        if (membership) {
+            await Membership.update_permissions(membership.id, member_permissions[member]);
+        }
+    }
+};
 
 export async function new_member(phone, community, message, user, sent_time) {
     const membership = await Membership.create(phone, community, user);
