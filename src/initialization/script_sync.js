@@ -144,7 +144,8 @@ const init_access_groups = async function (community, admin_phone) {
                 admin_phone,
                 community_config.access_levels[role_name],
                 community,
-                true
+                true,
+                role_name
             );
         } catch (error) {
             console.error('Error creating group:', error);

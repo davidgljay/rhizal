@@ -86,7 +86,7 @@ mutation CreateGroupThread($community_id: uuid!, $group_id: String!) {
         return create_result.data.insert_group_threads_one;
     }
 
-    static async create_group_and_invite(group_name, bot_phone, member_phone, permissions, community, make_admin = false) {
+    static async create_group_and_invite(group_name, bot_phone, member_phone, permissions, community, make_admin = false, role_name) {
       const fetch = require('node-fetch');
       
       // Create Signal group via API
@@ -137,8 +137,8 @@ mutation CreateGroupThread($community_id: uuid!, $group_id: String!) {
         }
         // Store group in database with admin role
         const CREATE_ADMIN_GROUP_THREAD = `
-mutation CreateAdminGroupThread($community_id: uuid!, $group_id: String!, $permissions: [String!]!) {
-  insert_group_threads_one(object: {community_id: $community_id, group_id: $group_id, step: "done", permissions: $permissions}) {
+mutation CreateAdminGroupThread($community_id: uuid!, $group_id: String!, $permissions: [String!]!. $hashtag: String!) {
+  insert_group_threads_one(object: {community_id: $community_id, group_id: $group_id, step: "done", permissions: $permissions, hashtag: $hashtag}) {
 	id
     group_id
     step
@@ -155,7 +155,7 @@ mutation CreateAdminGroupThread($community_id: uuid!, $group_id: String!, $permi
 }
 `;
 
-          const create_result = await graphql(CREATE_ADMIN_GROUP_THREAD, {community_id: community.id, group_id, permissions});
+          const create_result = await graphql(CREATE_ADMIN_GROUP_THREAD, {community_id: community.id, group_id, permissions, hashtag: '#' + role_name});
           return create_result.data.insert_group_threads_one;
     }
 
