@@ -6,6 +6,7 @@
     then:
       - step: 3
     else:
+      - save_message: true
       - set_message_type:
           type: "draft_announcement"
       - step: 1
@@ -14,7 +15,7 @@
   send:
     - "Thanks! Does this look good? \n\n{{message}}\n\nPlease respond with 'yes' to send or 'no' to cancel."
   on_receive:
-    if: "regex(message, /yes/i)"
+    if: "regex(message, /yes/)"
     then:
       - send_announcement: true
       - step: 2
