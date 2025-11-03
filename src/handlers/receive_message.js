@@ -50,7 +50,7 @@ const queries = {
     }
 }`,
     receiveGroupMessageQuery:
-`query RecieveGroupMessageQuery($bot_phone:String!) {
+`query RecieveGroupMessageQuery($bot_phone:String!, $phone:String!) {
     communities(where: {bot_phone: {_eq: $bot_phone}}) {
         id
         group_script_id
@@ -61,25 +61,26 @@ const queries = {
         }
     }
     memberships(where:{community:{bot_phone:{_eq: $bot_phone}},user:{phone:{_eq:$phone}}}) {
-    id
-    step
-    name
-    permissions
-    informal_name
-    current_script {
         id
+        step
         name
-        script_json
-        vars_query
-        targets_query
-    }
-    community {
-        id
-        bot_phone
-    }
-    user {
-        id
-        phone
+        permissions
+        informal_name
+        current_script {
+            id
+            name
+            script_json
+            vars_query
+            targets_query
+        }
+        community {
+            id
+            bot_phone
+        }
+        user {
+            id
+            phone
+        }
     }
 }`,
     replyQuery:
@@ -137,16 +138,14 @@ export async function receive_message(sender, recipient, message, sent_time, sen
         // await Message.create(community.id, membership.id, message, sent_time, true);
         return;
     }
-    // Logging the metadata for incoming messages to enable reply handling.
     // await Message.create(community.id, membership.id, '', sent_time, true);
-    // Disabling ability to use hashtags in one-on-one conversations with the bot, you've gotta do 'em in a group.
-    // if (message.match(/#[\w]+/)) {
-    //     const hashtag = message.match(/#[\w]+/)[0];
-    //     const command_triggered = await bot_message_hashtag(hashtag, membership, community, message);
-    //     if (command_triggered) {
-    //         return;
-    //     }
-    // }
+    if (message.match(/#[\w]+/)) {
+        const hashtag = message.match(/#[\w]+/)[0];
+        const command_triggered = await bot_message_hashtag(hashtag, membership, community, message);
+        if (command_triggered) {
+            return;
+        }
+    }
     if (membership.step == 'done') {
         await no_script_message(membership, community, message);
         return;
@@ -164,7 +163,8 @@ export async function receive_message(sender, recipient, message, sent_time, sen
 
 export async function receive_group_message(internal_group_id, message, from_phone, bot_phone, sender_name, sent_time) {
     const group_id = Buffer.from(internal_group_id).toString('base64');
-    const response = await graphql(queries.receiveGroupMessageQuery, { bot_phone });
+    console.log('received group message query');
+    const response = await graphql(queries.receiveGroupMessageQuery, { bot_phone, phone: from_phone });
     const community = response.data.communities.length > 0 ? response.data.communities[0] : null;
     let membership = response.data.memberships.length > 0 ? response.data.memberships[0] : null;
     if (!community) {
