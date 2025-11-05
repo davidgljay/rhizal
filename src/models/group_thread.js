@@ -94,7 +94,7 @@ mutation CreateGroupThread($community_id: uuid!, $group_id: String!) {
       const group_data = {
           name: group_name,
           members: [member_phone, bot_phone],
-          description: "Members of this group have admin access to the Rhizal bot for " + community.name,
+          description: "Members of this group have " + permissions.join(", ") + " access to the Rhizal bot for " + community.name,
           expiration_time: 0,
           group_link: "disabled",
           permissions: {
@@ -137,7 +137,7 @@ mutation CreateGroupThread($community_id: uuid!, $group_id: String!) {
         }
         // Store group in database with admin role
         const CREATE_ADMIN_GROUP_THREAD = `
-mutation CreateAdminGroupThread($community_id: uuid!, $group_id: String!, $permissions: [String!]!. $hashtag: String!) {
+mutation CreateAdminGroupThread($community_id: uuid!, $group_id: String!, $permissions: [String!]!, $hashtag: String!) {
   insert_group_threads_one(object: {community_id: $community_id, group_id: $group_id, step: "done", permissions: $permissions, hashtag: $hashtag}) {
 	id
     group_id

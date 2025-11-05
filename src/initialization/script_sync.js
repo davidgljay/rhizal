@@ -128,7 +128,7 @@ const set_admin = async function (community) {
     });
     const admin_membership = await Membership.create_admin(admin_phone, community);
     console.log('Admin membership created with id:', admin_membership.id);
-    return admin_phone;
+    return {admin_phone, admin_id: admin_membership.id};
 }
 
 const init_access_groups = async function (community, admin_phone) {
