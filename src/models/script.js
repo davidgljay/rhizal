@@ -32,18 +32,23 @@ query GetScript($name:String!) {
     }
     static async update(script_config) {
         const scriptData = await graphql(`
-        mutation UpdateScript($id:uuid!, $script_json:String!) {
-            update_scripts_by_pk(pk_columns: {id: $id}, _set: {script_json: $script_json}) {
-                id
-                name
-                script_json
-                vars_query
-                targets_query
+        mutation UpdateScript($community_id:uuid!, $name:String!, $script_json:String!) {
+            update_scripts(
+                where: {community_id: {_eq: $community_id}, name: {_eq: $name}},
+                _set: {script_json: $script_json}
+            ) {
+                returning {
+                    id
+                    name
+                    script_json
+                    vars_query
+                    targets_query
+                }
             }
         }
         `
-        ,{ id: script_config.id, script_json: script_config.script_json });
-        return new Script(scriptData.data.update_scripts_by_pk);
+        ,{ community_id: script_config.community_id, name: script_config.name, script_json: script_config.script_json });
+        return new Script(scriptData.data.update_scripts.returning[0]);
     }
     static async create(script_config) {
         const scriptData = await graphql(`
