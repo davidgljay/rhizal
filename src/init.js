@@ -25,6 +25,10 @@ async function initialize() {
     await verifySignalRegistrationCode(bot_phone, verification_code);
     await setSignalProfileName();
     const {admin_phone, admin_id} = await set_admin(community);
+    console.log('You should receive a message from Rhizal shortly. Once you have done so, press any key to continue.');
+    Message.send(community.id, admin_id, admin_phone, bot_phone, 'Please accept this message to ensure that Rhizal has the permissions it needs for the next step.');
+    await wait_for_keypress();
+    console.log('Setting up access groups');
     await init_access_groups(community, admin_phone);
     Message.send(community.id, admin_id, admin_phone, bot_phone, 'Rhizal has been set up! You should have been invited as an admin to the groups specified in the community_config.yml file.');
     Message.send(community.id, admin_id, admin_phone, bot_phone, 'You can add and remove members from these groups to grant and revoke permissions.');
