@@ -26,7 +26,6 @@ async function initialize() {
     await setSignalProfileName();
     const {admin_phone, admin_id} = await set_admin(community);
     await init_access_groups(community, admin_phone);
-    Message.send()
     Message.send(community.id, admin_id, admin_phone, bot_phone, 'Rhizal has been set up! You should have been invited as an admin to the groups specified in the community_config.yml file.');
     Message.send(community.id, admin_id, admin_phone, bot_phone, 'You can add and remove members from these groups to grant and revoke permissions.');
     console.log('Setup complete! You should receive a message from Rhizal shortly. Please use "npm start" to start the bot.');
