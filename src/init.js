@@ -23,27 +23,12 @@ async function initialize() {
     const signal_captcha_url = await promptsignal_captcha_url();
     const verification_code = await getVerificationCodeFromsignal_captcha_url(bot_phone, signal_captcha_url);
     await verifySignalRegistrationCode(bot_phone, verification_code);
-    await setSignalProfileName();
-    const {admin_phone, admin_id} = await set_admin(community);
-    console.log('You should receive a message from Rhizal shortly. Once you have done so, press any key to continue.');
-    Message.send(community.id, admin_id, admin_phone, bot_phone, 'Please accept this message to ensure that Rhizal has the permissions it needs for the next step.');
-    await wait_for_keypress();
+    const rhizal_username = await setSignalProfileName();
+    const {admin_phone, admin_id} = await set_admin(community, rhizal_username);
     console.log('Setting up access groups');
     await init_access_groups(community, admin_phone);
-    Message.send(community.id, admin_id, admin_phone, bot_phone, 'Rhizal has been set up! You should have been invited as an admin to the groups specified in the community_config.yml file.');
-    Message.send(community.id, admin_id, admin_phone, bot_phone, 'You can add and remove members from these groups to grant and revoke permissions.');
+    await Message.send(community.id, admin_id, admin_phone, bot_phone, 'Rhizal has been set up! You should have been invited as an admin to the groups specified in the community_config.yml file.');
+    await Message.send(community.id, admin_id, admin_phone, bot_phone, 'You can add and remove members from these groups to grant and revoke permissions.');
     console.log('Setup complete! You should receive a message from Rhizal shortly. Please use "npm start" to start the bot.');
 }
 initialize().catch(console.error);
-
-const wait_for_keypress = async () => {
-    await new Promise((resolve) => {
-        process.stdin.setRawMode(true);
-        process.stdin.resume();
-        process.stdin.once('data', () => {
-            process.stdin.setRawMode(false);
-            process.stdin.pause();
-            resolve();
-        });
-    });
-}

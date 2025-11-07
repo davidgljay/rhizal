@@ -163,7 +163,6 @@ export async function receive_message(sender, recipient, message, sent_time, sen
 
 export async function receive_group_message(internal_group_id, message, from_phone, bot_phone, sender_name, sent_time) {
     const group_id = Buffer.from(internal_group_id).toString('base64');
-    console.log('received group message query');
     const response = await graphql(queries.receiveGroupMessageQuery, { bot_phone, phone: from_phone });
     const community = response.data.communities.length > 0 ? response.data.communities[0] : null;
     let membership = response.data.memberships.length > 0 ? response.data.memberships[0] : null;
@@ -173,14 +172,15 @@ export async function receive_group_message(internal_group_id, message, from_pho
     const group_thread = await GroupThread.find_or_create_group_thread(group_id, community.id);
 
 
+
     if (message && message.includes('#leave')) {
         await GroupThread.leave_group(group_id, bot_phone);
         return;
     }
-
+    const hashtags = message ? message.match(/#[\w]+/g) : null;
     //Check if the message includes a hashtag command, if so execute it.
-    if (message && message.match(/#[\w]+/)) {
-        const hashtag = message.match(/#[\w]+/)[0];
+    if (hashtags && hashtags.length > 0) {
+        const hashtag = hashtags[0];
         const command_triggered = await bot_message_hashtag(hashtag, membership, community, message);
         if (command_triggered) {
             return;
@@ -191,10 +191,7 @@ export async function receive_group_message(internal_group_id, message, from_pho
         await GroupThread.run_script(group_thread, {user: {phone: from_phone}, community}, message, sent_time);
         return;
     }
-    if (!message) { //If there is no message, return.
-        return;
-    }
-    const hashtags = message.match(/#[\w]+/g);
+
     if (!hashtags) { //Ignore all messages without a hashtag
         return;
     }

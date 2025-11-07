@@ -637,7 +637,7 @@ describe('Integration Tests for receive_message Handler', () => {
                     },
                     {
                         query: expectedQueries.createGroupThread,
-                        variables: { community_id: communityId, group_id: base64_group_id },
+                        variables: { community_id: communityId, group_id: 'group.' + base64_group_id },
                         response: { data: { insert_group_threads_one: { id: 'thread_1', group_id: base64_group_id, step: '0', community: {group_script_id: 'script_2'} } } }
                     },
                     {

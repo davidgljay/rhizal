@@ -84,7 +84,7 @@ describe('GroupThread', () => {
             const group_id = 'new_group_id';
             const community_id = 'new_community_id';
             const getVariables = { group_id };
-            const createVariables = { community_id, group_id };
+            const createVariables = { community_id, group_id: "group." + group_id };
 
             graphql.mockResolvedValueOnce({ data: { group_threads: [] } }); // No existing group thread
 

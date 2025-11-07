@@ -82,7 +82,7 @@ mutation CreateGroupThread($community_id: uuid!, $group_id: String!) {
         if (get_result.data.group_threads.length > 0) {
             return get_result.data.group_threads[0];
         }
-        const create_result = await graphql(CREATE_GROUP_THREAD, {community_id, group_id});
+        const create_result = await graphql(CREATE_GROUP_THREAD, {community_id, group_id: "group." + group_id});
         return create_result.data.insert_group_threads_one;
     }
 
