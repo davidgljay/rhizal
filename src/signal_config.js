@@ -1,4 +1,4 @@
-const { promptSignalCaptchaUrl, getVerificationCodeFromSignalCaptchaUrl, verifySignalRegistrationCode, setSignalProfileName } = require('./initialization/signal_config');
+const { promptSignalCaptchaUrl, getVerificationCodeFromSignalCaptchaUrl, verifySignalRegistrationCode, setSignalProfileName } = require('./initialization/signal_config.js');
 
 async function configure_signal() {
     const signalCaptchaUrl = await promptSignalCaptchaUrl();
@@ -8,3 +8,4 @@ async function configure_signal() {
 }
 
 configure_signal().catch(console.error);
+console.log('Signal configured');
