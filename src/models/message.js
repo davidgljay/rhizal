@@ -43,7 +43,7 @@ mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_i
         text: $text, 
         signal_timestamp: $signal_timestamp,
         about_membership_id: $about_membership_id,
-        type: $type
+        type: $message_type
     }) 
     {
         id
@@ -68,7 +68,7 @@ mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_i
             text,
             signal_timestamp,
             about_membership_id,
-            type:message_type
+            message_type
         };
         const result = await graphql(CREATE_MESSAGE,  message);
         const { id, membership, community, type } = result.data.insert_messages_one;
