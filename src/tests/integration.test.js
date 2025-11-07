@@ -1,4 +1,4 @@
-const { receive_message, receive_group_message, receive_reply } = require('../handlers/receive_message');
+const { receive_message, receive_group_message, receive_reply, group_join_or_leave } = require('../handlers/receive_message');
 const signal = require('../apis/signal');
 const {graphql} = require('../apis/graphql');
 const Membership = require('../models/membership');
@@ -181,7 +181,10 @@ const expectedQueries = {
     getGroupThread: `query GetGroupThread($group_id: String!)`,
     createGroupThread: `mutation CreateGroupThread($community_id: uuid!, $group_id: String!)`,
     replyQuery: `query ReplyQuery($bot_phone:String!, $phone:String!, $signal_timestamp:bigint!)`,
-    systemScript: `query GetSystemScript($script_name: String!)`
+    systemScript: `query GetSystemScript($script_name: String!)`,
+    getPermissionsGroups: `query GetPermissionsGroups($bot_phone:String!)`,
+    getMembershipFromPhoneNumbers: `query GetMembershipFromPhoneNumbers($phone: String!, $bot_phone: String!)`,
+    updateMembershipPermissions: `mutation UpdatePermissions($id:uuid!, $permissions:[String!])`,
 }
 
 const testScript = JSON.stringify(script);
@@ -191,6 +194,7 @@ jest.mock('../apis/signal', () => ({
     send: jest.fn(() => ({timestamp: 1234567890})),
     show_typing_indicator: jest.fn(),
     emoji_reaction: jest.fn(),
+    get_group_info: jest.fn(),
 }));
 jest.mock('../apis/graphql', () => ({
     graphql: jest.fn()
@@ -558,15 +562,14 @@ describe('Integration Tests for receive_message Handler', () => {
             expect(signal.send).not.toHaveBeenCalled();
         });
 
-        //Disabling this test for now, since this activity should only happen in a group messages at present. Leaving the test in case we bring this functionality back to direct chat with the Rhizal bot.
-        xit('should trigger the correct command if the member is an admin and the message includes a hashtag command', async () => {
+        it('should trigger the correct command if the member is an admin and the message includes a hashtag command', async () => {
             const senderNumber = '1234567890';
             const recipientNumber = '0987654321';
             const sentTime = 1741644982;
             const expectedMessage = "Would you like to send an announcement to your entire community? Just enter the message here and I'll confirm that it looks good before sending. You can also cancel this process with #cancel."
 
             const hashtagCommandResponse = JSON.parse(JSON.stringify(mockQueryResponse));
-            hashtagCommandResponse.data.memberships[0].type = 'admin';
+            hashtagCommandResponse.data.memberships[0].permissions = ['announcement'];
 
             const mockGraphql = [
                 {
@@ -1065,6 +1068,56 @@ describe('Integration Tests for receive_message Handler', () => {
             expect(signal.send).toHaveBeenCalledWith(['+9999999999'], bot_phone, expectedMessage);
         });
 
+    });
+
+    describe('group_join_or_leave', () => {
+        it('should update permissions for members in groups', async () => {
+            const phone = '+1234567890';
+            const bot_phone = '+0987654321';
+            const group_id = 'group_123';
+            const base64_group_id = Buffer.from(group_id).toString('base64');
+            const mockGroupInfo = {
+                members: ['+1234567890', '+0987654321'],
+            };
+            signal.get_group_info.mockResolvedValue(mockGroupInfo);
+            const mockGraphql = [
+                {
+                    query: expectedQueries.getPermissionsGroups,
+                    variables: { bot_phone: bot_phone },
+                    response: { data: { group_threads: [{ group_id: base64_group_id, permissions: ['group_comms'] }] } }
+                },
+                {
+                    query: expectedQueries.getMembershipFromPhoneNumbers,
+                    variables: { phone: '+1234567890', bot_phone: bot_phone },
+                    response: { data: { memberships: [{ id: 'membership_1', permissions: ['group_comms'] }] } }
+                },
+                {
+                    query: expectedQueries.updateMembershipPermissions,
+                    variables: { id: 'membership_1', permissions: ['group_comms'] },
+                    response: { data: { update_memberships: { returning: [{ id: 'membership_1' }] } } }
+                },
+                {
+                    query: expectedQueries.getMembershipFromPhoneNumbers,
+                    variables: { phone: bot_phone, bot_phone: bot_phone },
+                    response: { data: { memberships: [{ id: 'membership_2', permissions: ['group_comms'] }] } }
+                },
+                {
+                    query: expectedQueries.updateMembershipPermissions,
+                    variables: { id: 'membership_2', permissions: ['group_comms'] },
+                    response: { data: { update_memberships: { returning: [{ id: 'membership_2' }] } } }
+                },
+            ];
+            for (let i = 0; i < mockGraphql.length; i++) {
+                graphql.mockImplementationOnce((...args) => {
+                    return Promise.resolve(mockGraphql[i].response);
+                });
+            }
+            await group_join_or_leave(bot_phone);
+            for (let i = 0; i < mockGraphql.length; i++) {
+                expect(graphql).toHaveBeenNthCalledWith(i + 1, expect.stringContaining(mockGraphql[i].query), mockGraphql[i].variables);
+            }
+            expect(graphql).toHaveBeenCalledTimes(mockGraphql.length);
+        });
     });
 
 });
