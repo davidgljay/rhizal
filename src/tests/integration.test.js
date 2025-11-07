@@ -796,14 +796,14 @@ describe('Integration Tests for receive_message Handler', () => {
                         response: { data: { communities: [{id: communityId, bot_phone: botNumber }], memberships: [ { id: 'membership_1', type: 'member', user: { phone: senderNumber }, community: { id: communityId, bot_phone: botNumber }, name: 'Test User' }] } }
                     },
                     {
-                        query: expectedQueries.systemScript,
-                        variables: { script_name: 'announcement' },
-                        response: { data: { scripts: [{ id: 'announcement_script', name: 'announcement', script_json: JSON.stringify(announcementScript), vars_query: null }] } }
-                    },
-                    {
                         query: expectedQueries.getGroupThread,
                         variables: { group_id: base64_group_id },
                         response: { data: { group_threads: [{ id: 'thread_1', group_id: base64_group_id, step: '0', community: { group_script_id: 'script_2' } }] } }
+                    },
+                    {
+                        query: expectedQueries.systemScript,
+                        variables: { script_name: 'announcement' },
+                        response: { data: { scripts: [{ id: 'announcement_script', name: 'announcement', script_json: JSON.stringify(announcementScript), vars_query: null }] } }
                     },
                     {
                         query: expectedQueries.getScript,
@@ -855,11 +855,6 @@ describe('Integration Tests for receive_message Handler', () => {
                         response: { data: { communities: [{id: communityId, bot_phone: botNumber }], memberships: [ { id: 'membership_1', type: 'member', user: { phone: senderNumber }, community: { id: communityId, bot_phone: botNumber }, name: 'Test User' }] } }
                     },
                     {
-                        query: expectedQueries.systemScript,
-                        variables: { script_name: 'announcement' },
-                        response: { data: { scripts: [{ id: 'announcement_script', name: 'announcement', script_json: JSON.stringify(announcementScript), vars_query: null }] } }
-                    },
-                    {
                         query: expectedQueries.getGroupThread,
                         variables: { group_id: base64_group_id },
                         response: { data: { group_threads: [{ id: 'thread_1', group_id: base64_group_id, step: '0', community: { group_script_id: 'script_2' } }] } }
@@ -881,8 +876,7 @@ describe('Integration Tests for receive_message Handler', () => {
                         return Promise.resolve(mockGraphql[i].response);
                     });
                 }
-
-                await receive_group_message(group_id, message, senderNumber, botNumber);
+                await receive_group_message(group_id, message, senderNumber, botNumber, 'Test User', 1234567890);
 
                 for (let i = 0; i < mockGraphql.length; i++) {
                     expect(graphql).toHaveBeenNthCalledWith(i + 1, expect.stringContaining(mockGraphql[i].query), mockGraphql[i].variables);
@@ -907,15 +901,15 @@ describe('Integration Tests for receive_message Handler', () => {
                         response: { data: { communities: [{id: communityId, bot_phone: botNumber }], memberships: [ { id: 'membership_1', type: 'member', user: { phone: senderNumber }, community: { id: communityId, bot_phone: botNumber }, name: 'Test User' }] } }
                     },
                     {
+                        query: expectedQueries.getGroupThread,
+                        variables: { group_id: base64_group_id },
+                        response: { data: { group_threads: [{ id: 'thread_1', group_id: base64_group_id, step: 'done', community: { group_script_id: 'script_2' } }] } }
+                    },
+                    {
                         query: expectedQueries.systemScript,
                         variables: { script_name: 'announcement' },
                         response: { data: { scripts: [{ id: 'announcement_script', name: 'announcement', script_json: JSON.stringify(announcementScript), vars_query: null }] } }
                     },
-                    {
-                        query: expectedQueries.getGroupThread,
-                        variables: { group_id: base64_group_id },
-                        response: { data: { group_threads: [{ id: 'thread_1', group_id: base64_group_id, step: 'done', community: { group_script_id: 'script_2' } }] } }
-                    }
                 ];
 
                 for (let i = 0; i < mockGraphql.length; i++) {
@@ -948,14 +942,14 @@ describe('Integration Tests for receive_message Handler', () => {
                         response: { data: { communities: [{id: communityId, bot_phone: botNumber }], memberships: [ { id: 'membership_1', permissions: ['group_comms'], user: { phone: senderNumber }, community: { id: communityId, bot_phone: botNumber }, name: 'Test User' }] } }
                     },
                     {
-                        query: expectedQueries.systemScript,
-                        variables: { script_name: 'announcement' },
-                        response: { data: { scripts: [{ id: 'announcement_script', name: 'announcement', script_json: JSON.stringify(announcementScript), vars_query: null }] } }
-                    },
-                    {
                         query: expectedQueries.getGroupThread,
                         variables: { group_id: base64_group_id },
                         response: { data: { group_threads: [{ id: 'thread_1', hashtag: '#groupHash', group_id: base64_group_id, step: 'done', community: { group_script_id: 'script_2', group_threads: [{ group_id: Buffer.from('group_2').toString('base64'), hashtag: '#anotherGroupHashtag' }, { group_id: Buffer.from('group_3').toString('base64'), hashtag: '#funky' }] } }] } }
+                    },
+                    {
+                        query: expectedQueries.systemScript,
+                        variables: { script_name: 'announcement' },
+                        response: { data: { scripts: [{ id: 'announcement_script', name: 'announcement', script_json: JSON.stringify(announcementScript), vars_query: null }] } }
                     }
                 ];
 
@@ -990,15 +984,15 @@ describe('Integration Tests for receive_message Handler', () => {
                         response: { data: { communities: [{id: communityId, bot_phone: botNumber }], memberships: [ { id: 'membership_1', type: 'member', user: { phone: senderNumber }, community: { id: communityId, bot_phone: botNumber }, name: 'Test User' }] } }
                     },
                     {
+                        query: expectedQueries.getGroupThread,
+                        variables: { group_id: base64_group_id },
+                        response: { data: { group_threads: [{ id: 'thread_1', group_id: base64_group_id, step: 'done', community: { group_script_id: 'script_2' } }] } }
+                    },
+                    {
                         query: expectedQueries.systemScript,
                         variables: { script_name: 'announcement' },
                         response: { data: { scripts: [{ id: 'announcement_script', name: 'announcement', script_json: JSON.stringify(announcementScript), vars_query: null }] } }
                     },
-                    {
-                        query: expectedQueries.getGroupThread,
-                        variables: { group_id: base64_group_id },
-                        response: { data: { group_threads: [{ id: 'thread_1', group_id: base64_group_id, step: 'done', community: { group_script_id: 'script_2' } }] } }
-                    }
                 ];
 
                 for (let i = 0; i < mockGraphql.length; i++) {
