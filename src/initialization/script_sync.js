@@ -6,6 +6,7 @@ const Script = require('../models/script');
 const readline = require('readline');
 const Membership = require('../models/membership');
 const GroupThread = require('../models/group_thread');
+const WebSocket = require('ws');
 
 async function initial_message() {
     console.log("Thank you for trying out Rhizal!");
@@ -101,7 +102,7 @@ const update_community_and_scripts = async function () {
     return community;
 }
 
-const set_admin = async function (community) {
+const set_admin = async function (community, rhizal_username) {
     // Ask for a phone number to be entered via the console that will serve as an administrator for Rhizal.
     let admin_phone = await new Promise((resolve, reject) => {
 
@@ -121,12 +122,26 @@ const set_admin = async function (community) {
                 console.error('No phone number entered.');
                 return reject(new Error('No phone number entered.'));
             }
-            // You can add logic here to save or process the admin phone number as needed.
-            console.log(`Administrator phone number set to: ${phone.trim()}`);
             resolve(phone.trim());
         });
     });
-    const admin_membership = await Membership.create_admin(admin_phone, community);
+    console.log('Please send a signal message to username: ' + rhizal_username + ' to be added as an admin.');
+    const admin_membership = await new Promise((resolve, reject) => {
+    const ws = new WebSocket('ws://signal-cli:8080/v1/receive/' + community.bot_phone);
+        ws.on('message', async (data) => {
+            const message = JSON.parse(data);
+            const admin_phone = message.envelope.sourceUuid;
+            const admin_membership = await Membership.create_admin(admin_phone, community);
+            resolve(admin_membership);
+        });
+        ws.on('error', (err) => {
+            reject(new Error('WebSocket error:', err));
+        });
+        ws.on('close', () => {
+            console.log('WebSocket connection closed');
+        });
+    });
+
     console.log('Admin membership created with id:', admin_membership.id);
     return {admin_phone, admin_id: admin_membership.id};
 }

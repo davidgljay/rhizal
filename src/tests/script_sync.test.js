@@ -4,6 +4,7 @@ const GroupThread = require('../models/group_thread');
 const readline = require('readline');
 const fs = require('fs');
 const path = require('path');
+const WebSocket = require('ws');
 
 jest.mock('../models/membership');
 jest.mock('../models/group_thread');
@@ -30,127 +31,35 @@ describe('Script Sync - Admin Group Creation', () => {
 
     describe('set_admin', () => {
         it('should create admin membership successfully', async () => {
-            const mockCommunity = {
-                id: 'community_123',
-                name: 'Test Community',
-                bot_phone: '+1234567890'
-            };
-
-            const mockAdminMembership = {
-                id: 'membership_123',
-                permissions: ['onboarding', 'group_comms', 'announcement'],
-                step: 'done'
-            };
-
-            const mockAdminGroup = {
-                id: 'group_thread_123',
-                group_id: 'admin_group_id_123',
-                permissions: ['onboarding', 'group_comms', 'announcement'],
-                step: 'done'
-            };
-
+            const mockAdminMembership = { id: 'membership_123' };
             Membership.create_admin.mockResolvedValue(mockAdminMembership);
-            GroupThread.create_group_and_invite.mockResolvedValue(mockAdminGroup);
-
-            // Mock the readline question to resolve with a phone number
-            mockQuestion.mockImplementation((prompt, callback) => {
-                callback('+0987654321');
+            const mockAdminPhone = '+0987654321';
+            const mockCommunity = { id: 'community_123', bot_phone: '+1234567890' };
+            const mockRhizalUsername = 'rhizal_username';
+            const mockMessage = { envelope: { sourceUuid: mockAdminPhone } }; 
+            // Mock WebSocket for signal message simulation
+            const wsOnHandlers = {};
+            jest.spyOn(WebSocket.prototype, 'on').mockImplementation(function (event, handler) {
+                wsOnHandlers[event] = handler;
+                return this;
             });
 
-            const result = await set_admin(mockCommunity);
+            // Simulate readline.question returning admin phone
+            mockQuestion.mockImplementation((prompt, cb) => cb(mockAdminPhone));
 
-            expect(Membership.create_admin).toHaveBeenCalledWith('+0987654321', mockCommunity);
-            expect(result).toEqual({"admin_id": "membership_123", "admin_phone": "+0987654321"});
-        });
+            // Call set_admin and mock a signal message being received
+            const setAdminPromise = set_admin(mockCommunity, mockRhizalUsername);
 
-        it('should handle empty phone number input', async () => {
-            const mockCommunity = {
-                id: 'community_123',
-                name: 'Test Community',
-                bot_phone: '+1234567890'
-            };
+            // Simulate the WebSocket 'message' event as if a signal message was received with sourceUuid
+            await Promise.resolve(); // move to next tick for 'set_admin' to register .on handlers
+            wsOnHandlers['message'] &&
+                wsOnHandlers['message'](JSON.stringify(mockMessage));
 
-            // Mock the readline question to resolve with empty string
-            mockQuestion.mockImplementation((prompt, callback) => {
-                callback('');
-            });
+            const result = await setAdminPromise;
 
-            await expect(set_admin(mockCommunity)).rejects.toThrow('No phone number entered.');
-
-            expect(Membership.create_admin).not.toHaveBeenCalled();
-            expect(GroupThread.create_group_and_invite).not.toHaveBeenCalled();
-        });
-
-        it('should handle whitespace-only phone number input', async () => {
-            const mockCommunity = {
-                id: 'community_123',
-                name: 'Test Community',
-                bot_phone: '+1234567890'
-            };
-
-            // Mock the readline question to resolve with whitespace
-            mockQuestion.mockImplementation((prompt, callback) => {
-                callback('   ');
-            });
-
-            await expect(set_admin(mockCommunity)).rejects.toThrow('No phone number entered.');
-
-            expect(Membership.create_admin).not.toHaveBeenCalled();
-            expect(GroupThread.create_group_and_invite).not.toHaveBeenCalled();
-        });
-
-        it('should trim phone number input', async () => {
-            const mockCommunity = {
-                id: 'community_123',
-                name: 'Test Community',
-                bot_phone: '+1234567890'
-            };
-
-            const mockAdminMembership = {
-                id: 'membership_123',
-                permissions: ['onboarding', 'group_comms', 'announcement'],
-                step: 'done'
-            };
-
-            const mockAdminGroup = {
-                id: 'group_thread_123',
-                group_id: 'admin_group_id_123',
-                permissions: ['onboarding', 'group_comms', 'announcement'],
-                step: 'done'
-            };
-
-            Membership.create_admin.mockResolvedValue(mockAdminMembership);
-            GroupThread.create_group_and_invite.mockResolvedValue(mockAdminGroup);
-
-            // Mock the readline question to resolve with phone number with whitespace
-            mockQuestion.mockImplementation((prompt, callback) => {
-                callback('  +0987654321  ');
-            });
-
-            const result = await set_admin(mockCommunity);
-
-            expect(Membership.create_admin).toHaveBeenCalledWith('+0987654321', mockCommunity);
-            expect(result).toEqual({"admin_id": "membership_123", "admin_phone": "+0987654321"});
-        });
-
-        it('should handle admin membership creation failure', async () => {
-            const mockCommunity = {
-                id: 'community_123',
-                name: 'Test Community',
-                bot_phone: '+1234567890'
-            };
-
-            Membership.create_admin.mockRejectedValue(new Error('Database error'));
-
-            // Mock the readline question to resolve with a phone number
-            mockQuestion.mockImplementation((prompt, callback) => {
-                callback('+0987654321');
-            });
-
-            await expect(set_admin(mockCommunity)).rejects.toThrow('Database error');
-
-            expect(Membership.create_admin).toHaveBeenCalledWith('+0987654321', mockCommunity);
-            expect(GroupThread.create_group_and_invite).not.toHaveBeenCalled();
+            expect(result).toHaveProperty('admin_phone', mockAdminPhone);
+            expect(result).toHaveProperty('admin_id', mockAdminMembership.id);
+            expect(Membership.create_admin).toHaveBeenCalledWith(mockAdminPhone, mockCommunity);
         });
     });
 

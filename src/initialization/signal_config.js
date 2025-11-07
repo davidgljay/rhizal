@@ -158,8 +158,7 @@ async function setSignalProfileName() {
 
     const urlPath = `/v1/accounts/${botPhone}/username`;
 
-
-    await new Promise((resolve, reject) => {
+    const registered_username = await new Promise((resolve, reject) => {
         const req = http.request({
             hostname: 'signal-cli',
             port: 8080,
@@ -180,7 +179,7 @@ async function setSignalProfileName() {
                     console.log(data);
                     console.log(JSON.parse(data));
                     console.log("Signal username set successfully, assigned username:", JSON.parse(data).username);
-                    resolve();
+                    resolve(JSON.parse(data).username);
                 } else {
                     reject(new Error(`Failed to set Signal username: ${res.statusCode} ${data}`));
                 }
@@ -224,6 +223,7 @@ async function setSignalProfileName() {
         req.write(profileData);
         req.end();
     });
+    return registered_username;
 }
 
 

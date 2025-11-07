@@ -285,7 +285,7 @@ describe('signal_config.js', () => {
 
             resMock.on.mockImplementation((event, handler) => {});
 
-            await expect(signalConfig.setSignalProfileName()).resolves.toBeUndefined();
+            await expect(signalConfig.setSignalProfileName()).resolves.toBe('rhizal');
             expect(http.request).toHaveBeenCalled();
         });
     });
