@@ -32,9 +32,9 @@ query GetMessage($id: ID!) {
         return result.data.message;
     }
 
-    static async create(community_id, membership_id, text, signal_timestamp, from_user, about_membership_id = null) {
+    static async create(community_id, membership_id, text, signal_timestamp, from_user, about_membership_id = null, message_type = "message") {
         const CREATE_MESSAGE = `
-mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $signal_timestamp: bigint!, $about_membership_id: uuid = null) {
+mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $signal_timestamp: bigint!, $about_membership_id: uuid = null, $message_type: String = "message") {
   insert_messages_one(
     object: {
         community_id: $community_id, 
@@ -42,10 +42,12 @@ mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_i
         membership_id: $membership_id, 
         text: $text, 
         signal_timestamp: $signal_timestamp,
-        about_membership_id: $about_membership_id
+        about_membership_id: $about_membership_id,
+        type: $type
     }) 
     {
         id
+        type
         membership {
             id
             user {
@@ -65,14 +67,16 @@ mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_i
             membership_id,
             text,
             signal_timestamp,
-            about_membership_id
+            about_membership_id,
+            type:message_type
         };
         const result = await graphql(CREATE_MESSAGE,  message);
-        const { id, membership, community } = result.data.insert_messages_one;
+        const { id, membership, community, type } = result.data.insert_messages_one;
         //TODO: Make this match graphql schema to match other objects, probably through a consistent constructor
         this.id = id;
         this.text = text;
         this.from_user = from_user;
+        this.type = message_type;
         this.signal_timestamp = signal_timestamp;
         this.membership_id = membership_id;
         this.community_id = community_id;
@@ -93,9 +97,12 @@ mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_i
             if (!timestamp) {
                 return;
             }
+            if (message_type === 'announcement') {  
+                await Message.create(community_id, membership_id, text, timestamp, false, about_membership_id, message_type);
+            }
             if (log_message) {
                 // Log the message metadata only for now.
-                await Message.create(community_id, membership_id, '', timestamp, false, about_membership_id);
+                await Message.create(community_id, membership_id, '', timestamp, false, about_membership_id, message_type);
             }
         }).catch(err => {
             console.error('Error sending message:', err);
@@ -204,7 +211,7 @@ query SendToOnboarding($community_id: uuid!) {
             await Message.send(
                 community_id,
                 sender_id, //Use the about_message_id for group messages
-                onboarding_group.group_id,
+                'group.' + onboarding_group.group_id,
                 bot_phone,
                 text,
                 true,

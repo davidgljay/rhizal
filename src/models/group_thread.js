@@ -82,7 +82,7 @@ mutation CreateGroupThread($community_id: uuid!, $group_id: String!) {
         if (get_result.data.group_threads.length > 0) {
             return get_result.data.group_threads[0];
         }
-        const create_result = await graphql(CREATE_GROUP_THREAD, {community_id, group_id: "group." + group_id});
+        const create_result = await graphql(CREATE_GROUP_THREAD, {community_id, group_id});
         return create_result.data.insert_group_threads_one;
     }
 
@@ -117,10 +117,10 @@ mutation CreateGroupThread($community_id: uuid!, $group_id: String!) {
         }
 
         const result = await response.json();
-        const group_id = result.id.toString('base64');
+        const group_id = result.id.toString('base64').replace('group.', '');
 
         if (make_admin) {
-          const make_admin_endpoint = `http://signal-cli:8080/v1/groups/${bot_phone}/${group_id}/admins`;
+          const make_admin_endpoint = `http://signal-cli:8080/v1/groups/${bot_phone}/group.${group_id}/admins`;
           const make_admin_data = {
             admins: [member_phone]
           };
