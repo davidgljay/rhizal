@@ -235,7 +235,7 @@ describe('GroupThread', () => {
                 body: JSON.stringify({
                     name: group_name,
                     members: [member_phone, bot_phone],
-                    description: "Members of this group have admin access to the Rhizal bot for " + community.name,
+                    description: "Members of this group have announcements access to the Rhizal bot for " + community.name,
                     expiration_time: 0,
                     group_link: "disabled",
                     permissions: {
@@ -347,7 +347,7 @@ describe('GroupThread', () => {
                 body: JSON.stringify({
                     name: group_name,
                     members: [member_phone, bot_phone],
-                    description: "Members of this group have admin access to the Rhizal bot for " + community.name,
+                    description: "Members of this group have announcements access to the Rhizal bot for " + community.name,
                     expiration_time: 0,
                     group_link: "disabled",
                     permissions: {

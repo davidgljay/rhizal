@@ -237,14 +237,16 @@ query GetScript($id:uuid!) {
         it('should update script data successfully', async () => {
             const mockResponse = {
                 data: {
-                    update_scripts_by_pk: { id: 1, name: 'Test Script', script_json: '{"json": "json content"}' },
+                    update_scripts: {
+                        returning: [{ community_id: 2, id: 1, name: 'Test Script', script_json: '{"json": "json content"}' }],
+                    }
                 },
             };
             graphql.mockResolvedValue(mockResponse);
 
-            const scriptInstance = await Script.update(mockResponse.data.update_scripts_by_pk);
+            const scriptInstance = await Script.update(mockResponse.data.update_scripts.returning[0]);
 
-            expect(graphql).toHaveBeenCalledWith(expect.stringContaining('mutation UpdateScript($id:uuid!, $script_json:String!)'), { id: mockResponse.data.update_scripts_by_pk.id, script_json: mockResponse.data.update_scripts_by_pk.script_json });
+            expect(graphql).toHaveBeenCalledWith(expect.stringContaining('mutation UpdateScript($community_id:uuid!, $name:String!, $script_json:String!)'), { community_id: 2, name: mockResponse.data.update_scripts.returning[0].name, script_json: mockResponse.data.update_scripts.returning[0].script_json });
             expect(scriptInstance).toBeInstanceOf(Script);
         });
     })

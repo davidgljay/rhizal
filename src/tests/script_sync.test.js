@@ -60,7 +60,7 @@ describe('Script Sync - Admin Group Creation', () => {
             const result = await set_admin(mockCommunity);
 
             expect(Membership.create_admin).toHaveBeenCalledWith('+0987654321', mockCommunity);
-            expect(result).toEqual('+0987654321');
+            expect(result).toEqual({"admin_id": "membership_123", "admin_phone": "+0987654321"});
         });
 
         it('should handle empty phone number input', async () => {
@@ -130,7 +130,7 @@ describe('Script Sync - Admin Group Creation', () => {
             const result = await set_admin(mockCommunity);
 
             expect(Membership.create_admin).toHaveBeenCalledWith('+0987654321', mockCommunity);
-            expect(result).toEqual('+0987654321');
+            expect(result).toEqual({"admin_id": "membership_123", "admin_phone": "+0987654321"});
         });
 
         it('should handle admin membership creation failure', async () => {
