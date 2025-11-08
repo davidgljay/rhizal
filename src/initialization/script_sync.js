@@ -130,15 +130,16 @@ const set_admin = async function (community, rhizal_username) {
     const ws = new WebSocket('ws://signal-cli:8080/v1/receive/' + community.bot_phone);
         ws.on('message', async (data) => {
             const message = JSON.parse(data);
+            if (!message.envelope.dataMessage) {
+                return;
+            }
             const admin_phone = message.envelope.sourceUuid;
             const admin_membership = await Membership.create_admin(admin_phone, community);
+            ws.close();
             resolve(admin_membership);
         });
         ws.on('error', (err) => {
             reject(new Error('WebSocket error:', err));
-        });
-        ws.on('close', () => {
-            console.log('WebSocket connection closed');
         });
     });
 
