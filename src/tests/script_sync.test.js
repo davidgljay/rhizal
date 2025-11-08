@@ -4,13 +4,15 @@ const GroupThread = require('../models/group_thread');
 const readline = require('readline');
 const fs = require('fs');
 const path = require('path');
-const WebSocket = require('ws');
 
 jest.mock('../models/membership');
 jest.mock('../models/group_thread');
 jest.mock('readline');
 jest.mock('fs');
 jest.mock('path');
+jest.mock('ws');
+
+const WebSocket = require('ws');
 
 describe('Script Sync - Admin Group Creation', () => {
     let mockReadlineInterface;
@@ -36,13 +38,19 @@ describe('Script Sync - Admin Group Creation', () => {
             const mockAdminPhone = '+0987654321';
             const mockCommunity = { id: 'community_123', bot_phone: '+1234567890' };
             const mockRhizalUsername = 'rhizal_username';
-            const mockMessage = { envelope: { sourceUuid: mockAdminPhone } }; 
+            const mockMessage = { envelope: { sourceUuid: mockAdminPhone, dataMessage: { message: 'test message' } } }; 
+            
             // Mock WebSocket for signal message simulation
             const wsOnHandlers = {};
-            jest.spyOn(WebSocket.prototype, 'on').mockImplementation(function (event, handler) {
-                wsOnHandlers[event] = handler;
-                return this;
-            });
+            const mockWebSocketInstance = {
+                on: jest.fn((event, handler) => {
+                    wsOnHandlers[event] = handler;
+                    return mockWebSocketInstance;
+                }),
+                close: jest.fn(),
+                readyState: 1 // WebSocket.OPEN
+            };
+            WebSocket.mockImplementation(() => mockWebSocketInstance);
 
             // Simulate readline.question returning admin phone
             mockQuestion.mockImplementation((prompt, cb) => cb(mockAdminPhone));
@@ -52,8 +60,9 @@ describe('Script Sync - Admin Group Creation', () => {
 
             // Simulate the WebSocket 'message' event as if a signal message was received with sourceUuid
             await Promise.resolve(); // move to next tick for 'set_admin' to register .on handlers
-            wsOnHandlers['message'] &&
+            if (wsOnHandlers['message']) {
                 wsOnHandlers['message'](JSON.stringify(mockMessage));
+            }
 
             const result = await setAdminPromise;
 

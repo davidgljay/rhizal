@@ -70,13 +70,14 @@ describe('Message', () => {
                 membership_id: 'membership_1',
                 text: 'Hello, world!',
                 signal_timestamp: 1696118400000,
-                about_membership_id: null 
+                about_membership_id: null,
+                message_type: 'message'
             }
             graphql.mockResolvedValue({ data: { insert_messages_one: mockMessage } });
             const ms_time = new Date('2023-10-01T00:00:00Z').getTime();
             const result = await Message.create('community_1', 'membership_1', 'Hello, world!', ms_time, true);
 
-            expect(graphql).toHaveBeenCalledWith( expect.stringContaining('mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $signal_timestamp: bigint!, $about_membership_id: uuid = null)'), messageVars );
+            expect(graphql).toHaveBeenCalledWith( expect.stringContaining('mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $signal_timestamp: bigint!, $about_membership_id: uuid = null, $message_type: String = "message")'), messageVars );
             expect(result).toEqual(mockMessage);
         });
 
@@ -95,7 +96,7 @@ describe('Message', () => {
 
             await Message.send('community_1', 'membership_1', 'to_phone', 'from_phone', 'Hello, world!', true);
 
-            expect(mockCreate).toHaveBeenCalledWith('community_1', 'membership_1', '', 1234567890, false, null);
+            expect(mockCreate).toHaveBeenCalledWith('community_1', 'membership_1', '', 1234567890, false, null, 'message');
             expect(mockSend).toHaveBeenCalledWith(['to_phone'], 'from_phone', 'Hello, world!');
 
             mockCreate.mockRestore();
@@ -233,7 +234,7 @@ describe('Message', () => {
             expect(mockSend).toHaveBeenNthCalledWith(1,
                 'community_1',
                 'sender_id', // No specific membership_id for group messages
-                'onboarding_group_id_1',
+                'group.onboarding_group_id_1',
                 'bot_phone',
                 'Hello, onboarding!',
                 true, 
@@ -244,7 +245,7 @@ describe('Message', () => {
             expect(mockSend).toHaveBeenNthCalledWith(2,
                 'community_1',
                 'sender_id', // No specific membership_id for group messages
-                'onboarding_group_id_2',
+                'group.onboarding_group_id_2',
                 'bot_phone',
                 'Hello, onboarding!',
                 true, 

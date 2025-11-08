@@ -84,7 +84,7 @@ describe('GroupThread', () => {
             const group_id = 'new_group_id';
             const community_id = 'new_community_id';
             const getVariables = { group_id };
-            const createVariables = { community_id, group_id: "group." + group_id };
+            const createVariables = { community_id, group_id };
 
             graphql.mockResolvedValueOnce({ data: { group_threads: [] } }); // No existing group thread
 
@@ -360,7 +360,7 @@ describe('GroupThread', () => {
 
             // Verify make_admin endpoint was called
             expect(fetch).toHaveBeenNthCalledWith(2, 
-                `http://signal-cli:8080/v1/groups/${bot_phone}/${signal_group_id}/admins`,
+                `http://signal-cli:8080/v1/groups/${bot_phone}/group.${signal_group_id}/admins`,
                 {
                     method: 'POST',
                     headers: {
@@ -416,7 +416,7 @@ describe('GroupThread', () => {
             expect(fetch).toHaveBeenCalledTimes(2);
             // Verify make_admin endpoint was called
             expect(fetch).toHaveBeenNthCalledWith(2, 
-                `http://signal-cli:8080/v1/groups/${bot_phone}/${signal_group_id}/admins`,
+                `http://signal-cli:8080/v1/groups/${bot_phone}/group.${signal_group_id}/admins`,
                 expect.any(Object)
             );
             // Verify GraphQL mutation was not called due to error

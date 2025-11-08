@@ -175,7 +175,7 @@ const expectedQueries = {
     createUserAndMembership: `mutation CreateUserAndMembership($phone:String!, $community_id:uuid!, $current_script_id:uuid!)`,
     createMembership: `mutation CreateMembership($user_id:uuid!, $community_id:uuid!, $current_script_id:uuid!)`,
     testVars: `testVarsQuery($membership_id:uuid!)`,
-    createMessage: `mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $signal_timestamp: bigint!, $about_membership_id: uuid = null)`,
+    createMessage: `mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_id: uuid!, $text: String!, $signal_timestamp: bigint!, $about_membership_id: uuid = null, $message_type: String = "message")`,
     updateMembershipVariable: `mutation updateMembershipVariable($id:uuid!, $value:String!)`,
     getScript: `query GetScript($id:uuid!)`,
     getGroupThread: `query GetGroupThread($group_id: String!)`,
@@ -448,7 +448,8 @@ describe('Integration Tests for receive_message Handler', () => {
                         from_user: true,
                         signal_timestamp: expect.any(Number),
                         text: 'Hello',
-                        about_membership_id: null
+                        about_membership_id: null,
+                        message_type: 'message'
                     },
                     response: { data: { insert_messages_one: { id: "message_1", membership: {id: 'membership_1', user: {phone: '+1234567890'}}, community: { id: 'community_1', bot_phone: '+0987654321'} } } }
                 },
@@ -637,7 +638,7 @@ describe('Integration Tests for receive_message Handler', () => {
                     },
                     {
                         query: expectedQueries.createGroupThread,
-                        variables: { community_id: communityId, group_id: 'group.' + base64_group_id },
+                        variables: { community_id: communityId, group_id: base64_group_id },
                         response: { data: { insert_group_threads_one: { id: 'thread_1', group_id: base64_group_id, step: '0', community: {group_script_id: 'script_2'} } } }
                     },
                     {
