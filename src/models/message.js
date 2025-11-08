@@ -97,7 +97,7 @@ mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_i
             if (!timestamp) {
                 return;
             }
-            if (message_type === 'announcement') {  
+            if (message_type === 'save_message') {  
                 await Message.create(community_id, membership_id, text, timestamp, false, about_membership_id, message_type);
             }
             if (log_message) {
