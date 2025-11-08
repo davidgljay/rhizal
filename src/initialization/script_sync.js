@@ -5,6 +5,7 @@ const Community = require('../models/community');
 const Script = require('../models/script');
 const readline = require('readline');
 const Membership = require('../models/membership');
+const Message = require('../models/message');
 const GroupThread = require('../models/group_thread');
 const WebSocket = require('ws');
 
@@ -96,9 +97,6 @@ const update_community_and_scripts = async function () {
     const group_script_result = await create_or_update_script(group_script_config);
     await Community.update_community_scripts(community.id, onboarding_script_result.id, group_script_result.id);
     console.log('Community and scripts updated');
-    console.log('Community config:', community);
-    console.log('Onboarding script id:', onboarding_script_result.id);
-    console.log('Group script id:', group_script_result.id);
     return community;
 }
 
@@ -125,6 +123,20 @@ const set_admin = async function (community, rhizal_username) {
             resolve(phone.trim());
         });
     });
+    let admin_name = await new Promise((resolve, reject) => {
+        const rl = readline.createInterface({
+            input: process.stdin,
+            output: process.stdout
+        });
+        rl.question('Ocassionally Rhizal will refer to you by name to others. What name would you like to use? ', (name) => {
+            rl.close();
+            if (!name || !name.trim()) {
+                console.error('No name entered.');
+                return reject(new Error('No name entered.'));
+            }
+            resolve(name.trim());
+        });
+    });
     console.log('Please send a signal message to username: ' + rhizal_username + ' to be added as an admin.');
     const admin_membership = await new Promise((resolve, reject) => {
     const ws = new WebSocket('ws://signal-cli:8080/v1/receive/' + community.bot_phone);
@@ -144,6 +156,9 @@ const set_admin = async function (community, rhizal_username) {
     });
 
     console.log('Admin membership created with id:', admin_membership.id);
+    console.log('Admin name set to:', admin_name);
+    // Set the variable via Membership.set_variable
+    await Membership.set_variable(admin_membership.id, "name", admin_name);
     return {admin_phone, admin_id: admin_membership.id};
 }
 

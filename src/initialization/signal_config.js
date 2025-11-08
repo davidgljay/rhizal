@@ -176,8 +176,6 @@ async function setSignalProfileName() {
 
             res.on('end', () => {
                 if (res.statusCode >= 200 && res.statusCode < 300) {
-                    console.log(data);
-                    console.log(JSON.parse(data));
                     console.log("Signal username set successfully, assigned username:", JSON.parse(data).username);
                     resolve(JSON.parse(data).username);
                 } else {

@@ -36,6 +36,7 @@ describe('Script Sync - Admin Group Creation', () => {
             const mockAdminMembership = { id: 'membership_123' };
             Membership.create_admin.mockResolvedValue(mockAdminMembership);
             const mockAdminPhone = '+0987654321';
+            const mockAdminName = 'John Doe';
             const mockCommunity = { id: 'community_123', bot_phone: '+1234567890' };
             const mockRhizalUsername = 'rhizal_username';
             const mockMessage = { envelope: { sourceUuid: mockAdminPhone, dataMessage: { message: 'test message' } } }; 
@@ -52,14 +53,32 @@ describe('Script Sync - Admin Group Creation', () => {
             };
             WebSocket.mockImplementation(() => mockWebSocketInstance);
 
-            // Simulate readline.question returning admin phone
-            mockQuestion.mockImplementation((prompt, cb) => cb(mockAdminPhone));
+            // Each call to createInterface returns the same mock interface, but we need to handle two sequential questions
+            // Callbacks are called synchronously to immediately resolve the promises
+            let callCount = 0;
+            mockQuestion.mockImplementation((prompt, cb) => {
+                callCount++;
+                // Call callback asynchronously to match readline's behavior
+                setImmediate(() => {
+                    if (callCount === 1) {
+                        cb(mockAdminPhone);
+                    } else if (callCount === 2) {
+                        cb(mockAdminName);
+                    }
+                });
+            });
 
             // Call set_admin and mock a signal message being received
             const setAdminPromise = set_admin(mockCommunity, mockRhizalUsername);
 
+            // Wait for readline promises to resolve (they use setImmediate)
+            await new Promise(resolve => setImmediate(resolve));
+            await new Promise(resolve => setImmediate(resolve));
+            
+            // Now wait for the WebSocket to be set up
+            await Promise.resolve();
+            
             // Simulate the WebSocket 'message' event as if a signal message was received with sourceUuid
-            await Promise.resolve(); // move to next tick for 'set_admin' to register .on handlers
             if (wsOnHandlers['message']) {
                 wsOnHandlers['message'](JSON.stringify(mockMessage));
             }
