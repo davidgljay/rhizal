@@ -26,7 +26,7 @@ const queries = {
         id
         phone
     }
-    memberships(where:{community:{bot_phone:{_eq: $bot_phone}},user:{phone:{_eq:$phone}}}) {
+    memberships(where:{community:{bot_phone:{_eq: $bot_phone}},user:{phone:{_eq:$phone}}}, order_by: {created_at: desc}) {
         id
         step
         name
@@ -60,7 +60,7 @@ const queries = {
             hashtag
         }
     }
-    memberships(where:{community:{bot_phone:{_eq: $bot_phone}},user:{phone:{_eq:$phone}}}) {
+    memberships(where:{community:{bot_phone:{_eq: $bot_phone}},user:{phone:{_eq:$phone}}}, order_by: {created_at: desc}) {
         id
         step
         name
@@ -85,7 +85,7 @@ const queries = {
 }`,
     replyQuery:
 `query ReplyQuery($bot_phone:String!, $phone:String!, $signal_timestamp:bigint!) {
-    memberships(where:{community:{bot_phone:{_eq: $bot_phone}},user:{phone:{_eq:$phone}}}) {
+    memberships(where:{community:{bot_phone:{_eq: $bot_phone}},user:{phone:{_eq:$phone}}}, order_by: {created_at: desc}) {
         id
         permissions
         name
