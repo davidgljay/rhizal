@@ -1,9 +1,11 @@
 import { bot_message_hashtag } from "../helpers/hashtag_commands";
 import Membership from "../models/membership";
 import Script from "../models/script";
+import GroupThread from "../models/group_thread";
 
 jest.mock("../models/membership");
 jest.mock("../models/script");
+jest.mock("../models/group_thread");
 
 describe("bot_message_hashtag", () => {
     afterEach(() => {
@@ -69,5 +71,44 @@ describe("bot_message_hashtag", () => {
 
             expect(Membership.set_variable).not.toHaveBeenCalled();
         }); 
-});
+    });
+
+    describe("#name", () => {
+        it("should handle #name hashtag correctly", async () => {
+            const mockMembership = { id: 1, permissions: ['group_comms'] };
+            const mockCommunity = {};
+            const mockMessage = "Test message";
+            const mockGroupThread = { id: 'group_thread_123', group_id: 'group_456' };
+            const mockGroupNameScript = {
+                id: 789,
+                vars: {},
+                get_vars: jest.fn(),
+                send: jest.fn(),
+            };
+
+            Script.get = jest.fn().mockResolvedValue(mockGroupNameScript);
+            GroupThread.set_variable = jest.fn();
+
+            const result = await bot_message_hashtag("#name", mockMembership, mockCommunity, mockMessage, mockGroupThread);
+
+            expect(result).toBe(true);
+            expect(Script.get).toHaveBeenCalledWith("group_thread");
+            expect(GroupThread.set_variable).toHaveBeenCalledWith(mockGroupThread.id, "step", "0");
+            expect(mockGroupNameScript.get_vars).toHaveBeenCalledWith(mockMembership, mockMessage);
+            expect(mockGroupNameScript.vars.group_id).toBe(mockGroupThread.group_id);
+            expect(mockGroupNameScript.send).toHaveBeenCalledWith("0");
+        });
+
+        it("should return false if member does not have group_comms permission", async () => {
+            const mockMembership = { id: 1, permissions: [] };
+            const mockCommunity = {};
+            const mockMessage = "Test message";
+            const mockGroupThread = { id: 'group_thread_123', group_id: 'group_456' };
+
+            const result = await bot_message_hashtag("#name", mockMembership, mockCommunity, mockMessage, mockGroupThread);
+
+            expect(result).toBe(false);
+            expect(GroupThread.set_variable).not.toHaveBeenCalled();
+        });
+    });
 });

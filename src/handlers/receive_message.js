@@ -181,7 +181,7 @@ export async function receive_group_message(internal_group_id, message, from_pho
     //Check if the message includes a hashtag command, if so execute it.
     if (hashtags && hashtags.length > 0) {
         const hashtag = hashtags[0];
-        const command_triggered = await bot_message_hashtag(hashtag, membership, community, message);
+        const command_triggered = await bot_message_hashtag(hashtag, membership, community, message, group_thread);
         if (command_triggered) {
             return;
         }

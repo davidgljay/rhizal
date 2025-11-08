@@ -350,7 +350,7 @@ describe('receive_message', () => {
             jest.spyOn(GroupThread, 'find_or_create_group_thread').mockResolvedValue(mockGroupThread);
             await receive_group_message(group_id, message, from_phone, bot_phone, sender_name, timestamp);
 
-            expect(bot_message_hashtag).toHaveBeenCalledWith('#command', expect.objectContaining({ id: 'membership_1' }), expect.objectContaining({ id: 'community_1' }), message);
+            expect(bot_message_hashtag).toHaveBeenCalledWith('#command', expect.objectContaining({ id: 'membership_1' }), expect.objectContaining({ id: 'community_1' }), message, {step: '0'});
 
         });
 
