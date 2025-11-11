@@ -242,13 +242,17 @@ export async function group_join_or_leave(bot_phone) {
     const member_permissions = {};
     for (const group of groups.data.group_threads) {
         const group_info = await Signal.get_group_info(bot_phone, group.group_id);
+        if (group_info instanceof Error) {
+            console.error('Error updating membership permissions:', group_info);
+            return;
+        }
         for (const member of group_info.members) {
             if (member_permissions[member]) {
-                member_permissions[member] = member_permissions[member].concat(group.permissions);
-            } else {
-                member_permissions[member] = group.permissions;
+                    member_permissions[member] = member_permissions[member].concat(group.permissions);
+                } else {
+                    member_permissions[member] = group.permissions;
+                }
             }
-        }
     }
     for (const member of Object.keys(member_permissions)) {
         const membership = await Membership.get(member, bot_phone);
