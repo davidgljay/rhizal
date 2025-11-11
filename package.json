@@ -11,7 +11,7 @@
     "build": "babel src --out-dir dist && cp -r src/initialization dist/initialization && cp -r scripts_config dist/scripts_config",
     "wipe-db": "docker compose run --rm rhizal node src/wipe.js",
     "rhizal-init": "docker compose run --rm rhizal node src/init.js",
-    "script-sync": "docker compose run --rm rhizal node src/script_sync.js -f docker-compose-no-signal.yml",
+    "script-sync": "docker compose -f docker-compose-no-signal.yml run --rm rhizal node src/script_sync.js",
     "signal-config": "docker compose run --rm rhizal node src/signal_config.js",
     "dev": "nodemon dist/app.js",
     "test": "jest --watch"
