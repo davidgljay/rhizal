@@ -169,6 +169,9 @@ export async function receive_group_message(internal_group_id, message, from_pho
     if (!community) {
         return;
     }
+    if (!membership.permissions.includes('group_comms')) {
+        return;
+    }
     const group_thread = await GroupThread.find_or_create_group_thread(group_id, community.id);
 
 
