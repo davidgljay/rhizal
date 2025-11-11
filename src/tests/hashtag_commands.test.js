@@ -78,7 +78,7 @@ describe("bot_message_hashtag", () => {
             const mockMembership = { id: 1, permissions: ['group_comms'] };
             const mockCommunity = {};
             const mockMessage = "Test message";
-            const mockGroupThread = { id: 'group_thread_123', group_id: 'group_456' };
+            const mockGroupThread = { group_id: 'group_thread_123', group_id: 'group_456' };
             const mockGroupNameScript = {
                 id: 789,
                 vars: {},
@@ -93,7 +93,7 @@ describe("bot_message_hashtag", () => {
 
             expect(result).toBe(true);
             expect(Script.get).toHaveBeenCalledWith("group_thread");
-            expect(GroupThread.set_variable).toHaveBeenCalledWith(mockGroupThread.id, "step", "0");
+            expect(GroupThread.set_variable).toHaveBeenCalledWith(mockGroupThread.group_id, "step", "0");
             expect(mockGroupNameScript.get_vars).toHaveBeenCalledWith(mockMembership, mockMessage);
             expect(mockGroupNameScript.vars.group_id).toBe(mockGroupThread.group_id);
             expect(mockGroupNameScript.send).toHaveBeenCalledWith("0");
