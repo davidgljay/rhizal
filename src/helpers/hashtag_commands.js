@@ -31,7 +31,7 @@ export async function bot_message_hashtag(hashtag, membership, community, messag
             if (!membership.permissions.includes('group_comms')) {
                 return false;
             }
-            await GroupThread.set_variable(group_thread.id, 'step', '0');
+            await GroupThread.set_variable(group_thread.group_id, 'step', '0');
             await group_name_script.get_vars(membership, message);
             group_name_script.vars.group_id = group_thread.group_id;
             await group_name_script.send('0');
