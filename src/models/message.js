@@ -179,16 +179,16 @@ mutation SetMessageType($signal_timestamp: bigint!, $type: String!) {
         return result.data.update_messages.returning[0];
     }
 
-    static async send_to_onboarding(community_id, sender_id, text) {
+    static async send_to_permission(community_id, sender_id, text, permission = 'onboarding') {
         let bot_phone;
         let communityData;
         
-        const SEND_TO_ONBOARDING = `
-query SendToOnboarding($community_id: uuid!) {
+        const SEND_TO_PERMISSION = `
+query SendToPermission($community_id: uuid!, $permission: [String!]!) {
     communities(where: {id: {_eq: $community_id}}) {
         id
         bot_phone
-        onboarding_groups: group_threads(where: { permissions: { _contains: ["onboarding"] } }) {
+        groups: group_threads(where: { permissions: { _contains: $permission } }) {
             id
             group_id
         }
@@ -196,27 +196,27 @@ query SendToOnboarding($community_id: uuid!) {
     }
 }`;
 
-        const result = await graphql(SEND_TO_ONBOARDING, { community_id });
+        const result = await graphql(SEND_TO_PERMISSION, { community_id, permission: [permission] });
         communityData = result.data.communities[0];
         if (!communityData) {
             throw new Error('Community not found');
         }
-        if (communityData.onboarding_groups.length === 0) {
-            throw new Error('No onboarding groups found');
+        if (communityData.groups.length === 0) {
+            throw new Error(`No groups found with permission: ${permission}`);
         }
         bot_phone = communityData.bot_phone;
 
 
-        for (const onboarding_group of communityData.onboarding_groups) {
+        for (const group of communityData.groups) {
             await Message.send(
                 community_id,
                 sender_id, //Use the about_message_id for group messages
-                'group.' + onboarding_group.group_id,
+                'group.' + group.group_id,
                 bot_phone,
                 text,
                 true,
                 sender_id,
-                `relay_to_onboarding_group`,
+                `relay_to_`+ permission + `_group`,
                 0
             );
         }

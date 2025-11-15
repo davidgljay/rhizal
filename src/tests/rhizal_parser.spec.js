@@ -8,7 +8,7 @@ jest.mock('../models/message', () => ({
     send: jest.fn(),
     send_announcement: jest.fn(),
     set_message_type: jest.fn(),
-    send_to_onboarding: jest.fn(),
+    send_to_permission: jest.fn(),
     create: jest.fn(),
 }));
 
@@ -366,22 +366,28 @@ describe('rhyzal_parser', () => {
         });
     });
 
-    describe('send_to_onboarding', () => {
+    describe('send_to_permission', () => {
         it('should send a message to admins correctly', async () => {
             const parser = new RhyzalParser(test_json);
-            await parser.evaluate_receive({send_to_onboarding: {preamble: 'Test preamble'}}, {community_id: '123', id: '456', message: 'Hello, world!'});
-            expect(Message.send_to_onboarding).toHaveBeenCalledWith('123', '456', 'Test preamble\n\nHello, world!');
+            await parser.evaluate_receive({send_to_group_threads: {preamble: 'Test preamble'}}, {community_id: '123', id: '456', message: 'Hello, world!'});
+            expect(Message.send_to_permission).toHaveBeenCalledWith('123', '456', 'Test preamble\n\nHello, world!', 'group_threads');
         });
 
         it('should replace variables in the preamble', async () => {
             const parser = new RhyzalParser(test_json);
             await parser.evaluate_receive({send_to_onboarding: {preamble: 'Test preamble {{var1}}'}}, {community_id: '123', id: '456', message: 'Hello, world!', var1: 'foo'});
-            expect(Message.send_to_onboarding).toHaveBeenCalledWith('123', '456', 'Test preamble foo\n\nHello, world!');
+            expect(Message.send_to_permission).toHaveBeenCalledWith('123', '456', 'Test preamble foo\n\nHello, world!', 'onboarding');
+        });
+
+        it('should use custom permission when specified', async () => {
+            const parser = new RhyzalParser(test_json);
+            await parser.evaluate_receive({send_to_permission: {preamble: 'Test preamble', permission: 'admin'}}, {community_id: '123', id: '456', message: 'Hello, world!'});
+            expect(Message.send_to_permission).toHaveBeenCalledWith('123', '456', 'Test preamble\n\nHello, world!', 'admin');
         });
 
         it('should throw an error if community_id is not found', async () => {
             const parser = new RhyzalParser(test_json);
-            await expect(() => parser.evaluate_receive({send_to_onboarding: true}, {})).rejects.toThrowError('Community ID not found in vars');
+            await expect(() => parser.evaluate_receive({send_to_permission: true}, {})).rejects.toThrowError('Community ID not found in vars');
         });
     });
 

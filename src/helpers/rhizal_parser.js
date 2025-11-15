@@ -19,14 +19,14 @@ class RhyzalParser {
 
     constructor(script_json) {
         let script_obj;
-        const {send, set_message_type, send_announcement, send_to_onboarding} = Message;
+        const {send, set_message_type, send_announcement, send_to_permission} = Message;
         const {set_variable} = Membership;
         this.send_message = send;
         this.send_announcement = send_announcement;
         this.set_message_type = set_message_type;
         this.set_variable = set_variable;
         this.set_group_variable = GroupThread.set_variable;
-        this.send_to_onboarding = send_to_onboarding;
+        this.send_to_permission = send_to_permission;
         this.save_message = Message.create;
         try {
             script_obj = JSON.parse(script_json);
@@ -87,7 +87,22 @@ class RhyzalParser {
     }
 
     async evaluate_receive(script, vars) {
-        switch(Object.keys(script)[0]) {
+        const key = Object.keys(script)[0];
+        
+        // Handle arbitrary send_to_[permission] cases
+        if (key.startsWith('send_to_')) {
+            if (!vars.community_id) {
+                throw new Error('Community ID not found in vars');
+            }
+            const permission = key.replace('send_to_', '');
+            const scriptConfig = script[key];
+            const expandedMessage = this.insert_variables(scriptConfig['preamble'], vars) + '\n\n' + vars.message;
+            const permissionOverride = scriptConfig['permission'] || permission;
+            await this.send_to_permission(vars.community_id, vars.id, expandedMessage, permissionOverride);
+            return;
+        }
+        
+        switch(key) {
             case 'step':
                 const new_step = String(script['step']);
                 if (vars.group_id) {
@@ -141,13 +156,6 @@ class RhyzalParser {
                     throw new Error('Community ID not found in vars');
                 }
                 await this.send_announcement(vars.community_id, vars.id);
-                break;
-            case 'send_to_onboarding':
-                if (!vars.community_id) {
-                    throw new Error('Community ID not found in vars');
-                }
-                const expandedMessage = this.insert_variables(script['send_to_onboarding']['preamble'], vars) + '\n\n' + vars.message
-                await this.send_to_onboarding(vars.community_id, vars.id, expandedMessage);
                 break;
             case 'if': //TODO: add elif to support more complex logic
                 if (this.evaluate_condition(script.if, vars)) {

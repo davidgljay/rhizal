@@ -11,7 +11,7 @@
             - set_group_variable:
                 variable: "hashtag"
                 value: "regex(message, /#\\w+/)"
-            - send_to_admins:
+            - send_to_group_comms:
                 preamble: "A new group has been created with hashtag:"
             - step: 1
         else:

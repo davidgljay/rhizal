@@ -210,7 +210,7 @@ describe('Message', () => {
     });
 
 
-    describe('send_to_onboarding', () => {
+    describe('send_to_permission', () => {
 
         afterEach(() => {
             jest.clearAllMocks();
@@ -221,15 +221,16 @@ describe('Message', () => {
             const mockCommunity = {
                 id: 'community_1',
                 bot_phone: 'bot_phone',
-                onboarding_groups: [
+                groups: [
                     { id: 'onboarding_group_1', group_id: 'onboarding_group_id_1' },
                     { id: 'onboarding_group_2', group_id: 'onboarding_group_id_2' }
                 ]
             };
             graphql.mockResolvedValue({ data: { communities: [mockCommunity] } });
 
-            await Message.send_to_onboarding('community_1', 'sender_id', 'Hello, onboarding!');
+            await Message.send_to_permission('community_1', 'sender_id', 'Hello, onboarding!', 'onboarding');
 
+            expect(graphql).toHaveBeenCalledWith(expect.stringContaining('query SendToPermission'), { community_id: 'community_1', permission: ['onboarding'] });
             expect(mockSend).toHaveBeenCalledTimes(2);
             expect(mockSend).toHaveBeenNthCalledWith(1,
                 'community_1',
@@ -260,7 +261,64 @@ describe('Message', () => {
 
         it('should handle errors when fetching community data', async () => {
             graphql.mockResolvedValue({ data: { communities: [] } });
-            await expect(Message.send_to_onboarding('community_1', 'sender_id', 'Hello, onboarding!')).rejects.toThrow('Community not found');
+            await expect(Message.send_to_permission('community_1', 'sender_id', 'Hello, onboarding!', 'onboarding')).rejects.toThrow('Community not found');
+        });
+
+        it('should send a message to groups with arbitrary permission', async () => {
+            const mockSend = jest.spyOn(Message, 'send').mockResolvedValue({});
+            const mockCommunity = {
+                id: 'community_1',
+                bot_phone: 'bot_phone',
+                groups: [
+                    { id: 'admin_group_1', group_id: 'admin_group_id_1' }
+                ]
+            };
+            graphql.mockResolvedValue({ data: { communities: [mockCommunity] } });
+
+            await Message.send_to_permission('community_1', 'sender_id', 'Hello, admins!', 'admin');
+
+            expect(graphql).toHaveBeenCalledWith(expect.stringContaining('query SendToPermission'), { community_id: 'community_1', permission: ['admin'] });
+            expect(mockSend).toHaveBeenCalledTimes(1);
+            expect(mockSend).toHaveBeenNthCalledWith(1,
+                'community_1',
+                'sender_id',
+                'group.admin_group_id_1',
+                'bot_phone',
+                'Hello, admins!',
+                true, 
+                'sender_id',
+                `relay_to_admin_group`,
+                0
+            );
+
+            mockSend.mockRestore();
+        });
+
+        it('should throw error when no groups found with specified permission', async () => {
+            const mockCommunity = {
+                id: 'community_1',
+                bot_phone: 'bot_phone',
+                groups: []
+            };
+            graphql.mockResolvedValue({ data: { communities: [mockCommunity] } });
+            await expect(Message.send_to_permission('community_1', 'sender_id', 'Hello!', 'nonexistent')).rejects.toThrow('No groups found with permission: nonexistent');
+        });
+
+        it('should default to onboarding permission when not specified', async () => {
+            const mockSend = jest.spyOn(Message, 'send').mockResolvedValue({});
+            const mockCommunity = {
+                id: 'community_1',
+                bot_phone: 'bot_phone',
+                groups: [
+                    { id: 'onboarding_group_1', group_id: 'onboarding_group_id_1' }
+                ]
+            };
+            graphql.mockResolvedValue({ data: { communities: [mockCommunity] } });
+
+            await Message.send_to_permission('community_1', 'sender_id', 'Hello!');
+
+            expect(graphql).toHaveBeenCalledWith(expect.stringContaining('query SendToPermission'), { community_id: 'community_1', permission: ['onboarding'] });
+            mockSend.mockRestore();
         });
     });
 });
