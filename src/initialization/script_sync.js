@@ -95,6 +95,23 @@ const update_community_and_scripts = async function () {
         script_json: JSON.stringify(group_script)
     };
     const group_script_result = await create_or_update_script(group_script_config);
+    
+    // Create or update name_request script
+    const name_request_script_yaml = fs.readFileSync(path.join(__dirname, '../../scripts_config', 'name_request.yml'), 'utf8');
+    let name_request_script;
+    try {
+        name_request_script = yaml.load(name_request_script_yaml);
+    } catch (error) {
+        console.error('Error loading name_request script yaml:', error);
+        throw new Error('Error loading name_request script yaml');
+    }
+    const name_request_script_config = {
+        name: 'name_request',
+        community_id: community.id,
+        script_json: JSON.stringify(name_request_script)
+    };
+    await create_or_update_script(name_request_script_config);
+    
     await Community.update_community_scripts(community.id, onboarding_script_result.id, group_script_result.id);
     console.log('Community and scripts updated');
     return community;

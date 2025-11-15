@@ -1,0 +1,9 @@
+0:
+  send:
+    - "Hi! You've been added to a group with Rhizal. What name would you like Rhizal to use when relaying your messages to others?"
+  on_receive:
+    - set_variable:
+        variable: "name"
+        value: "regex(message, '^[a-zA-Z ]+$')"
+    - step: "done"
+

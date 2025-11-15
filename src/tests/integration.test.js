@@ -185,6 +185,10 @@ const expectedQueries = {
     getPermissionsGroups: `query GetPermissionsGroups($bot_phone:String!)`,
     getMembershipFromPhoneNumbers: `query GetMembershipFromPhoneNumbers($phone: String!, $bot_phone: String!)`,
     updateMembershipPermissions: `mutation UpdatePermissions($id:uuid!, $permissions:[String!])`,
+    getCurrentPermissions: `query GetCurrentPermissions($id:uuid!)`,
+    getCommunityWithOnboarding: `query GetCommunityWithOnboarding($bot_phone:String!)`,
+    getNameRequestScript: `query GetNameRequestScript($name:String!, $community_id:uuid!)`,
+    getUser: `query GetUser($phone:String!)`,
 }
 
 const testScript = JSON.stringify(script);
@@ -1126,15 +1130,29 @@ describe('Integration Tests for receive_message Handler', () => {
     });
 
     describe('group_join_or_leave', () => {
+        beforeEach(() => {
+            // Ensure Community.get spy is properly set up before each test
+            // jest.restoreAllMocks() in parent afterEach restores the original implementation,
+            // so we need to re-spy to ensure mock methods are available
+            if (typeof Community.get.mockImplementation !== 'function') {
+                jest.spyOn(Community, 'get');
+            }
+        });
+
         it('should update permissions for members in groups', async () => {
             const phone = '+1234567890';
             const bot_phone = '+0987654321';
             const group_id = 'group_123';
             const base64_group_id = Buffer.from(group_id).toString('base64');
+            const communityId = 'community_1';
             const mockGroupInfo = {
                 members: ['+1234567890', '+0987654321'],
             };
             signal.get_group_info.mockResolvedValue(mockGroupInfo);
+            
+            // Mock Community.get - ensure fresh implementation for this test
+            Community.get.mockImplementation(() => Promise.resolve({ id: communityId, bot_phone }));
+            
             const mockGraphql = [
                 {
                     query: expectedQueries.getPermissionsGroups,
@@ -1142,24 +1160,76 @@ describe('Integration Tests for receive_message Handler', () => {
                     response: { data: { group_threads: [{ group_id: base64_group_id, permissions: ['group_comms'] }] } }
                 },
                 {
+                    query: expectedQueries.getCommunityWithOnboarding,
+                    variables: { bot_phone: bot_phone },
+                    response: { 
+                        data: { 
+                            communities: [{
+                                id: communityId,
+                                bot_phone: bot_phone,
+                                onboarding: {
+                                    id: 'onboarding_script',
+                                    name: 'onboarding',
+                                    script_json: JSON.stringify(script),
+                                    vars_query: null,
+                                    targets_query: null
+                                }
+                            }] 
+                        } 
+                    }
+                },
+                {
+                    query: expectedQueries.getNameRequestScript,
+                    variables: { name: 'name_request', community_id: communityId },
+                    response: { data: { scripts: [] } } // Script doesn't exist, will use onboarding
+                },
+                {
                     query: expectedQueries.getMembershipFromPhoneNumbers,
                     variables: { phone: '+1234567890', bot_phone: bot_phone },
-                    response: { data: { memberships: [{ id: 'membership_1', permissions: ['group_comms'] }] } }
+                    response: { 
+                        data: { 
+                            memberships: [{ 
+                                id: 'membership_1', 
+                                permissions: [],
+                                user: { phone: '+1234567890' },
+                                community: { id: communityId, bot_phone: bot_phone }
+                            }] 
+                        } 
+                    }
+                },
+                {
+                    query: expectedQueries.getCurrentPermissions,
+                    variables: { id: 'membership_1' },
+                    response: { data: { memberships: [{ permissions: [] }] } }
                 },
                 {
                     query: expectedQueries.updateMembershipPermissions,
                     variables: { id: 'membership_1', permissions: ['group_comms'] },
-                    response: { data: { update_memberships: { returning: [{ id: 'membership_1' }] } } }
+                    response: { data: { update_memberships: { returning: [{ id: 'membership_1', permissions: ['group_comms'] }] } } }
                 },
                 {
                     query: expectedQueries.getMembershipFromPhoneNumbers,
                     variables: { phone: bot_phone, bot_phone: bot_phone },
-                    response: { data: { memberships: [{ id: 'membership_2', permissions: ['group_comms'] }] } }
+                    response: { 
+                        data: { 
+                            memberships: [{ 
+                                id: 'membership_2', 
+                                permissions: [],
+                                user: { phone: bot_phone },
+                                community: { id: communityId, bot_phone: bot_phone }
+                            }] 
+                        } 
+                    }
+                },
+                {
+                    query: expectedQueries.getCurrentPermissions,
+                    variables: { id: 'membership_2' },
+                    response: { data: { memberships: [{ permissions: [] }] } }
                 },
                 {
                     query: expectedQueries.updateMembershipPermissions,
                     variables: { id: 'membership_2', permissions: ['group_comms'] },
-                    response: { data: { update_memberships: { returning: [{ id: 'membership_2' }] } } }
+                    response: { data: { update_memberships: { returning: [{ id: 'membership_2', permissions: ['group_comms'] }] } } }
                 },
             ];
             for (let i = 0; i < mockGraphql.length; i++) {
@@ -1172,6 +1242,7 @@ describe('Integration Tests for receive_message Handler', () => {
                 expect(graphql).toHaveBeenNthCalledWith(i + 1, expect.stringContaining(mockGraphql[i].query), mockGraphql[i].variables);
             }
             expect(graphql).toHaveBeenCalledTimes(mockGraphql.length);
+            expect(Community.get).toHaveBeenCalledWith(bot_phone);
         });
     });
 
