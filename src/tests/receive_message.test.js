@@ -27,7 +27,7 @@ jest.mock('../models/message', () => {
     return {
         create: jest.fn(),
         send: jest.fn(),
-        send_to_onboarding: jest.fn()
+        send_to_permission: jest.fn()
     };
 });
 
@@ -153,7 +153,7 @@ describe('receive_message', () => {
             const community = { id: 'community_1', bot_phone: '0987654321', admins: [] };
             const message = 'Test message';
             await no_script_message(membership, community, message);
-            expect(Message.send_to_onboarding).toHaveBeenCalledWith('community_1', 'membership_1', 'Message relayed from Test User: \"Test message\" Reply to respond.', 'onboarding');
+            expect(Message.send_to_permission).toHaveBeenCalledWith('community_1', 'membership_1', 'Message relayed from Test User: \"Test message\" Reply to respond.', 'onboarding');
         });
     });
 
@@ -257,7 +257,7 @@ describe('receive_message', () => {
 
             await receive_message(sender, recipient, message, sent_time);
 
-            expect(Message.send_to_onboarding).toHaveBeenCalledWith('community_1', 'membership_1', 'Message relayed from Test User: \"test message\" Reply to respond.', 'onboarding');
+            expect(Message.send_to_permission).toHaveBeenCalledWith('community_1', 'membership_1', 'Message relayed from Test User: \"test message\" Reply to respond.', 'onboarding');
         });
 
         it('should process the member\'s message', async () => {
