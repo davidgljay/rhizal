@@ -275,6 +275,6 @@ export async function new_member(phone, community, message, user, sent_time) {
 
 export async function no_script_message(membership, community, message) {
     const relayMessage = `Message relayed from ${membership.name}: "${message}" Reply to respond.`;
-    Message.send_to_onboarding(community.id, membership.id, relayMessage, 'onboarding');
+    Message.send_to_permission(community.id, membership.id, relayMessage, 'onboarding');
     return;
 }
