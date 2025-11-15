@@ -1127,5 +1127,584 @@ describe('Integration Scenarios', () => {
             );
         });
     });
+
+    describe('6. Announcement cancellation', () => {
+        it('should allow user to cancel an announcement after starting it', async () => {
+            const senderNumber = '+1234567890';
+            const botNumber = '+0987654321';
+            const communityId = 'community_1';
+            const sentTime = 1741644982;
+
+            // User sends #announcement
+            graphqlMock.addResponseForQuery('RecieveMessageQuery', {
+                data: {
+                    communities: [{
+                        id: communityId,
+                        bot_phone: botNumber,
+                        onboarding: {
+                            id: 'onboarding_script',
+                            name: 'Onboarding Script',
+                            script_json: '{}',
+                            vars_query: null,
+                            targets_query: null
+                        }
+                    }],
+                    users: [{
+                        id: 'user_1',
+                        phone: senderNumber
+                    }],
+                    memberships: [{
+                        id: 'membership_1',
+                        step: 'done',
+                        permissions: ['announcement'],
+                        current_script: null,
+                        community: {
+                            id: communityId,
+                            bot_phone: botNumber
+                        },
+                        user: {
+                            id: 'user_1',
+                            phone: senderNumber
+                        }
+                    }]
+                }
+            });
+
+            // Get system script
+            graphqlMock.addResponseForQuery('GetSystemScript', {
+                data: {
+                    scripts: [{
+                        id: 'announcement_script',
+                        name: 'announcement',
+                        script_json: JSON.stringify(announcementScript),
+                        vars_query: null,
+                        targets_query: null
+                    }]
+                }
+            });
+
+            // Update membership to use announcement script
+            graphqlMock.addResponseForQuery('updateMembershipVariable', {
+                data: {
+                    update_memberships: {
+                        returning: [{ id: 'membership_1' }]
+                    }
+                }
+            });
+
+            // Update step to 0
+            graphqlMock.addResponseForQuery('updateMembershipVariable', {
+                data: {
+                    update_memberships: {
+                        returning: [{ id: 'membership_1' }]
+                    }
+                }
+            });
+
+            await receive_message(senderNumber, botNumber, '#announcement', sentTime);
+
+            expect(signalMock.send).toHaveBeenCalledWith(
+                [senderNumber],
+                botNumber,
+                'Would you like to send an announcement to your entire community? Just enter the message here and I\'ll confirm that it looks good before sending. You can also cancel this process with #cancel.'
+            );
+
+            // Reset mocks
+            signalMock.reset();
+            graphqlMock.reset();
+            graphqlMock.clearCustomResponses();
+
+            // User sends #cancel
+            graphqlMock.addResponseForQuery('RecieveMessageQuery', {
+                data: {
+                    communities: [{
+                        id: communityId,
+                        bot_phone: botNumber,
+                        onboarding: {
+                            id: 'onboarding_script',
+                            name: 'Onboarding Script',
+                            script_json: '{}',
+                            vars_query: null,
+                            targets_query: null
+                        }
+                    }],
+                    users: [{
+                        id: 'user_1',
+                        phone: senderNumber
+                    }],
+                    memberships: [{
+                        id: 'membership_1',
+                        step: '0',
+                        permissions: ['announcement'],
+                        current_script: {
+                            id: 'announcement_script',
+                            name: 'announcement',
+                            script_json: JSON.stringify(announcementScript),
+                            vars_query: null,
+                            targets_query: null
+                        },
+                        community: {
+                            id: communityId,
+                            bot_phone: botNumber
+                        },
+                        user: {
+                            id: 'user_1',
+                            phone: senderNumber
+                        }
+                    }]
+                }
+            });
+
+            // Get system script for #cancel
+            graphqlMock.addResponseForQuery('GetSystemScript', {
+                data: {
+                    scripts: [{
+                        id: 'announcement_script',
+                        name: 'announcement',
+                        script_json: JSON.stringify(announcementScript),
+                        vars_query: null,
+                        targets_query: null
+                    }]
+                }
+            });
+
+            // Update step to done
+            graphqlMock.addResponseForQuery('updateMembershipVariable', {
+                data: {
+                    update_memberships: {
+                        returning: [{ id: 'membership_1' }]
+                    }
+                }
+            });
+
+            await receive_message(senderNumber, botNumber, '#cancel', sentTime + 1);
+
+            expect(signalMock.send).toHaveBeenCalledWith(
+                [senderNumber],
+                botNumber,
+                'Okay, I\'ve canceled the announcement process. You can start it again with #announcement at any time.'
+            );
+        });
+    });
+
+    describe('7. Group thread #name cancellation', () => {
+        it('should allow user to cancel group_thread script started with #name', async () => {
+            const groupId = 'group_123';
+            const base64GroupId = Buffer.from(groupId).toString('base64');
+            const senderNumber = '+1234567890';
+            const botNumber = '+0987654321';
+            const communityId = 'community_1';
+            const groupScriptId = 'group_script_1';
+            const sentTime = 1741644982;
+
+            // User sends #name in group
+            graphqlMock.addResponseForQuery('RecieveGroupMessageQuery', {
+                data: {
+                    communities: [{
+                        id: communityId,
+                        bot_phone: botNumber,
+                        group_script_id: groupScriptId,
+                        group_threads: []
+                    }],
+                    memberships: [{
+                        id: 'membership_1',
+                        permissions: ['group_comms'],
+                        user: {
+                            phone: senderNumber
+                        },
+                        community: {
+                            id: communityId,
+                            bot_phone: botNumber
+                        },
+                        name: 'Test User'
+                    }]
+                }
+            });
+
+            graphqlMock.addResponseForQuery('GetGroupThread', {
+                data: {
+                    group_threads: [{
+                        id: 'thread_1',
+                        group_id: base64GroupId,
+                        step: 'done',
+                        hashtag: '#existingHashtag',
+                        community: {
+                            group_script_id: groupScriptId,
+                            group_threads: []
+                        }
+                    }]
+                }
+            });
+
+            // Get group_thread script for #name
+            graphqlMock.addResponseForQuery('GetScript', {
+                data: {
+                    scripts: [{
+                        id: 'group_thread_script',
+                        name: 'group_thread',
+                        script_json: JSON.stringify(groupThreadScript),
+                        vars_query: null,
+                        targets_query: null
+                    }]
+                }
+            });
+
+            // Update group thread step to 0
+            graphqlMock.addResponseForQuery('UpdateGroupThreadVariable', {
+                data: {
+                    update_group_threads: {
+                        returning: [{ id: 'thread_1' }]
+                    }
+                }
+            });
+
+            await receive_group_message(groupId, '#name', senderNumber, botNumber, 'Test User', sentTime);
+
+            const sendGroupId = 'group.' + base64GroupId;
+            expect(signalMock.send).toHaveBeenCalledWith(
+                [sendGroupId],
+                botNumber,
+                'Thanks for inviting me to the group!'
+            );
+            expect(signalMock.send).toHaveBeenCalledWith(
+                [sendGroupId],
+                botNumber,
+                'What\'s a good hashtag to use for this group?'
+            );
+
+            // Reset mocks
+            signalMock.reset();
+            graphqlMock.reset();
+            graphqlMock.clearCustomResponses();
+
+            // User sends message without hashtag (first time - goes to step 2)
+            graphqlMock.addResponseForQuery('RecieveGroupMessageQuery', {
+                data: {
+                    communities: [{
+                        id: communityId,
+                        bot_phone: botNumber,
+                        group_script_id: groupScriptId,
+                        group_threads: []
+                    }],
+                    memberships: [{
+                        id: 'membership_1',
+                        permissions: ['group_comms'],
+                        user: {
+                            phone: senderNumber
+                        },
+                        community: {
+                            id: communityId,
+                            bot_phone: botNumber,
+                            group_threads: []
+                        },
+                        name: 'Test User'
+                    }]
+                }
+            });
+
+            graphqlMock.addResponseForQuery('GetGroupThread', {
+                data: {
+                    group_threads: [{
+                        id: 'thread_1',
+                        group_id: base64GroupId,
+                        step: '0',
+                        hashtag: null,
+                        community: {
+                            group_script_id: groupScriptId,
+                            group_threads: []
+                        }
+                    }]
+                }
+            });
+
+            graphqlMock.addResponseForQuery('GetScript', {
+                data: {
+                    scripts: [{
+                        id: groupScriptId,
+                        name: 'group_setup',
+                        script_json: JSON.stringify(groupThreadScript),
+                        vars_query: null,
+                        targets_query: null
+                    }]
+                }
+            });
+
+            // Update step to 2
+            graphqlMock.addResponseForQuery('UpdateGroupThreadVariable', {
+                data: {
+                    update_group_threads: {
+                        returning: [{ id: 'thread_1' }]
+                    }
+                }
+            });
+
+            await receive_group_message(groupId, 'I changed my mind', senderNumber, botNumber, 'Test User', sentTime + 1);
+
+            expect(signalMock.send).toHaveBeenCalledWith(
+                [sendGroupId],
+                botNumber,
+                'I don\'t see a hashtag in that response, please include a word with the # character.'
+            );
+
+            // Reset mocks
+            signalMock.reset();
+            graphqlMock.reset();
+            graphqlMock.clearCustomResponses();
+
+            // User sends message without hashtag again (second time - goes to done)
+            graphqlMock.addResponseForQuery('RecieveGroupMessageQuery', {
+                data: {
+                    communities: [{
+                        id: communityId,
+                        bot_phone: botNumber,
+                        group_script_id: groupScriptId,
+                        group_threads: []
+                    }],
+                    memberships: [{
+                        id: 'membership_1',
+                        permissions: ['group_comms'],
+                        user: {
+                            phone: senderNumber
+                        },
+                        community: {
+                            id: communityId,
+                            bot_phone: botNumber,
+                            group_threads: []
+                        },
+                        name: 'Test User'
+                    }]
+                }
+            });
+
+            graphqlMock.addResponseForQuery('GetGroupThread', {
+                data: {
+                    group_threads: [{
+                        id: 'thread_1',
+                        group_id: base64GroupId,
+                        step: '2',
+                        hashtag: null,
+                        community: {
+                            group_script_id: groupScriptId,
+                            group_threads: []
+                        }
+                    }]
+                }
+            });
+
+            graphqlMock.addResponseForQuery('GetScript', {
+                data: {
+                    scripts: [{
+                        id: groupScriptId,
+                        name: 'group_setup',
+                        script_json: JSON.stringify(groupThreadScript),
+                        vars_query: null,
+                        targets_query: null
+                    }]
+                }
+            });
+
+            // Update step to done
+            graphqlMock.addResponseForQuery('UpdateGroupThreadVariable', {
+                data: {
+                    update_group_threads: {
+                        returning: [{ id: 'thread_1' }]
+                    }
+                }
+            });
+
+            await receive_group_message(groupId, 'Never mind', senderNumber, botNumber, 'Test User', sentTime + 2);
+
+            // Should not send any message when going to done
+            expect(signalMock.send).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('8. Permission checks', () => {
+        it('should not allow user without announcement permission to start announcement', async () => {
+            const senderNumber = '+1234567890';
+            const botNumber = '+0987654321';
+            const communityId = 'community_1';
+            const sentTime = 1741644982;
+
+            // User without announcement permission sends #announcement
+            graphqlMock.addResponseForQuery('RecieveMessageQuery', {
+                data: {
+                    communities: [{
+                        id: communityId,
+                        bot_phone: botNumber,
+                        onboarding: {
+                            id: 'onboarding_script',
+                            name: 'Onboarding Script',
+                            script_json: '{}',
+                            vars_query: null,
+                            targets_query: null
+                        }
+                    }],
+                    users: [{
+                        id: 'user_1',
+                        phone: senderNumber
+                    }],
+                    memberships: [{
+                        id: 'membership_1',
+                        step: 'done',
+                        name: 'Test User',
+                        permissions: [], // No announcement permission
+                        current_script: null,
+                        community: {
+                            id: communityId,
+                            bot_phone: botNumber
+                        },
+                        user: {
+                            id: 'user_1',
+                            phone: senderNumber
+                        }
+                    }]
+                }
+            });
+
+            // Send to permission query (onboarding group) - match the actual query pattern
+            graphqlMock.addResponseForQuery('SendToPermission', {
+                data: {
+                    communities: [{
+                        id: communityId,
+                        bot_phone: botNumber,
+                        groups: [{
+                            id: 'group_1',
+                            group_id: Buffer.from('onboarding_group').toString('base64')
+                        }]
+                    }]
+                }
+            });
+            
+            // Also match by group_threads pattern (in case the query name doesn't match)
+            graphqlMock.addCustomResponse((query, variables) => {
+                return query.includes('group_threads') && 
+                       query.includes('permissions') && 
+                       query.includes('_contains') &&
+                       variables.community_id === communityId;
+            }, {
+                data: {
+                    communities: [{
+                        id: communityId,
+                        bot_phone: botNumber,
+                        groups: [{
+                            id: 'group_1',
+                            group_id: Buffer.from('onboarding_group').toString('base64')
+                        }]
+                    }]
+                }
+            });
+
+            // Create relay message
+            graphqlMock.addResponseForQuery('CreateMessage', {
+                data: {
+                    insert_messages_one: {
+                        id: 'message_1',
+                        type: 'relay_to_onboarding_group',
+                        membership: {
+                            id: 'membership_1',
+                            user: { phone: senderNumber }
+                        },
+                        community: {
+                            id: communityId,
+                            bot_phone: botNumber
+                        }
+                    }
+                }
+            });
+
+            await receive_message(senderNumber, botNumber, '#announcement', sentTime);
+
+            // Should send message to onboarding group (standard behavior for messages outside of a script)
+            const onboardingGroupId = 'group.' + Buffer.from('onboarding_group').toString('base64');
+            expect(signalMock.send).toHaveBeenCalledWith(
+                [onboardingGroupId],
+                botNumber,
+                'Message relayed from Test User: "#announcement" Reply to respond.'
+            );
+        });
+
+        it('should not allow user without group_comms permission to relay messages between groups', async () => {
+            const groupId1 = 'group_1';
+            const base64GroupId1 = Buffer.from(groupId1).toString('base64');
+            const groupId2 = 'group_2';
+            const base64GroupId2 = Buffer.from(groupId2).toString('base64');
+            const senderNumber = '+1234567890';
+            const botNumber = '+0987654321';
+            const communityId = 'community_1';
+            const sentTime = 1741644982;
+
+            // User without group_comms permission sends message with hashtag
+            graphqlMock.addResponseForQuery('RecieveGroupMessageQuery', {
+                data: {
+                    communities: [{
+                        id: communityId,
+                        bot_phone: botNumber,
+                        group_script_id: 'group_script_1',
+                        group_threads: [
+                            { group_id: base64GroupId1, hashtag: '#group1' },
+                            { group_id: base64GroupId2, hashtag: '#group2' }
+                        ]
+                    }],
+                    memberships: [{
+                        id: 'membership_1',
+                        permissions: [], // No group_comms permission
+                        user: {
+                            phone: senderNumber
+                        },
+                        community: {
+                            id: communityId,
+                            bot_phone: botNumber
+                        },
+                        name: 'Test User'
+                    }]
+                }
+            });
+
+            await receive_group_message(groupId1, 'Hello #group2', senderNumber, botNumber, 'Test User', sentTime);
+
+            // Should not send any message
+            expect(signalMock.send).not.toHaveBeenCalled();
+            expect(signalMock.emoji_reaction).not.toHaveBeenCalled();
+        });
+
+        it('should not allow user without group_comms permission to use #name command', async () => {
+            const groupId = 'group_123';
+            const base64GroupId = Buffer.from(groupId).toString('base64');
+            const senderNumber = '+1234567890';
+            const botNumber = '+0987654321';
+            const communityId = 'community_1';
+            const sentTime = 1741644982;
+
+            // User without group_comms permission sends #name
+            graphqlMock.addResponseForQuery('RecieveGroupMessageQuery', {
+                data: {
+                    communities: [{
+                        id: communityId,
+                        bot_phone: botNumber,
+                        group_script_id: 'group_script_1',
+                        group_threads: []
+                    }],
+                    memberships: [{
+                        id: 'membership_1',
+                        permissions: [], // No group_comms permission
+                        user: {
+                            phone: senderNumber
+                        },
+                        community: {
+                            id: communityId,
+                            bot_phone: botNumber
+                        },
+                        name: 'Test User'
+                    }]
+                }
+            });
+
+            await receive_group_message(groupId, '#name', senderNumber, botNumber, 'Test User', sentTime);
+
+            // Should not send any message
+            expect(signalMock.send).not.toHaveBeenCalled();
+        });
+    });
 });
 
