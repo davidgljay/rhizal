@@ -256,25 +256,7 @@ export async function receive_reply(message, from_phone, bot_phone, reply_to_tim
     
 }
 
-async function send_permission_message(membership, permission) {
-    const permissionMessages = {
-        'announcement': 'Congrats, you have been granted announcement permission! You can now use #announcement to send a message to everyone registered with Rhizal. The hashtag will trigger a script which will walk you through the process of drafting and sending an announcement.',
-        'group_comms': 'Congrats, you have been granted group comms permissions! You can now communicate between groups where the Rhizal bot is present by using hashtags. For example, if there is a #leaders group, you can send messages to it from another group by typing #leaders.',
-        'onboarding': 'Congrats, you have been granted onboarding permissions! You should see messages from new members appearing in a group that you\'ve been invited to. You can reply to these messages to respond to people who are joining or who message the Rhizal bot with a question.'
-    };
-    
-    const message = permissionMessages[permission];
-    if (message) {
-        await Message.send(
-            membership.community.id,
-            membership.id,
-            membership.user.phone,
-            membership.community.bot_phone,
-            message,
-            false
-        );
-    }
-}
+
 
 export async function new_member_joined_group(bot_phone, user_phone, permissions) {     
     const nameRequestScriptResult = await graphql(queries.nameRequestScriptQuery, { 
@@ -329,7 +311,7 @@ export async function group_join_or_leave(bot_phone) {
                 perm => !updateResult.oldPermissions.includes(perm)
             );
             for (const permission of newPermissions) {
-                await send_permission_message(membership, permission);
+                await Message.send_permission_message(membership, permission);
             }
         }
     }

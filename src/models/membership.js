@@ -23,7 +23,7 @@ query GetMembershipFromPhoneNumbers($phone: String!, $bot_phone: String!) {
       permissions
       current_script_id
       informal_name
-	  intro {
+	    intro {
         text
       }
       community {
@@ -260,6 +260,8 @@ mutation CreateUserAndMembership($phone:String!, $community_id:uuid!, $current_s
     }
 
 }
+
+
 
 module.exports = Membership;
 

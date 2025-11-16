@@ -27,7 +27,8 @@ jest.mock('../models/message', () => {
     return {
         create: jest.fn(),
         send: jest.fn(),
-        send_to_permission: jest.fn()
+        send_to_permission: jest.fn(),
+        send_permission_message: jest.fn()
     };
 });
 
@@ -743,22 +744,14 @@ describe('receive_message', () => {
             await group_join_or_leave(bot_phone);
 
             // send_permission_message should be called for 'announcement' and 'group_comms' (new permissions)
-            expect(Message.send).toHaveBeenCalledTimes(2);
-            expect(Message.send).toHaveBeenCalledWith(
-                'community_1',
-                'membership_1',
-                '1234567890',
-                '0987654321',
-                expect.stringContaining('announcement permission'),
-                false
+            expect(Message.send_permission_message).toHaveBeenCalledTimes(2);
+            expect(Message.send_permission_message).toHaveBeenCalledWith(
+                mockMembership,
+                'announcement'
             );
-            expect(Message.send).toHaveBeenCalledWith(
-                'community_1',
-                'membership_1',
-                '1234567890',
-                '0987654321',
-                expect.stringContaining('group comms permissions'),
-                false
+            expect(Message.send_permission_message).toHaveBeenCalledWith(
+                mockMembership,
+                'group_comms'
             );
         });
 
@@ -936,7 +929,7 @@ describe('receive_message', () => {
                 ['announcement', 'group_comms']
             );
             // Should send messages for both new permissions
-            expect(Message.send).toHaveBeenCalledTimes(2);
+            expect(Message.send_permission_message).toHaveBeenCalledTimes(2);
         });
 
         it('should handle errors from Signal.get_group_info gracefully', async () => {
