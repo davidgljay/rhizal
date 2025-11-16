@@ -120,7 +120,7 @@ group_threads(where: {community:{bot_phone:{_eq: $bot_phone}}, permissions: {_ne
 }
 `,
 nameRequestScriptQuery: `
-query GetNameRequestScript($name:String!, $community_id:uuid!) {
+query GetNameRequestScript($name:String!, $bot_phone:String!) {
     scripts(where: {name: {_eq: $name}, community:{bot_phone:{_eq: $bot_phone}}}) {
         id
         name
@@ -258,18 +258,18 @@ export async function receive_reply(message, from_phone, bot_phone, reply_to_tim
 
 
 
-export async function new_member_joined_group(bot_phone, user_phone, permissions) {     
+export async function new_member_joined_group(bot_phone, user_phone, permissions) {
     const nameRequestScriptResult = await graphql(queries.nameRequestScriptQuery, { 
         name: 'name_request', 
         bot_phone
     });
+    if (nameRequestScriptResult.data.scripts.length === 0) {
+        return new Error('Name request script not found');
+    }
     const community = nameRequestScriptResult.data.scripts[0].community;
     let nameRequestScript = null;
     if (nameRequestScriptResult.data.scripts.length > 0) {
         nameRequestScript = new Script(nameRequestScriptResult.data.scripts[0]);
-    }
-    if (!nameRequestScript) {
-        return new Error('Name request script not found');
     }
     const membership = await Membership.create(user_phone, community, null);
     await Membership.update_permissions(membership.id, permissions);
