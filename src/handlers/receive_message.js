@@ -119,6 +119,23 @@ group_threads(where: {community:{bot_phone:{_eq: $bot_phone}}, permissions: {_ne
 }
 }
 `,
+nameRequestScriptQuery: `
+query GetNameRequestScript($name:String!, $community_id:uuid!) {
+    scripts(where: {name: {_eq: $name}, community:{bot_phone:{_eq: $bot_phone}}}) {
+        id
+        name
+        script_json
+        vars_query
+        targets_query
+        community {
+            id
+            bot_phone
+            onboarding {
+                id
+            }
+        }
+    }
+}`
 }
 
 
@@ -259,6 +276,29 @@ async function send_permission_message(membership, permission) {
     }
 }
 
+export async function new_member_joined_group(bot_phone, user_phone, permissions) {     
+    const nameRequestScriptResult = await graphql(queries.nameRequestScriptQuery, { 
+        name: 'name_request', 
+        bot_phone
+    });
+    const community = nameRequestScriptResult.data.scripts[0].community;
+    let nameRequestScript = null;
+    if (nameRequestScriptResult.data.scripts.length > 0) {
+        nameRequestScript = new Script(nameRequestScriptResult.data.scripts[0]);
+    }
+    if (!nameRequestScript) {
+        return new Error('Name request script not found');
+    }
+    const membership = await Membership.create(user_phone, community, null);
+    await Membership.update_permissions(membership.id, permissions);
+    await Membership.set_variable(membership.id, 'current_script_id', nameRequestScript.id);
+    await Membership.set_variable(membership.id, 'step', '0');
+    await nameRequestScript.get_vars(membership, '', Date.now());
+    await nameRequestScript.send('0');
+    return membership;
+}
+
+
 export async function group_join_or_leave(bot_phone) {
     // Perform an audit of all group permissions to ensure that the user has the correct permissions.
     const groups = await graphql(queries.get_permissions_groups_query, { bot_phone });
@@ -277,108 +317,17 @@ export async function group_join_or_leave(bot_phone) {
                 }
             }
     }
-    
-    // Get community info for creating new members
-    const community = await Community.get(bot_phone);
-    if (!community) {
-        console.error('Community not found for bot_phone:', bot_phone);
-        return;
-    }
-    
-    // Get full community data with onboarding script
-    const communityQuery = `
-query GetCommunityWithOnboarding($bot_phone:String!) {
-    communities(where: {bot_phone: {_eq: $bot_phone}}) {
-        id
-        bot_phone
-        onboarding {
-            id
-            name
-            script_json
-            vars_query
-            targets_query
-        }
-    }
-}`;
-    const communityResult = await graphql(communityQuery, { bot_phone });
-    const communityData = communityResult.data.communities[0];
-    if (!communityData) {
-        console.error('Community data not found for bot_phone:', bot_phone);
-        return;
-    }
-    
-    // Get or create name request script
-    const nameRequestScriptQuery = `
-query GetNameRequestScript($name:String!, $community_id:uuid!) {
-    scripts(where: {name: {_eq: $name}, community_id: {_eq: $community_id}}) {
-        id
-        name
-        script_json
-        vars_query
-        targets_query
-    }
-}`;
-    const nameRequestScriptResult = await graphql(nameRequestScriptQuery, { 
-        name: 'name_request', 
-        community_id: communityData.id 
-    });
-    let nameRequestScript = null;
-    if (nameRequestScriptResult.data.scripts.length > 0) {
-        nameRequestScript = new Script(nameRequestScriptResult.data.scripts[0]);
-    } else {
-        // Script doesn't exist yet, will be created by script-sync
-        // For now, use onboarding script step 0
-        nameRequestScript = new Script(communityData.onboarding);
-    }
-    
     for (const member of Object.keys(member_permissions)) {
-        let membership = await Membership.get(member, bot_phone);
-        const wasNewMember = !membership;
-        
+        const membership = await Membership.get(member, bot_phone);
         if (!membership) {
-            // Create new member record
-            const userQuery = `
-query GetUser($phone:String!) {
-    users(where: {phone: {_eq: $phone}}) {
-        id
-        phone
-    }
-}`;
-            const userResult = await graphql(userQuery, { phone: member });
-            const user = userResult.data.users.length > 0 ? userResult.data.users[0] : null;
-            
-            // Create membership - Membership.create expects community with onboarding property
-            membership = await Membership.create(member, communityData, user);
-            
-            // Reload membership to get full structure with user and community
-            membership = await Membership.get(member, bot_phone);
-            
-            // Send name request script
-            if (nameRequestScript.name === 'name_request') {
-                await Membership.set_variable(membership.id, 'current_script_id', nameRequestScript.id);
-                await Membership.set_variable(membership.id, 'step', '0');
-            } else {
-                // Fallback to onboarding script step 0
-                await Membership.set_variable(membership.id, 'current_script_id', communityData.onboarding.id);
-                await Membership.set_variable(membership.id, 'step', '0');
-            }
-            
-            const script = nameRequestScript.name === 'name_request' 
-                ? nameRequestScript 
-                : new Script(communityData.onboarding);
-            await script.get_vars(membership, '', Date.now());
-            await script.send('0');
+            await new_member_joined_group(bot_phone, member, member_permissions[member]);
+            continue;
         }
-        
-        // Update permissions and track changes
         const updateResult = await Membership.update_permissions(membership.id, member_permissions[member]);
-        
-        // Send messages for newly added permissions
         if (updateResult.oldPermissions && updateResult.newPermissions) {
             const newPermissions = updateResult.newPermissions.filter(
                 perm => !updateResult.oldPermissions.includes(perm)
             );
-            
             for (const permission of newPermissions) {
                 await send_permission_message(membership, permission);
             }
