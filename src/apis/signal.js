@@ -173,6 +173,22 @@ class WebSocketManager {
                 return response.json();
             })
     }
+
+    async get_contacts(bot_phone) {
+        const get_contacts_endpoint = `http://signal-cli:8080/v1/contacts/${bot_phone}`;
+        return await fetch(get_contacts_endpoint, { method: 'GET' })
+            .then(async response => {
+                if (!response.ok) {
+                    console.error('Error getting member info:', response.statusText);
+                }
+                const response_data = await response.json();
+                const contacts = response_data.reduce((hashmap, contact) => {
+                    hashmap[contact.number] = contact.uuid;
+                    return hashmap;
+                }, {});
+                return contacts;
+            })
+    }
 }
 
 const webSocketManager = new WebSocketManager();

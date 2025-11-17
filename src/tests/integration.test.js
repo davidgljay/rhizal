@@ -199,6 +199,7 @@ jest.mock('../apis/signal', () => ({
     show_typing_indicator: jest.fn(),
     emoji_reaction: jest.fn(),
     get_group_info: jest.fn(),
+    get_contacts: jest.fn(),
 }));
 jest.mock('../apis/graphql', () => ({
     graphql: jest.fn()
@@ -1130,6 +1131,13 @@ describe('Integration Tests for receive_message Handler', () => {
     });
 
     describe('group_join_or_leave', () => {
+        // Mock contacts mapping phone numbers to UUIDs
+        const mockContacts = {
+            '+1234567890': 'uuid-1234567890',
+            '+0987654321': 'uuid-0987654321',
+            '+1111111111': 'uuid-1111111111'
+        };
+
         beforeEach(() => {
             // Ensure spies are properly set up before each test
             // jest.restoreAllMocks() in parent afterEach restores the original implementation,
@@ -1143,10 +1151,14 @@ describe('Integration Tests for receive_message Handler', () => {
             if (typeof Membership.create.mockImplementation !== 'function') {
                 jest.spyOn(Membership, 'create');
             }
+            // Mock Signal methods to return contacts object
+            signal.get_contacts.mockResolvedValue(mockContacts);
+            signal.get_group_info.mockResolvedValue({ members: [] });
         });
 
         it('should grant new permissions to an already registered user and send permission messages', async () => {
             const phone = '+1234567890';
+            const userUuid = 'uuid-1234567890';
             const bot_phone = '+0987654321';
             const group_id = 'group_123';
             const base64_group_id = Buffer.from(group_id).toString('base64');
@@ -1154,9 +1166,10 @@ describe('Integration Tests for receive_message Handler', () => {
             const membershipId = 'membership_1';
             
             const mockGroupInfo = {
-                members: [phone],
+                members: [userUuid], // UUID instead of phone number
             };
             signal.get_group_info.mockResolvedValue(mockGroupInfo);
+            signal.get_contacts.mockResolvedValue(mockContacts);
 
             const mockGraphql = [
                 {
@@ -1168,7 +1181,7 @@ describe('Integration Tests for receive_message Handler', () => {
                             memberships: [{ 
                                 id: membershipId, 
                                 permissions: [], // User currently has no permissions
-                                user: { phone: phone },
+                                user: { phone: userUuid }, // Use UUID to match member UUID
                                 community: { id: communityId, bot_phone: bot_phone }
                             }] 
                         } 
@@ -1209,7 +1222,7 @@ describe('Integration Tests for receive_message Handler', () => {
             expect(Message.send).toHaveBeenCalledWith(
                 communityId,
                 membershipId,
-                phone,
+                userUuid, // Message.send uses membership.user.phone which is the UUID
                 bot_phone,
                 expect.stringContaining('announcement permission'),
                 false
@@ -1218,6 +1231,7 @@ describe('Integration Tests for receive_message Handler', () => {
 
         it('should remove permissions from an already registered user when they are removed from groups', async () => {
             const phone = '+1234567890';
+            const userUuid = 'uuid-1234567890';
             const bot_phone = '+0987654321';
             const group_id = 'group_123';
             const base64_group_id = Buffer.from(group_id).toString('base64');
@@ -1240,7 +1254,7 @@ describe('Integration Tests for receive_message Handler', () => {
                             memberships: [{ 
                                 id: membershipId, 
                                 permissions: ['announcement'], // User currently has permissions
-                                user: { phone: phone },
+                                user: { phone: userUuid }, // Use UUID to match member UUID
                                 community: { id: communityId, bot_phone: bot_phone }
                             }] 
                         } 
@@ -1281,6 +1295,7 @@ describe('Integration Tests for receive_message Handler', () => {
 
         it('should register a new user, grant permissions, and send name request script', async () => {
             const phone = '+1234567890';
+            const userUuid = 'uuid-1234567890';
             const bot_phone = '+0987654321';
             const group_id = 'group_123';
             const base64_group_id = Buffer.from(group_id).toString('base64');
@@ -1289,9 +1304,10 @@ describe('Integration Tests for receive_message Handler', () => {
             const nameRequestScriptId = 'name_request_script';
             
             const mockGroupInfo = {
-                members: [phone],
+                members: [userUuid], // UUID instead of phone number
             };
             signal.get_group_info.mockResolvedValue(mockGroupInfo);
+            signal.get_contacts.mockResolvedValue(mockContacts);
             
             const nameRequestScript = {
                 "0": {
@@ -1343,12 +1359,12 @@ describe('Integration Tests for receive_message Handler', () => {
                 },
                 {
                     query: expectedQueries.createUserAndMembership,
-                    variables: { phone: phone, community_id: communityId, current_script_id: 'onboarding_script' },
+                    variables: { phone: userUuid, community_id: communityId, current_script_id: 'onboarding_script' },
                     response: { 
                         data: { 
                             insert_memberships_one: { 
                                 id: membershipId,
-                                user: { id: 'user_1', phone: phone },
+                                user: { id: 'user_1', phone: userUuid },
                                 community: { id: communityId, bot_phone: bot_phone },
                                 permissions: [],
                                 step: '0',
@@ -1401,7 +1417,7 @@ describe('Integration Tests for receive_message Handler', () => {
             expect(graphql).toHaveBeenCalledTimes(mockGraphql.length);
             expect(graphql).toHaveBeenNthCalledWith(1, expect.stringContaining(expectedQueries.getPermissionsGroups), { bot_phone });
             expect(graphql).toHaveBeenNthCalledWith(2, expect.stringContaining(expectedQueries.getNameRequestScript), { name: 'name_request', bot_phone });
-            expect(graphql).toHaveBeenNthCalledWith(3, expect.stringContaining(expectedQueries.createUserAndMembership), expect.objectContaining({ phone, community_id: communityId }));
+            expect(graphql).toHaveBeenNthCalledWith(3, expect.stringContaining(expectedQueries.createUserAndMembership), expect.objectContaining({ phone: userUuid, community_id: communityId }));
             expect(graphql).toHaveBeenNthCalledWith(4, expect.stringContaining(expectedQueries.getCurrentPermissions), { id: membershipId });
             expect(graphql).toHaveBeenNthCalledWith(5, expect.stringContaining(expectedQueries.updateMembershipPermissions), { id: membershipId, permissions: ['group_comms'] });
             expect(graphql).toHaveBeenNthCalledWith(6, expect.stringContaining("mutation updateMembershipVariable($id:uuid!, $value:uuid!)"), { id: membershipId, value: nameRequestScriptId });
@@ -1410,8 +1426,8 @@ describe('Integration Tests for receive_message Handler', () => {
             // Verify Signal.get_group_info was called
             expect(signal.get_group_info).toHaveBeenCalledWith(bot_phone, base64_group_id);
 
-            // Verify new membership was created
-            expect(Membership.create).toHaveBeenCalledWith(phone, expect.objectContaining({ id: communityId }), null);
+            // Verify new membership was created (with UUID converted from phone)
+            expect(Membership.create).toHaveBeenCalledWith(userUuid, expect.objectContaining({ id: communityId }), null);
 
             // Verify name request script was executed
             expect(mockScriptGetVars).toHaveBeenCalled();

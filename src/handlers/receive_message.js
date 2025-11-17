@@ -297,6 +297,7 @@ export async function group_join_or_leave(bot_phone) {
     const result = await graphql(queries.get_permissions_groups_query, { bot_phone });
     const member_permissions = {};
     const new_members = [];
+    const contacts = await Signal.get_contacts(bot_phone);
     for (const group of result.data.group_threads) {
         const group_info = await Signal.get_group_info(bot_phone, group.group_id);
         if (group_info instanceof Error) {
@@ -304,20 +305,31 @@ export async function group_join_or_leave(bot_phone) {
             return;
         }
         for (const member of group_info.members) {
-            if (member_permissions[member]) {
-                    member_permissions[member] = member_permissions[member].concat(group.permissions);
+            let member_uuid;
+            // If Signal returned the member's phone number, get the member's UUID
+            if (member.startsWith('+') && member.length < 13) {
+                member_uuid = contacts[member];
+            } else {
+                member_uuid = member;
+            }
+            // Add the member's permissions for this group to the member's permissions hash
+            if (member_permissions[member_uuid]) {
+                    member_permissions[member_uuid] = member_permissions[member_uuid].concat(group.permissions);
                 } else {
-                    member_permissions[member] = group.permissions;
+                    member_permissions[member_uuid] = group.permissions;
                 }
             const registered_members = result.data.memberships.map(m => m.user.phone);
-            if (!registered_members.includes(member)) {
-                new_members.push(member);
+            // If the member is not already registered, add them to the new members list
+            if (!registered_members.includes(member_uuid)) {
+                new_members.push(member_uuid);
             };
         };
     };
+    // Create new memberships for the new members
     for (const member of [...new Set(new_members)]) {
         await new_member_joined_group(bot_phone, member, member_permissions[member]);
     };
+    // Update the existing memberships with the new permissions
     for (const member of result.data.memberships) {
         const membership = new Membership(member);
         if (!member_permissions[member.user.phone]) {
