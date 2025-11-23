@@ -1,0 +1,53 @@
+config_event_announcement:
+  description: |
+    Configure and preview an event announcement for broadcast to your list.
+    You will be prompted for the following:
+      1. Title for the event (required)
+      2. Description/message (required)
+      3. Link or file path to image (optional)
+      4. Confirmation before sending to the list
+
+  steps:
+    - prompt: "Enter the title of your event:"
+      var: event_title
+      required: true
+
+    - prompt: "Enter a message describing this event:"
+      var: event_message
+      required: true
+
+    - prompt: "Enter a URL or file path to an image (press Enter to skip):"
+      var: event_image
+      required: false
+
+    - action: preview_event
+      inputs:
+        event_title: "{{ event_title }}"
+        event_message: "{{ event_message }}"
+        event_image: "{{ event_image }}"
+      description: |
+        Example Announcement:
+        ---
+        Title: {{ event_title }}
+        Message: {{ event_message }}
+        {% if event_image %}
+        Image: {{ event_image }}
+        {% endif %}
+        ---
+
+    - prompt: "Would you like to send this announcement to the list? (yes/no)"
+      var: confirm_send
+      required: true
+
+    - condition: "{{ confirm_send | lower == 'yes' }}"
+      then:
+        - action: send_event_announcement
+          inputs:
+            event_title: "{{ event_title }}"
+            event_message: "{{ event_message }}"
+            event_image: "{{ event_image }}"
+          description: "Event announcement sent to the list."
+      else:
+        - action: cancel
+          description: "Event announcement canceled."
+
