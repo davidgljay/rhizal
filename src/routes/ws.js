@@ -35,6 +35,7 @@ export async function receive_raw_message(msg) {
         return;
     }
     const { envelope: {sourceUuid, timestamp, sourceName, dataMessage: {message, groupInfo, quote}}, account } = msg;
+    console.log(msg);
     if (groupInfo) { 
         if (groupInfo.revision == 21) {
             return; //If this message is about being kicked out of a group, ignore it.

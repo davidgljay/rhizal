@@ -224,6 +224,14 @@ query SendToPermission($community_id: uuid!, $permission: [String!]!) {
     }
 
     static async send_permission_message(membership, permission) {
+        if (!membership || !membership.community || !membership.user) {
+            console.error('Cannot send permission message: membership data incomplete', {
+                hasMembership: !!membership,
+                hasCommunity: !!membership?.community,
+                hasUser: !!membership?.user
+            });
+            return;
+        }
         const permissionMessages = {
             'announcement': 'Congrats, you have been granted announcement permission! You can now use #announcement to send a message to everyone registered with Rhizal. The hashtag will trigger a script which will walk you through the process of drafting and sending an announcement.',
             'group_comms': 'Congrats, you have been granted group comms permissions! You can now communicate between groups where the Rhizal bot is present by using hashtags. For example, if there is a #leaders group, you can send messages to it from another group by typing #leaders.',

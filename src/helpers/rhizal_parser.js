@@ -46,7 +46,10 @@ class RhyzalParser {
                 return;
             };
             if (!this.script[step]) {
-                throw new Error('Step missing from script');
+                // Log available steps for debugging
+                const availableSteps = Object.keys(this.script).join(', ');
+                console.error(`Step "${step}" missing from script. Available steps: ${availableSteps}`);
+                throw new Error(`Step "${step}" missing from script. Available steps: ${availableSteps}`);
             }
 
             const messages = this.script[step].send;
@@ -111,6 +114,15 @@ class RhyzalParser {
                 } else {
                     await this.set_variable(vars.id, 'step', new_step);
                 }
+                // Only send if step is not "done" and exists in script
+                if (new_step === 'done') {
+                    // "done" step doesn't need to send anything
+                    return;
+                } else if (!this.script[new_step]) {
+                    const availableSteps = Object.keys(this.script).join(', ');
+                    console.warn(`Step "${new_step}" does not exist in script. Available steps: ${availableSteps}. Step variable has been updated but no message will be sent.`);
+                    return;
+                }
                 await this.send(new_step, vars);
                 break;
             case 'save_message':
@@ -160,7 +172,15 @@ class RhyzalParser {
                 break;
             case 'send_permission_message':
                 const membership = await Membership.get(vars.phone, vars.bot_phone);
-                await this.send_permission_message(vars.id, membership.permissions);
+                if (!membership) {
+                    throw new Error('Membership not found');
+                }
+                // Send permission messages for all permissions the user has
+                if (membership.permissions && Array.isArray(membership.permissions)) {
+                    for (const permission of membership.permissions) {
+                        await this.send_permission_message(membership, permission);
+                    }
+                }
                 break;
             case 'if': //TODO: add elif to support more complex logic
                 if (this.evaluate_condition(script.if, vars)) {

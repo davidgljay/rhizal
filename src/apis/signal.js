@@ -39,6 +39,48 @@ class WebSocketManager {
         this.websockets[account_phone] = ws;
     }
 
+    async trust_identity(recipient, from_number) {
+        const trust_endpoint = `http://signal-cli:8080/v1/identities/${from_number}/trust/${recipient}`;
+        return await fetch(trust_endpoint, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ trust_all_known_keys: true })
+        })
+        .then(async response => {
+            // Signal CLI returns 204 No Content on success, so check status before parsing JSON
+            if (response.status === 204) {
+                return { success: true };
+            }
+            if (!response.ok) {
+                const text = await response.text();
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch (e) {
+                    data = { error: text };
+                }
+                console.error('Error trusting identity:', response.statusText, data);
+                return data;
+            }
+            // Try to parse JSON, but handle empty responses
+            const text = await response.text();
+            if (!text) {
+                return { success: true };
+            }
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                return { success: true, raw: text };
+            }
+        })
+        .catch(error => {
+            console.error('Error trusting identity:', error);
+            throw error;
+        });
+    }
+
     async send(recipients, from_number, message) {
         if (!Array.isArray(recipients)) {
             console.error('Recipients must be an array');
@@ -50,27 +92,51 @@ class WebSocketManager {
             number: from_number,
             message
         };
-        return await fetch(send_endpoint, {
+        const response = await fetch(send_endpoint, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify(body)
-        })
-        .then(response => {
-            if (!response.ok) {
-                console.error('Error sending message:', response.statusText);
+        });
+        
+        const data = await response.json();
+        
+        // If we get an untrusted identity error, trust all identities and retry
+        if (data.error && (data.error.includes('untrusted identities') || data.error.includes('untrusted'))) {
+            console.log('Untrusted identity detected, trusting identities and retrying...');
+            // Trust identities for all recipients
+            for (const recipient of recipients) {
+                try {
+                    await this.trust_identity(recipient, from_number);
+                } catch (error) {
+                    console.error(`Failed to trust identity for ${recipient}:`, error);
+                }
+            }
+            // Retry sending
+            const retryResponse = await fetch(send_endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(body)
+            });
+            const retryData = await retryResponse.json();
+            if (retryData.error) {
+                console.error('Error sending message after trusting:', retryData.error);
             }
             this.clear_local_storage();
-            const data = response.json()
-            if (data.error) {
-                console.error('Error in response:', data.error);
-            }
-            return data;
-        })
-        .catch(error => {
-            console.error('Error sending message:', error);
-        });
+            return retryData;
+        }
+        
+        if (!response.ok) {
+            console.error('Error sending message:', response.statusText);
+        }
+        if (data.error) {
+            console.error('Error in response:', data.error);
+        }
+        this.clear_local_storage();
+        return data;
     }
 
     async leave_group(group_id, bot_number) {
