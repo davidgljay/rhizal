@@ -186,14 +186,7 @@ export async function receive_message(sender, recipient, message, sent_time, sen
     }
     await script.get_vars(membership, message, sent_time);
     
-    // Validate step is a valid step number, not a UUID or invalid value
     let step = membership.step;
-    if (!step || step === 'done' || (typeof step === 'string' && step.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i))) {
-        // Step is invalid (UUID, null, or done) - reset to '0'
-        console.warn(`Invalid step value "${step}" for membership ${membership.id}, resetting to "0"`);
-        await Membership.set_variable(membership.id, 'step', '0');
-        step = '0';
-    }
     
     await script.receive(step, message);
     return;
@@ -201,12 +194,10 @@ export async function receive_message(sender, recipient, message, sent_time, sen
 
 export async function receive_group_message(internal_group_id, message, from_phone, bot_phone, sender_name, sent_time) {
     const group_id = Buffer.from(internal_group_id).toString('base64');
-    console.log(`Processing group message. Internal group_id: ${internal_group_id}, Base64 group_id: ${group_id}, Message: ${message}`);
     const response = await graphql(queries.receiveGroupMessageQuery, { bot_phone, phone: from_phone });
     const community = response.data.communities.length > 0 ? response.data.communities[0] : null;
     let membership = response.data.memberships.length > 0 ? response.data.memberships[0] : null;
     if (!community) {
-        console.log(`No community found for bot_phone: ${bot_phone}`);
         return;
     }
     
@@ -214,7 +205,6 @@ export async function receive_group_message(internal_group_id, message, from_pho
     let group_thread;
     try {
         group_thread = await GroupThread.find_or_create_group_thread(group_id, community.id);
-        console.log(`Group thread found/created. ID: ${group_thread.id}, Step: ${group_thread.step}, Hashtag: ${group_thread.hashtag}`);
     } catch (error) {
         console.error(`Error creating/finding group_thread:`, error);
         return;
@@ -223,7 +213,6 @@ export async function receive_group_message(internal_group_id, message, from_pho
     // Check permissions - if user doesn't have group_comms, they can't use group features
     // but the group_thread is still created so the script can run for other users
     if (!membership || !membership.permissions || !membership.permissions.includes('group_comms')) {
-        console.log(`User ${from_phone} doesn't have group_comms permission. Group thread created but message ignored.`);
         return;
     }
 
@@ -292,7 +281,6 @@ export async function receive_reply(message, from_phone, bot_phone, reply_to_tim
     const expandedMessage = `Message from ${membership.name}: ${message}`;
 
     // Relay message to the member that the admin received a message about
-    console.log('relaying message to', about_member_phone);
     await Message.send(membership.community_id, membership.id, about_member_phone, bot_phone, expandedMessage, false);
     
 }

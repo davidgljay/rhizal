@@ -35,9 +35,7 @@ export async function receive_raw_message(msg) {
         return;
     }
     const { envelope: {sourceUuid, timestamp, sourceName, dataMessage: {message, groupInfo, quote}}, account } = msg;
-    console.log('Received message:', JSON.stringify({sourceUuid, timestamp, sourceName, message, hasGroupInfo: !!groupInfo, groupInfoType: groupInfo?.type, account}));
-    if (groupInfo) {
-        console.log(`Group message detected. GroupId: ${groupInfo.groupId}, Type: ${groupInfo.type}, Revision: ${groupInfo.revision}`); 
+    if (groupInfo) { 
         if (groupInfo.revision == 21) {
             return; //If this message is about being kicked out of a group, ignore it.
         }

@@ -89,7 +89,6 @@ class RhyzalParser {
         if (!this.script[step]) {
             throw new Error('Step missing from script');
         }
-        console.log(`Parser.receive called for step ${step}, message: "${vars.message}"`);
         if (Array.isArray(this.script[step].on_receive)) {
             for (let i = 0; i < this.script[step].on_receive.length; i++) {
                 await this.evaluate_receive(this.script[step].on_receive[i], vars);
@@ -97,7 +96,6 @@ class RhyzalParser {
         } else {
             await this.evaluate_receive(this.script[step].on_receive, vars);
         }
-        console.log(`Parser.receive completed for step ${step}`);
     }
 
     async evaluate_receive(script, vars) {
@@ -114,9 +112,7 @@ class RhyzalParser {
             const messageContent = vars.hashtag || vars.message || '';
             const expandedMessage = this.insert_variables(scriptConfig['preamble'], vars) + '\n\n' + messageContent;
             const permissionOverride = scriptConfig['permission'] || permission;
-            console.log(`Sending to ${permission} (${permissionOverride}): ${expandedMessage}`);
             await this.send_to_permission(vars.community_id, vars.id, expandedMessage, permissionOverride);
-            console.log(`Sent to ${permission} successfully`);
             return;
         }
         
@@ -141,16 +137,6 @@ class RhyzalParser {
                 } else {
                     await this.set_variable(vars.id, 'step', new_step);
                 }
-                // Only send if step is not "done" and exists in script
-                if (new_step === 'done') {
-                    // "done" step doesn't need to send anything
-                    return;
-                } else if (!this.script[new_step]) {
-                    const availableSteps = Object.keys(this.script).join(', ');
-                    console.warn(`Step "${new_step}" does not exist in script. Available steps: ${availableSteps}. Step variable has been updated but no message will be sent.`);
-                    return;
-                }
-                console.log(`Sending step ${new_step} message. vars.hashtag = ${vars.hashtag}`);
                 await this.send(new_step, vars);
                 break;
             case 'save_message':
@@ -179,16 +165,12 @@ class RhyzalParser {
                 }
                 if (script['set_group_variable']['value'].includes('regex')) {
                     const value = this.regex_match(script['set_group_variable']['value'], vars);
-                    console.log(`Setting group variable ${script['set_group_variable']['variable']} = ${value} for group_id ${vars.group_id}`);
                     await this.set_group_variable(vars.group_id, script['set_group_variable']['variable'], value);
                     vars[script['set_group_variable']['variable']] = value;
-                    console.log(`Group variable ${script['set_group_variable']['variable']} set in vars: ${vars[script['set_group_variable']['variable']]}`);
                 } else {
                     const value = script['set_group_variable']['value'];
-                    console.log(`Setting group variable ${script['set_group_variable']['variable']} = ${value} for group_id ${vars.group_id}`);
                     await this.set_group_variable(vars.group_id, script['set_group_variable']['variable'], value);
                     vars[script['set_group_variable']['variable']] = value;
-                    console.log(`Group variable ${script['set_group_variable']['variable']} set in vars: ${vars[script['set_group_variable']['variable']]}`);
                 }
                 break;
             case 'set_message_type':
@@ -217,13 +199,10 @@ class RhyzalParser {
                 break;
             case 'if': //TODO: add elif to support more complex logic
                 const conditionResult = this.evaluate_condition(script.if, vars);
-                console.log(`If condition evaluated: ${conditionResult}`);
                 if (conditionResult) {
                     if (script.then) {
-                        console.log(`Executing then block with ${Array.isArray(script.then) ? script.then.length : 1} action(s)`);
                         if (Array.isArray(script.then)) {
                             for (let i = 0; i < script.then.length; i++) {
-                                console.log(`Executing then action ${i + 1}/${script.then.length}:`, Object.keys(script.then[i])[0]);
                                 await this.evaluate_receive(script.then[i], vars);
                             }
                         } else {
@@ -231,7 +210,6 @@ class RhyzalParser {
                         }
                     } 
                 } else if (script.else) {
-                    console.log(`Executing else block`);
                     if (Array.isArray(script.else)) {
                         for (let i = 0; i < script.else.length; i++) {
                             await this.evaluate_receive(script.else[i], vars);

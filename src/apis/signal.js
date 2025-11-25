@@ -104,7 +104,6 @@ class WebSocketManager {
         
         // If we get an untrusted identity error, trust all identities and retry
         if (data.error && (data.error.includes('untrusted identities') || data.error.includes('untrusted'))) {
-            console.log('Untrusted identity detected, trusting identities and retrying...');
             // Trust identities for all recipients
             for (const recipient of recipients) {
                 try {
