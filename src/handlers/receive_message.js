@@ -185,22 +185,47 @@ export async function receive_message(sender, recipient, message, sent_time, sen
         script = new Script(community.onboarding);
     }
     await script.get_vars(membership, message, sent_time);
-    await script.receive(membership.step, message);
+    
+    // Validate step is a valid step number, not a UUID or invalid value
+    let step = membership.step;
+    if (!step || step === 'done' || (typeof step === 'string' && step.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i))) {
+        // Step is invalid (UUID, null, or done) - reset to '0'
+        console.warn(`Invalid step value "${step}" for membership ${membership.id}, resetting to "0"`);
+        await Membership.set_variable(membership.id, 'step', '0');
+        step = '0';
+    }
+    
+    await script.receive(step, message);
     return;
 }
 
 export async function receive_group_message(internal_group_id, message, from_phone, bot_phone, sender_name, sent_time) {
     const group_id = Buffer.from(internal_group_id).toString('base64');
+    console.log(`Processing group message. Internal group_id: ${internal_group_id}, Base64 group_id: ${group_id}, Message: ${message}`);
     const response = await graphql(queries.receiveGroupMessageQuery, { bot_phone, phone: from_phone });
     const community = response.data.communities.length > 0 ? response.data.communities[0] : null;
     let membership = response.data.memberships.length > 0 ? response.data.memberships[0] : null;
     if (!community) {
+        console.log(`No community found for bot_phone: ${bot_phone}`);
         return;
     }
-    if (!membership.permissions.includes('group_comms')) {
+    
+    // Create group_thread first (so it exists even if user doesn't have permission)
+    let group_thread;
+    try {
+        group_thread = await GroupThread.find_or_create_group_thread(group_id, community.id);
+        console.log(`Group thread found/created. ID: ${group_thread.id}, Step: ${group_thread.step}, Hashtag: ${group_thread.hashtag}`);
+    } catch (error) {
+        console.error(`Error creating/finding group_thread:`, error);
         return;
     }
-    const group_thread = await GroupThread.find_or_create_group_thread(group_id, community.id);
+    
+    // Check permissions - if user doesn't have group_comms, they can't use group features
+    // but the group_thread is still created so the script can run for other users
+    if (!membership || !membership.permissions || !membership.permissions.includes('group_comms')) {
+        console.log(`User ${from_phone} doesn't have group_comms permission. Group thread created but message ignored.`);
+        return;
+    }
 
 
 
@@ -220,7 +245,12 @@ export async function receive_group_message(internal_group_id, message, from_pho
 
     if (group_thread.step !== 'done') {
         await GroupThread.run_script(group_thread, {user: {phone: from_phone}, community}, message, sent_time);
-        return;
+        // Refetch group_thread to get updated step after script runs
+        group_thread = await GroupThread.find_or_create_group_thread(group_id, community.id);
+        // If still not done, return (script will handle next message)
+        if (group_thread.step !== 'done') {
+            return;
+        }
     }
 
     if (!hashtags) { //Ignore all messages without a hashtag
@@ -298,12 +328,24 @@ export async function group_join_or_leave(bot_phone) {
     const member_permissions = {};
     const new_members = [];
     const contacts = await Signal.get_contacts(bot_phone);
+    
+    // Get community info for creating group_threads
+    const communityQuery = await graphql(queries.receiveGroupMessageQuery, { bot_phone, phone: bot_phone });
+    const community = communityQuery.data.communities.length > 0 ? communityQuery.data.communities[0] : null;
+    
     for (const group of result.data.group_threads) {
         const group_info = await Signal.get_group_info(bot_phone, group.group_id);
         if (group_info instanceof Error) {
             console.error('Error updating membership permissions:', group_info);
             return;
         }
+        
+        // Create group_thread record if it doesn't exist (so script can run when someone messages)
+        if (community) {
+            const group_id_base64 = Buffer.from(group.group_id, 'base64').toString('base64');
+            await GroupThread.find_or_create_group_thread(group_id_base64, community.id);
+        }
+        
         for (const member of group_info.members) {
             let member_uuid;
             // If Signal returned the member's phone number, get the member's UUID

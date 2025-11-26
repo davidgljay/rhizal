@@ -45,6 +45,14 @@ class RhyzalParser {
             if (step == 'done') {
                 return;
             };
+            
+            // Validate step is not a UUID (which would indicate a bug)
+            if (step && typeof step === 'string' && step.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+                console.error(`Invalid step value "${step}" appears to be a UUID. This is likely a bug. Available steps: ${Object.keys(this.script).join(', ')}`);
+                // Don't throw - just log and return to prevent crash
+                return;
+            }
+            
             if (!this.script[step]) {
                 // Log available steps for debugging
                 const availableSteps = Object.keys(this.script).join(', ');
@@ -81,6 +89,7 @@ class RhyzalParser {
         if (!this.script[step]) {
             throw new Error('Step missing from script');
         }
+        console.log(`Parser.receive called for step ${step}, message: "${vars.message}"`);
         if (Array.isArray(this.script[step].on_receive)) {
             for (let i = 0; i < this.script[step].on_receive.length; i++) {
                 await this.evaluate_receive(this.script[step].on_receive[i], vars);
@@ -88,6 +97,7 @@ class RhyzalParser {
         } else {
             await this.evaluate_receive(this.script[step].on_receive, vars);
         }
+        console.log(`Parser.receive completed for step ${step}`);
     }
 
     async evaluate_receive(script, vars) {
@@ -100,15 +110,32 @@ class RhyzalParser {
             }
             const permission = key.replace('send_to_', '');
             const scriptConfig = script[key];
-            const expandedMessage = this.insert_variables(scriptConfig['preamble'], vars) + '\n\n' + vars.message;
+            // Use hashtag if available, otherwise use message
+            const messageContent = vars.hashtag || vars.message || '';
+            const expandedMessage = this.insert_variables(scriptConfig['preamble'], vars) + '\n\n' + messageContent;
             const permissionOverride = scriptConfig['permission'] || permission;
+            console.log(`Sending to ${permission} (${permissionOverride}): ${expandedMessage}`);
             await this.send_to_permission(vars.community_id, vars.id, expandedMessage, permissionOverride);
+            console.log(`Sent to ${permission} successfully`);
             return;
         }
         
         switch(key) {
             case 'step':
-                const new_step = String(script['step']);
+                let new_step = script['step'];
+                // Handle variable interpolation (e.g., step: vars.some_var)
+                if (typeof new_step === 'string' && new_step.startsWith('vars.')) {
+                    const varName = new_step.replace('vars.', '');
+                    new_step = vars[varName];
+                }
+                new_step = String(new_step);
+                
+                // Validate step is not a UUID (which would indicate a bug)
+                if (new_step.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+                    console.error(`Invalid step value "${new_step}" appears to be a UUID. Resetting to "0".`);
+                    new_step = '0';
+                }
+                
                 if (vars.group_id) {
                     await this.set_group_variable(vars.group_id, 'step', new_step);
                 } else {
@@ -123,6 +150,7 @@ class RhyzalParser {
                     console.warn(`Step "${new_step}" does not exist in script. Available steps: ${availableSteps}. Step variable has been updated but no message will be sent.`);
                     return;
                 }
+                console.log(`Sending step ${new_step} message. vars.hashtag = ${vars.hashtag}`);
                 await this.send(new_step, vars);
                 break;
             case 'save_message':
@@ -151,11 +179,16 @@ class RhyzalParser {
                 }
                 if (script['set_group_variable']['value'].includes('regex')) {
                     const value = this.regex_match(script['set_group_variable']['value'], vars);
+                    console.log(`Setting group variable ${script['set_group_variable']['variable']} = ${value} for group_id ${vars.group_id}`);
                     await this.set_group_variable(vars.group_id, script['set_group_variable']['variable'], value);
                     vars[script['set_group_variable']['variable']] = value;
+                    console.log(`Group variable ${script['set_group_variable']['variable']} set in vars: ${vars[script['set_group_variable']['variable']]}`);
                 } else {
-                    await this.set_group_variable(vars.group_id, script['set_group_variable']['variable'], script['set_group_variable']['value']);
-                    vars[script['set_group_variable']['variable']] = script['set_group_variable']['value'];
+                    const value = script['set_group_variable']['value'];
+                    console.log(`Setting group variable ${script['set_group_variable']['variable']} = ${value} for group_id ${vars.group_id}`);
+                    await this.set_group_variable(vars.group_id, script['set_group_variable']['variable'], value);
+                    vars[script['set_group_variable']['variable']] = value;
+                    console.log(`Group variable ${script['set_group_variable']['variable']} set in vars: ${vars[script['set_group_variable']['variable']]}`);
                 }
                 break;
             case 'set_message_type':
@@ -183,10 +216,14 @@ class RhyzalParser {
                 }
                 break;
             case 'if': //TODO: add elif to support more complex logic
-                if (this.evaluate_condition(script.if, vars)) {
+                const conditionResult = this.evaluate_condition(script.if, vars);
+                console.log(`If condition evaluated: ${conditionResult}`);
+                if (conditionResult) {
                     if (script.then) {
+                        console.log(`Executing then block with ${Array.isArray(script.then) ? script.then.length : 1} action(s)`);
                         if (Array.isArray(script.then)) {
                             for (let i = 0; i < script.then.length; i++) {
+                                console.log(`Executing then action ${i + 1}/${script.then.length}:`, Object.keys(script.then[i])[0]);
                                 await this.evaluate_receive(script.then[i], vars);
                             }
                         } else {
@@ -194,6 +231,7 @@ class RhyzalParser {
                         }
                     } 
                 } else if (script.else) {
+                    console.log(`Executing else block`);
                     if (Array.isArray(script.else)) {
                         for (let i = 0; i < script.else.length; i++) {
                             await this.evaluate_receive(script.else[i], vars);

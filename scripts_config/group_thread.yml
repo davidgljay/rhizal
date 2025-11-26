@@ -11,7 +11,7 @@
             - set_group_variable:
                 variable: "hashtag"
                 value: "regex(message, /#\\w+/)"
-            - send_to_group_comms:
+            - send_to_onboarding:
                 preamble: "A new group has been created with hashtag:"
             - step: 1
         else:
@@ -30,6 +30,8 @@
             - set_group_variable:
                     variable: "hashtag"
                     value: "regex(message, /#\\w+/)"
+            - send_to_onboarding:
+                preamble: "A new group has been created with hashtag:"
             - step: 1
 3:
     send:
@@ -40,6 +42,8 @@
             - set_group_variable:
                     variable: "hashtag"
                     value: "regex(message, /#\\w+/)"
+            - send_to_onboarding:
+                preamble: "A new group has been created with hashtag:"
             - step: 1
         else:
             - step: 2

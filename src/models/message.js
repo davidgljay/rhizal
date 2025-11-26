@@ -100,8 +100,9 @@ mutation CreateMessage($community_id: uuid!, $from_user: Boolean!, $membership_i
             if (message_type === 'save_message') {  
                 await Message.create(community_id, membership_id, text, timestamp, false, about_membership_id, message_type);
             }
-            if (log_message) {
+            if (log_message && membership_id) {
                 // Log the message metadata only for now.
+                // Only log if we have a membership_id (skip logging for group messages without sender)
                 await Message.create(community_id, membership_id, '', timestamp, false, about_membership_id, message_type);
             }
         }).catch(err => {
@@ -210,12 +211,12 @@ query SendToPermission($community_id: uuid!, $permission: [String!]!) {
         for (const group of communityData.groups) {
             await Message.send(
                 community_id,
-                sender_id, //Use the about_message_id for group messages
+                sender_id || null, // Use sender_id if available, otherwise null for group messages
                 'group.' + group.group_id,
                 bot_phone,
                 text,
-                true,
-                sender_id,
+                sender_id ? true : false, // Only log if we have a sender_id
+                sender_id || null,
                 `relay_to_`+ permission + `_group`,
                 0
             );
