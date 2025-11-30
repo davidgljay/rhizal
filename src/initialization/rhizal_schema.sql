@@ -117,12 +117,13 @@ CREATE TABLE public.events (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    name text NOT NULL,
+    title text NOT NULL,
     description text NOT NULL,
     start_time timestamp with time zone NOT NULL,
     end_time timestamp with time zone NOT NULL,
     location text NOT NULL,
-    community_id uuid NOT NULL
+    community_id uuid NOT NULL,
+    creator_id uuid NOT NULL
 );
 
 
@@ -546,6 +547,14 @@ ALTER TABLE ONLY public.registrations
 
 ALTER TABLE ONLY public.events
     ADD CONSTRAINT events_community_fkey FOREIGN KEY (community_id) REFERENCES public.communities(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: events events_creator_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.events
+    ADD CONSTRAINT events_creator_fkey FOREIGN KEY (creator_id) REFERENCES public.memberships(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --

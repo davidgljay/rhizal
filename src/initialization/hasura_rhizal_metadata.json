@@ -132,6 +132,12 @@
                 "using": {
                   "foreign_key_constraint_on": "community_id"
                 }
+              },
+              {
+                "name": "creator",
+                "using": {
+                  "foreign_key_constraint_on": "creator_id"
+                }
               }
             ],
             "array_relationships": [
