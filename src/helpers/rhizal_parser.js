@@ -2,6 +2,7 @@ const yaml = require('js-yaml');
 const Message = require('../models/message');
 const GroupThread = require('../models/group_thread');
 const Membership = require('../models/membership');
+const Event = require('../models/event');
 
 
 /* 
@@ -26,6 +27,7 @@ class RhyzalParser {
         this.set_message_type = set_message_type;
         this.set_variable = set_variable;
         this.set_group_variable = GroupThread.set_variable;
+        this.set_event_variable = Event.set_variable;
         this.send_to_permission = send_to_permission;
         this.save_message = Message.create;
         this.send_permission_message = send_permission_message;
@@ -144,6 +146,38 @@ class RhyzalParser {
                 } else {
                     await this.set_group_variable(vars.group_id, script['set_group_variable']['variable'], script['set_group_variable']['value']);
                     vars[script['set_group_variable']['variable']] = script['set_group_variable']['value'];
+                }
+                break;
+            case 'create_event':
+                if (!vars.community_id) {
+                    throw new Error('Community ID not found in vars');
+                }
+                if (!vars.id) {
+                    throw new Error('Membership ID not found in vars');
+                }
+                const eventConfig = script['create_event'];
+                const title = eventConfig['title'] ? this.insert_variables(eventConfig['title'], vars) : '';
+                const event = await Event.create(vars.community_id, vars.id, title);
+                vars.event_id = event.id;
+                break;
+            case 'set_event_variable':
+                if (!vars.id) {
+                    throw new Error('Membership ID not found in vars');
+                }
+                const event_obj = (await Event.get_by_creator(vars.id));
+                if (!event_obj) {
+                    throw new Error('Event not found');
+                }
+                if (script['set_event_variable']['value'].includes('regex')) {
+                    const value = this.regex_match(script['set_event_variable']['value'], vars);
+                    await this.set_event_variable(event_obj.id, script['set_event_variable']['variable'], value);
+                    vars[script['set_event_variable']['variable']] = value;
+                } else if (vars[script['set_event_variable']['value']]) {
+                    await this.set_event_variable(event_obj.id, script['set_event_variable']['variable'], vars[script['set_event_variable']['value']]);
+                    vars[script['set_event_variable']['variable']] = vars[script['set_event_variable']['value']];
+                } else {
+                    await this.set_event_variable(event_obj.id, script['set_event_variable']['variable'], script['set_event_variable']['value']);
+                    vars[script['set_event_variable']['variable']] = script['set_event_variable']['value'];
                 }
                 break;
             case 'set_message_type':

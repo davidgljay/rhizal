@@ -111,4 +111,81 @@ describe("bot_message_hashtag", () => {
             expect(GroupThread.set_variable).not.toHaveBeenCalled();
         });
     });
+
+    describe("#event", () => {
+        it("should handle #event hashtag correctly", async () => {
+            const mockMembership = { id: 1, permissions: ['announcement'] };
+            const mockCommunity = {};
+            const mockMessage = "Test message";
+            const mockAnnouncementScript = {
+                id: 100,
+                get_vars: jest.fn(),
+                send: jest.fn(),
+            };
+            const mockEventScript = {
+                id: 123,
+                get_vars: jest.fn(),
+                send: jest.fn(),
+            };
+
+            Script.get_system_script = jest.fn()
+                .mockResolvedValueOnce(mockAnnouncementScript) // First call for announcement script at top
+                .mockResolvedValueOnce(mockEventScript); // Second call for event_config
+            Membership.set_variable = jest.fn();
+
+            const result = await bot_message_hashtag("#event", mockMembership, mockCommunity, mockMessage);
+
+            expect(result).toBe(true);
+            expect(Script.get_system_script).toHaveBeenCalledWith("announcement");
+            expect(Script.get_system_script).toHaveBeenCalledWith("event_config");
+            expect(Membership.set_variable).toHaveBeenCalledWith(mockMembership.id, "current_script_id", mockEventScript.id);
+            expect(Membership.set_variable).toHaveBeenCalledWith(mockMembership.id, "step", "0");
+            expect(mockEventScript.get_vars).toHaveBeenCalledWith(mockMembership, mockMessage);
+            expect(mockEventScript.send).toHaveBeenCalledWith("0");
+        });
+
+        it("should return false if member does not have announcement permission", async () => {
+            const mockMembership = { id: 1, permissions: [] };
+            const mockCommunity = {};
+            const mockMessage = "Test message";
+            const mockAnnouncementScript = {
+                id: 100,
+                get_vars: jest.fn(),
+                send: jest.fn(),
+            };
+
+            Script.get_system_script = jest.fn().mockResolvedValue(mockAnnouncementScript);
+            Membership.set_variable = jest.fn();
+
+            const result = await bot_message_hashtag("#event", mockMembership, mockCommunity, mockMessage);
+
+            expect(result).toBe(false);
+            expect(Script.get_system_script).toHaveBeenCalledWith("announcement");
+            expect(Script.get_system_script).not.toHaveBeenCalledWith("event_config");
+            expect(Membership.set_variable).not.toHaveBeenCalled();
+        });
+
+        it("should do nothing if system script for #event is not found", async () => {
+            const mockMembership = { id: 1, permissions: ['announcement'] };
+            const mockCommunity = {};
+            const mockMessage = "Test message";
+            const mockAnnouncementScript = {
+                id: 100,
+                get_vars: jest.fn(),
+                send: jest.fn(),
+            };
+
+            Script.get_system_script = jest.fn()
+                .mockResolvedValueOnce(mockAnnouncementScript) // First call for announcement script at top
+                .mockResolvedValueOnce(null); // Second call for event_config returns null
+            Membership.set_variable = jest.fn().mockResolvedValue(undefined);
+
+            const result = await bot_message_hashtag("#event", mockMembership, mockCommunity, mockMessage);
+
+            expect(Script.get_system_script).toHaveBeenCalledWith("announcement");
+            expect(Script.get_system_script).toHaveBeenCalledWith("event_config");
+            expect(Membership.set_variable).not.toHaveBeenCalled();
+            expect(result).toBeUndefined();
+        });
+    });
 });

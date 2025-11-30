@@ -3,6 +3,7 @@ const { community_id } = require('../models/message');
 const Membership = require('../models/membership');
 const Message = require('../models/message');
 const GroupThread = require('../models/group_thread');
+const Event = require('../models/event');
 
 jest.mock('../models/message', () => ({
     send: jest.fn(),
@@ -20,6 +21,12 @@ jest.mock('../models/membership', () => ({
 
 jest.mock('../models/group_thread', () => ({
     set_variable: jest.fn(),
+}));
+
+jest.mock('../models/event', () => ({
+    create: jest.fn(),
+    set_variable: jest.fn(),
+    get_by_creator: jest.fn(),
 }));
 
 
@@ -741,6 +748,310 @@ describe('rhyzal_parser', () => {
             expect(Membership.get).toHaveBeenCalledWith('+1234567890', '+0987654321');
             expect(Message.send_permission_message).toHaveBeenCalledWith('membership_123', ['announcement']);
             expect(Membership.set_variable).toHaveBeenCalledWith('membership_123', 'step', 'done');
+        });
+    });
+
+    describe('create_event', () => {
+        it('should create an event with title from config', async () => {
+            const script = {
+                "0": {
+                    "send": ["Test message"],
+                    "on_receive": {
+                        "create_event": {
+                            "title": "{{event_title}}"
+                        }
+                    }
+                }
+            };
+            const scriptJson = JSON.stringify(script);
+            const parser = new RhyzalParser(scriptJson);
+
+            const mockEvent = {
+                id: 'event-123',
+                title: 'My Test Event',
+                community_id: 'community-456',
+                creator_id: 'membership-789'
+            };
+
+            Event.create.mockResolvedValue(mockEvent);
+
+            const vars = {
+                id: 'membership-789',
+                community_id: 'community-456',
+                event_title: 'My Test Event'
+            };
+
+            await parser.evaluate_receive({create_event: {title: "{{event_title}}"}}, vars);
+
+            expect(Event.create).toHaveBeenCalledWith('community-456', 'membership-789', 'My Test Event');
+            expect(vars.event_id).toBe('event-123');
+        });
+
+        it('should create an event with empty title if not provided', async () => {
+            const script = {
+                "0": {
+                    "send": ["Test message"],
+                    "on_receive": {
+                        "create_event": {}
+                    }
+                }
+            };
+            const scriptJson = JSON.stringify(script);
+            const parser = new RhyzalParser(scriptJson);
+
+            const mockEvent = {
+                id: 'event-123',
+                title: '',
+                community_id: 'community-456',
+                creator_id: 'membership-789'
+            };
+
+            Event.create.mockResolvedValue(mockEvent);
+
+            const vars = {
+                id: 'membership-789',
+                community_id: 'community-456'
+            };
+
+            await parser.evaluate_receive({create_event: {}}, vars);
+
+            expect(Event.create).toHaveBeenCalledWith('community-456', 'membership-789', '');
+            expect(vars.event_id).toBe('event-123');
+        });
+
+        it('should throw an error if community_id is missing', async () => {
+            const script = {
+                "0": {
+                    "send": ["Test message"],
+                    "on_receive": {
+                        "create_event": {
+                            "title": "Test Event"
+                        }
+                    }
+                }
+            };
+            const scriptJson = JSON.stringify(script);
+            const parser = new RhyzalParser(scriptJson);
+
+            const vars = {
+                id: 'membership-789'
+            };
+
+            await expect(parser.evaluate_receive({create_event: {title: "Test Event"}}, vars))
+                .rejects.toThrow('Community ID not found in vars');
+            expect(Event.create).not.toHaveBeenCalled();
+        });
+
+        it('should throw an error if membership id is missing', async () => {
+            const script = {
+                "0": {
+                    "send": ["Test message"],
+                    "on_receive": {
+                        "create_event": {
+                            "title": "Test Event"
+                        }
+                    }
+                }
+            };
+            const scriptJson = JSON.stringify(script);
+            const parser = new RhyzalParser(scriptJson);
+
+            const vars = {
+                community_id: 'community-456'
+            };
+
+            await expect(parser.evaluate_receive({create_event: {title: "Test Event"}}, vars))
+                .rejects.toThrow('Membership ID not found in vars');
+            expect(Event.create).not.toHaveBeenCalled();
+        });
+
+        it('should replace variables in title', async () => {
+            const script = {
+                "0": {
+                    "send": ["Test message"],
+                    "on_receive": {
+                        "create_event": {
+                            "title": "Event: {{event_title}} by {{name}}"
+                        }
+                    }
+                }
+            };
+            const scriptJson = JSON.stringify(script);
+            const parser = new RhyzalParser(scriptJson);
+
+            const mockEvent = {
+                id: 'event-123',
+                title: 'Event: My Event by John',
+                community_id: 'community-456',
+                creator_id: 'membership-789'
+            };
+
+            Event.create.mockResolvedValue(mockEvent);
+
+            const vars = {
+                id: 'membership-789',
+                community_id: 'community-456',
+                event_title: 'My Event',
+                name: 'John'
+            };
+
+            await parser.evaluate_receive({create_event: {title: "Event: {{event_title}} by {{name}}"}}, vars);
+
+            expect(Event.create).toHaveBeenCalledWith('community-456', 'membership-789', 'Event: My Event by John');
+        });
+    });
+
+    describe('set_event_variable', () => {
+        it('should set an event variable correctly', async () => {
+            const script = {
+                "0": {
+                    "send": ["Test message"],
+                    "on_receive": {
+                        "set_event_variable": {
+                            "variable": "description",
+                            "value": "message"
+                        }
+                    }
+                }
+            };
+            const scriptJson = JSON.stringify(script);
+            const parser = new RhyzalParser(scriptJson);
+
+            const mockEvent = {
+                id: 'event-123',
+                title: 'Test Event'
+            };
+
+            Event.get_by_creator.mockResolvedValue(mockEvent);
+            Event.set_variable.mockResolvedValue({});
+
+            const vars = {
+                id: 'membership-789',
+                message: 'Test description'
+            };
+
+            await parser.evaluate_receive({set_event_variable: {variable: "description", value: "message"}}, vars);
+
+            expect(Event.get_by_creator).toHaveBeenCalledWith('membership-789');
+            expect(Event.set_variable).toHaveBeenCalledWith('event-123', 'description', 'Test description');
+            expect(vars.description).toBe('Test description');
+        });
+
+        it('should set event variable with literal value', async () => {
+            const script = {
+                "0": {
+                    "send": ["Test message"],
+                    "on_receive": {
+                        "set_event_variable": {
+                            "variable": "location",
+                            "value": "123 Main St"
+                        }
+                    }
+                }
+            };
+            const scriptJson = JSON.stringify(script);
+            const parser = new RhyzalParser(scriptJson);
+
+            const mockEvent = {
+                id: 'event-123',
+                title: 'Test Event'
+            };
+
+            Event.get_by_creator.mockResolvedValue(mockEvent);
+            Event.set_variable.mockResolvedValue({});
+
+            const vars = {
+                id: 'membership-789'
+            };
+
+            await parser.evaluate_receive({set_event_variable: {variable: "location", value: "123 Main St"}}, vars);
+
+            expect(Event.set_variable).toHaveBeenCalledWith('event-123', 'location', '123 Main St');
+            expect(vars.location).toBe('123 Main St');
+        });
+
+        it('should set event variable with regex', async () => {
+            const script = {
+                "0": {
+                    "send": ["Test message"],
+                    "on_receive": {
+                        "set_event_variable": {
+                            "variable": "title",
+                            "value": "regex(message, /[a-zA-Z0-9]+/)"
+                        }
+                    }
+                }
+            };
+            const scriptJson = JSON.stringify(script);
+            const parser = new RhyzalParser(scriptJson);
+
+            const mockEvent = {
+                id: 'event-123',
+                title: 'Test Event'
+            };
+
+            Event.get_by_creator.mockResolvedValue(mockEvent);
+            Event.set_variable.mockResolvedValue({});
+
+            const vars = {
+                id: 'membership-789',
+                message: 'Event: My Special Event'
+            };
+
+            await parser.evaluate_receive({set_event_variable: {variable: "title", value: "regex(message, /[a-zA-Z0-9: ]+/)"}}, vars);
+
+            expect(Event.set_variable).toHaveBeenCalledWith('event-123', 'title', 'Event: My Special Event');
+            expect(vars.title).toBe('Event: My Special Event');
+        });
+
+        it('should throw an error if membership id is missing', async () => {
+            const script = {
+                "0": {
+                    "send": ["Test message"],
+                    "on_receive": {
+                        "set_event_variable": {
+                            "variable": "description",
+                            "value": "message"
+                        }
+                    }
+                }
+            };
+            const scriptJson = JSON.stringify(script);
+            const parser = new RhyzalParser(scriptJson);
+
+            const vars = {};
+
+            await expect(parser.evaluate_receive({set_event_variable: {variable: "description", value: "message"}}, vars))
+                .rejects.toThrow('Membership ID not found in vars');
+            expect(Event.get_by_creator).not.toHaveBeenCalled();
+        });
+
+        it('should throw an error if event is not found', async () => {
+            const script = {
+                "0": {
+                    "send": ["Test message"],
+                    "on_receive": {
+                        "set_event_variable": {
+                            "variable": "description",
+                            "value": "message"
+                        }
+                    }
+                }
+            };
+            const scriptJson = JSON.stringify(script);
+            const parser = new RhyzalParser(scriptJson);
+
+            Event.get_by_creator.mockResolvedValue(undefined);
+
+            const vars = {
+                id: 'membership-789',
+                message: 'Test description'
+            };
+
+            await expect(parser.evaluate_receive({set_event_variable: {variable: "description", value: "message"}}, vars))
+                .rejects.toThrow('Event not found');
+            expect(Event.get_by_creator).toHaveBeenCalledWith('membership-789');
+            expect(Event.set_variable).not.toHaveBeenCalled();
         });
     });
 

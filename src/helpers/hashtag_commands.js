@@ -36,6 +36,19 @@ export async function bot_message_hashtag(hashtag, membership, community, messag
             group_name_script.vars.group_id = group_thread.group_id;
             await group_name_script.send('0');
             return true;
+        case '#event':
+            if (!membership.permissions.includes('announcement')) {
+                return false;
+            }
+            const event_script = await Script.get_system_script('event_config');
+            if (!event_script) {
+                return;
+            }
+            await Membership.set_variable(membership.id, 'current_script_id', event_script.id);
+            await Membership.set_variable(membership.id, 'step', '0');
+            await event_script.get_vars(membership, message);
+            await event_script.send('0');
+            return true;
     }
     return false;
 };
