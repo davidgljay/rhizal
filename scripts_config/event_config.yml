@@ -1,53 +1,61 @@
-config_event_announcement:
-  description: |
-    Configure and preview an event announcement for broadcast to your list.
-    You will be prompted for the following:
-      1. Title for the event (required)
-      2. Description/message (required)
-      3. Link or file path to image (optional)
-      4. Confirmation before sending to the list
+0:
+  send:
+    - "Let's create a new event! What's the title of the event? You can cancel this process with #cancel."
+  on_receive:
+    if: "regex(message, /#cancel[^a-zA-Z0-9]/)"
+    then:
+      - step: 4
+    else:
+      - create_event:
+          variable: "event_title"
+          value: "message"
+      - step: 1
 
-  steps:
-    - prompt: "Enter the title of your event:"
-      var: event_title
-      required: true
+1:
+  send:
+    - "Great! What's the description of the event?"
+  on_receive:
+    if: "regex(message, /#cancel[^a-zA-Z0-9]/)"
+    then:
+      - step: 4
+    else:
+      - set_event_variable:
+          variable: "event_description"
+          value: "message"
+      - step: 2
 
-    - prompt: "Enter a message describing this event:"
-      var: event_message
-      required: true
+2:
+  send:
+    - "When does the event start? Please provide the date and time (e.g., 2024-12-25 14:00:00)"
+  on_receive:
+    if: "regex(message, /#cancel[^a-zA-Z0-9]/)"
+    then:
+      - step: 4
+    else:
+      - set_event_variable:
+          variable: "event_start_time"
+          value: "message"
+      - step: 3
 
-    - prompt: "Enter a URL or file path to an image (press Enter to skip):"
-      var: event_image
-      required: false
+3:
+  send:
+    - "Perfect! Creating your event now..."
+  on_receive:
+    - create_event:
+        title: "{{event_title}}"
+        description: "{{event_description}}"
+        start_time: "{{event_start_time}}"
+    - step: 5
 
-    - action: preview_event
-      inputs:
-        event_title: "{{ event_title }}"
-        event_message: "{{ event_message }}"
-        event_image: "{{ event_image }}"
-      description: |
-        Example Announcement:
-        ---
-        Title: {{ event_title }}
-        Message: {{ event_message }}
-        {% if event_image %}
-        Image: {{ event_image }}
-        {% endif %}
-        ---
+4:
+  send:
+    - "Okay, I've canceled the event creation process. You can start it again with #events at any time."
+  on_receive:
+    - step: "done"
 
-    - prompt: "Would you like to send this announcement to the list? (yes/no)"
-      var: confirm_send
-      required: true
-
-    - condition: "{{ confirm_send | lower == 'yes' }}"
-      then:
-        - action: send_event_announcement
-          inputs:
-            event_title: "{{ event_title }}"
-            event_message: "{{ event_message }}"
-            event_image: "{{ event_image }}"
-          description: "Event announcement sent to the list."
-      else:
-        - action: cancel
-          description: "Event announcement canceled."
+5:
+  send:
+    - "Great! Your event '{{event_title}}' has been created successfully!"
+  on_receive:
+    - step: "done"
 
