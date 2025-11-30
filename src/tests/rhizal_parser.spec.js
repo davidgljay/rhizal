@@ -10,10 +10,12 @@ jest.mock('../models/message', () => ({
     set_message_type: jest.fn(),
     send_to_permission: jest.fn(),
     create: jest.fn(),
+    send_permission_message: jest.fn(),
 }));
 
 jest.mock('../models/membership', () => ({
     set_variable: jest.fn(),
+    get: jest.fn(),
 }));
 
 jest.mock('../models/group_thread', () => ({
@@ -539,6 +541,206 @@ describe('rhyzal_parser', () => {
                 1234567890,
                 true
             );
+        });
+    });
+
+    describe('send_permission_message', () => {
+        it('should get membership and call send_permission_message with membership id and permissions', async () => {
+            const script = {
+                "0": {
+                    "send": ["Test message"],
+                    "on_receive": {
+                        "send_permission_message": true
+                    }
+                }
+            };
+            const scriptJson = JSON.stringify(script);
+            const parser = new RhyzalParser(scriptJson);
+            
+            const mockMembership = {
+                id: 'membership_123',
+                permissions: ['announcement', 'group_comms'],
+                user: { phone: '+1234567890' },
+                community: { id: 'community_1', bot_phone: '+0987654321' }
+            };
+            
+            Membership.get.mockResolvedValue(mockMembership);
+            Message.send_permission_message.mockResolvedValue();
+            
+            const vars = {
+                id: 'membership_123',
+                phone: '+1234567890',
+                bot_phone: '+0987654321',
+                community_id: 'community_1'
+            };
+            
+            await parser.evaluate_receive({send_permission_message: true}, vars);
+            
+            expect(Membership.get).toHaveBeenCalledWith('+1234567890', '+0987654321');
+            expect(Message.send_permission_message).toHaveBeenCalledWith('membership_123', ['announcement', 'group_comms']);
+        });
+
+        it('should handle empty permissions array', async () => {
+            const script = {
+                "0": {
+                    "send": ["Test message"],
+                    "on_receive": {
+                        "send_permission_message": true
+                    }
+                }
+            };
+            const scriptJson = JSON.stringify(script);
+            const parser = new RhyzalParser(scriptJson);
+            
+            const mockMembership = {
+                id: 'membership_123',
+                permissions: [],
+                user: { phone: '+1234567890' },
+                community: { id: 'community_1', bot_phone: '+0987654321' }
+            };
+            
+            Membership.get.mockResolvedValue(mockMembership);
+            Message.send_permission_message.mockResolvedValue();
+            
+            const vars = {
+                id: 'membership_456',
+                phone: '+1234567890',
+                bot_phone: '+0987654321',
+                community_id: 'community_1'
+            };
+            
+            await parser.evaluate_receive({send_permission_message: true}, vars);
+            
+            expect(Membership.get).toHaveBeenCalledWith('+1234567890', '+0987654321');
+            expect(Message.send_permission_message).toHaveBeenCalledWith('membership_456', []);
+        });
+
+        it('should handle single permission', async () => {
+            const script = {
+                "0": {
+                    "send": ["Test message"],
+                    "on_receive": {
+                        "send_permission_message": true
+                    }
+                }
+            };
+            const scriptJson = JSON.stringify(script);
+            const parser = new RhyzalParser(scriptJson);
+            
+            const mockMembership = {
+                id: 'membership_123',
+                permissions: ['onboarding'],
+                user: { phone: '+1234567890' },
+                community: { id: 'community_1', bot_phone: '+0987654321' }
+            };
+            
+            Membership.get.mockResolvedValue(mockMembership);
+            Message.send_permission_message.mockResolvedValue();
+            
+            const vars = {
+                id: 'membership_789',
+                phone: '+1234567890',
+                bot_phone: '+0987654321',
+                community_id: 'community_1'
+            };
+            
+            await parser.evaluate_receive({send_permission_message: true}, vars);
+            
+            expect(Membership.get).toHaveBeenCalledWith('+1234567890', '+0987654321');
+            expect(Message.send_permission_message).toHaveBeenCalledWith('membership_789', ['onboarding']);
+        });
+
+        it('should handle when Membership.get returns null', async () => {
+            const script = {
+                "0": {
+                    "send": ["Test message"],
+                    "on_receive": {
+                        "send_permission_message": true
+                    }
+                }
+            };
+            const scriptJson = JSON.stringify(script);
+            const parser = new RhyzalParser(scriptJson);
+            
+            Membership.get.mockResolvedValue(null);
+            
+            const vars = {
+                id: 'membership_123',
+                phone: '+1234567890',
+                bot_phone: '+0987654321',
+                community_id: 'community_1'
+            };
+            
+            await expect(parser.evaluate_receive({send_permission_message: true}, vars)).rejects.toThrow();
+            
+            expect(Membership.get).toHaveBeenCalledWith('+1234567890', '+0987654321');
+            expect(Message.send_permission_message).not.toHaveBeenCalled();
+        });
+
+        it('should handle when Membership.get throws an error', async () => {
+            const script = {
+                "0": {
+                    "send": ["Test message"],
+                    "on_receive": {
+                        "send_permission_message": true
+                    }
+                }
+            };
+            const scriptJson = JSON.stringify(script);
+            const parser = new RhyzalParser(scriptJson);
+            
+            const error = new Error('Failed to get membership');
+            Membership.get.mockRejectedValue(error);
+            
+            const vars = {
+                id: 'membership_123',
+                phone: '+1234567890',
+                bot_phone: '+0987654321',
+                community_id: 'community_1'
+            };
+            
+            await expect(parser.evaluate_receive({send_permission_message: true}, vars)).rejects.toThrow('Failed to get membership');
+            
+            expect(Membership.get).toHaveBeenCalledWith('+1234567890', '+0987654321');
+            expect(Message.send_permission_message).not.toHaveBeenCalled();
+        });
+
+        it('should work when called from receive with array of on_receive actions', async () => {
+            const script = {
+                "0": {
+                    "send": ["Test message"],
+                    "on_receive": [
+                        { "send_permission_message": true },
+                        { "step": "done" }
+                    ]
+                }
+            };
+            const scriptJson = JSON.stringify(script);
+            const parser = new RhyzalParser(scriptJson);
+            
+            const mockMembership = {
+                id: 'membership_123',
+                permissions: ['announcement'],
+                user: { phone: '+1234567890' },
+                community: { id: 'community_1', bot_phone: '+0987654321' }
+            };
+            
+            Membership.get.mockResolvedValue(mockMembership);
+            Message.send_permission_message.mockResolvedValue();
+            Membership.set_variable.mockResolvedValue();
+            
+            const vars = {
+                id: 'membership_123',
+                phone: '+1234567890',
+                bot_phone: '+0987654321',
+                community_id: 'community_1'
+            };
+            
+            await parser.receive("0", vars);
+            
+            expect(Membership.get).toHaveBeenCalledWith('+1234567890', '+0987654321');
+            expect(Message.send_permission_message).toHaveBeenCalledWith('membership_123', ['announcement']);
+            expect(Membership.set_variable).toHaveBeenCalledWith('membership_123', 'step', 'done');
         });
     });
 

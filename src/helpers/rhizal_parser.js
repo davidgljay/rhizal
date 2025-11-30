@@ -19,7 +19,7 @@ class RhyzalParser {
 
     constructor(script_json) {
         let script_obj;
-        const {send, set_message_type, send_announcement, send_to_permission} = Message;
+        const {send, set_message_type, send_announcement, send_to_permission, send_permission_message} = Message;
         const {set_variable} = Membership;
         this.send_message = send;
         this.send_announcement = send_announcement;
@@ -28,6 +28,7 @@ class RhyzalParser {
         this.set_group_variable = GroupThread.set_variable;
         this.send_to_permission = send_to_permission;
         this.save_message = Message.create;
+        this.send_permission_message = send_permission_message;
         try {
             script_obj = JSON.parse(script_json);
         }
@@ -156,6 +157,10 @@ class RhyzalParser {
                     throw new Error('Community ID not found in vars');
                 }
                 await this.send_announcement(vars.community_id, vars.id);
+                break;
+            case 'send_permission_message':
+                const membership = await Membership.get(vars.phone, vars.bot_phone);
+                await this.send_permission_message(vars.id, membership.permissions);
                 break;
             case 'if': //TODO: add elif to support more complex logic
                 if (this.evaluate_condition(script.if, vars)) {

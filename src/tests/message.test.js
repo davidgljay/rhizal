@@ -321,4 +321,168 @@ describe('Message', () => {
             mockSend.mockRestore();
         });
     });
+
+    describe('send_permission_message', () => {
+        let mockSend;
+
+        beforeEach(() => {
+            mockSend = jest.spyOn(Message, 'send').mockResolvedValue();
+        });
+
+        afterEach(() => {
+            jest.clearAllMocks();
+            if (mockSend) {
+                mockSend.mockRestore();
+            }
+        });
+
+        const mockMembership = {
+            id: 'membership_123',
+            user: {
+                phone: '+1234567890'
+            },
+            community: {
+                id: 'community_1',
+                bot_phone: '+0987654321'
+            }
+        };
+
+        it('should send announcement permission message', async () => {
+            await Message.send_permission_message(mockMembership, 'announcement');
+
+            expect(mockSend).toHaveBeenCalledWith(
+                'community_1',
+                'membership_123',
+                '+1234567890',
+                '+0987654321',
+                'Congrats, you have been granted announcement permission! You can now use #announcement to send a message to everyone registered with Rhizal. The hashtag will trigger a script which will walk you through the process of drafting and sending an announcement.',
+                false
+            );
+        });
+
+        it('should send group_comms permission message', async () => {
+            await Message.send_permission_message(mockMembership, 'group_comms');
+
+            expect(mockSend).toHaveBeenCalledWith(
+                'community_1',
+                'membership_123',
+                '+1234567890',
+                '+0987654321',
+                'Congrats, you have been granted group comms permissions! You can now communicate between groups where the Rhizal bot is present by using hashtags. For example, if there is a #leaders group, you can send messages to it from another group by typing #leaders.',
+                false
+            );
+        });
+
+        it('should send onboarding permission message', async () => {
+            await Message.send_permission_message(mockMembership, 'onboarding');
+
+            expect(mockSend).toHaveBeenCalledWith(
+                'community_1',
+                'membership_123',
+                '+1234567890',
+                '+0987654321',
+                'Congrats, you have been granted onboarding permissions! You should see messages from new members appearing in a group that you\'ve been invited to. You can reply to these messages to respond to people who are joining or who message the Rhizal bot with a question.',
+                false
+            );
+        });
+
+        it('should not send message for unknown permission', async () => {
+            await Message.send_permission_message(mockMembership, 'unknown_permission');
+
+            expect(mockSend).not.toHaveBeenCalled();
+        });
+
+        it('should not send message for empty permission string', async () => {
+            await Message.send_permission_message(mockMembership, '');
+
+            expect(mockSend).not.toHaveBeenCalled();
+        });
+
+        it('should not send message for null permission', async () => {
+            await Message.send_permission_message(mockMembership, null);
+
+            expect(mockSend).not.toHaveBeenCalled();
+        });
+
+        it('should not send message for undefined permission', async () => {
+            await Message.send_permission_message(mockMembership, undefined);
+
+            expect(mockSend).not.toHaveBeenCalled();
+        });
+
+        it('should handle case-sensitive permission names', async () => {
+            await Message.send_permission_message(mockMembership, 'Announcement');
+
+            expect(mockSend).not.toHaveBeenCalled();
+        });
+
+        it('should use correct membership properties in send call', async () => {
+            const customMembership = {
+                id: 'membership_456',
+                user: {
+                    phone: '+9876543210'
+                },
+                community: {
+                    id: 'community_2',
+                    bot_phone: '+1111111111'
+                }
+            };
+
+            await Message.send_permission_message(customMembership, 'announcement');
+
+            expect(mockSend).toHaveBeenCalledWith(
+                'community_2',
+                'membership_456',
+                '+9876543210',
+                '+1111111111',
+                expect.stringContaining('announcement permission'),
+                false
+            );
+        });
+
+        it('should handle multiple permission messages being sent sequentially', async () => {
+            await Message.send_permission_message(mockMembership, 'announcement');
+            await Message.send_permission_message(mockMembership, 'group_comms');
+            await Message.send_permission_message(mockMembership, 'onboarding');
+
+            expect(mockSend).toHaveBeenCalledTimes(3);
+            expect(mockSend).toHaveBeenNthCalledWith(1,
+                'community_1',
+                'membership_123',
+                '+1234567890',
+                '+0987654321',
+                expect.stringContaining('announcement permission'),
+                false
+            );
+            expect(mockSend).toHaveBeenNthCalledWith(2,
+                'community_1',
+                'membership_123',
+                '+1234567890',
+                '+0987654321',
+                expect.stringContaining('group comms permissions'),
+                false
+            );
+            expect(mockSend).toHaveBeenNthCalledWith(3,
+                'community_1',
+                'membership_123',
+                '+1234567890',
+                '+0987654321',
+                expect.stringContaining('onboarding permissions'),
+                false
+            );
+        });
+
+        it('should always pass false as log_message parameter', async () => {
+            await Message.send_permission_message(mockMembership, 'announcement');
+
+            expect(mockSend).toHaveBeenCalledWith(
+                expect.any(String),
+                expect.any(String),
+                expect.any(String),
+                expect.any(String),
+                expect.any(String),
+                false
+            );
+        });
+    });
 });

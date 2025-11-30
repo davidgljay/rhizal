@@ -23,7 +23,7 @@ query GetMembershipFromPhoneNumbers($phone: String!, $bot_phone: String!) {
       permissions
       current_script_id
       informal_name
-	  intro {
+	    intro {
         text
       }
       community {
@@ -55,18 +55,39 @@ query GetMembershipFromPhoneNumbers($phone: String!, $bot_phone: String!) {
     }
 
     static async update_permissions(id, permissions) {
+        // First get the current permissions
+        const getCurrentPermissionsQuery = `
+query GetCurrentPermissions($id:uuid!) {
+  memberships(where: {id: {_eq: $id}}) {
+    permissions
+  }
+}
+`;
+        const currentResponse = await graphql(getCurrentPermissionsQuery, { id });
+        const oldPermissions = currentResponse.data.memberships.length > 0 
+            ? currentResponse.data.memberships[0].permissions || [] 
+            : [];
+        
         const query = `
 mutation UpdatePermissions($id:uuid!, $permissions:[String!]) {
   update_memberships(where: {id: {_eq: $id}}, _set: {permissions: $permissions}) {
     returning {
       id
+      permissions
     }
   }
 }
 `;
         const uniquePermissions = [...new Set(permissions)];
         const variables = { id, permissions: uniquePermissions};
-        return await graphql(query, variables);
+        const result = await graphql(query, variables);
+        
+        // Return both old and new permissions for comparison
+        return {
+            oldPermissions,
+            newPermissions: uniquePermissions,
+            result
+        };
     }
 
     static async add_permissions(id, permissions) {
@@ -239,6 +260,8 @@ mutation CreateUserAndMembership($phone:String!, $community_id:uuid!, $current_s
     }
 
 }
+
+
 
 module.exports = Membership;
 

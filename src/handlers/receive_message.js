@@ -113,12 +113,40 @@ group_threads(where: {group_id: {_eq: $group_id}}) {
 
 get_permissions_groups_query: `
 query GetPermissionsGroups($bot_phone:String!) {
-group_threads(where: {community:{bot_phone:{_eq: $bot_phone}}, permissions: {_neq: []}}) {
-    group_id
-    permissions
-}
+    group_threads(where: {community:{bot_phone:{_eq: $bot_phone}}, permissions: {_neq: []}}) {
+        group_id
+        permissions
+    }
+    memberships(where: {community:{bot_phone:{_eq: $bot_phone}}}) {
+        id
+        permissions
+        user {
+            phone
+        }
+        community {
+            id
+            bot_phone
+        }
+    }
 }
 `,
+nameRequestScriptQuery: `
+query GetNameRequestScript($name:String!, $bot_phone:String!) {
+    scripts(where: {name: {_eq: $name}, community:{bot_phone:{_eq: $bot_phone}}}) {
+        id
+        name
+        script_json
+        vars_query
+        targets_query
+        community {
+            id
+            bot_phone
+            onboarding {
+                id
+            }
+        }
+    }
+}`
 }
 
 
@@ -239,28 +267,85 @@ export async function receive_reply(message, from_phone, bot_phone, reply_to_tim
     
 }
 
+
+
+export async function new_member_joined_group(bot_phone, user_phone, permissions) {
+    const nameRequestScriptResult = await graphql(queries.nameRequestScriptQuery, { 
+        name: 'name_request', 
+        bot_phone
+    });
+    if (nameRequestScriptResult.data.scripts.length === 0) {
+        return new Error('Name request script not found');
+    }
+    const community = nameRequestScriptResult.data.scripts[0].community;
+    let nameRequestScript = null;
+    if (nameRequestScriptResult.data.scripts.length > 0) {
+        nameRequestScript = new Script(nameRequestScriptResult.data.scripts[0]);
+    }
+    const membership = await Membership.create(user_phone, community, null);
+    await Membership.update_permissions(membership.id, permissions);
+    await Membership.set_variable(membership.id, 'current_script_id', nameRequestScript.id);
+    await Membership.set_variable(membership.id, 'step', '0');
+    await nameRequestScript.get_vars(membership, '', Date.now());
+    await nameRequestScript.send('0');
+    return membership;
+}
+
+
 export async function group_join_or_leave(bot_phone) {
     // Perform an audit of all group permissions to ensure that the user has the correct permissions.
-    const groups = await graphql(queries.get_permissions_groups_query, { bot_phone });
+    const result = await graphql(queries.get_permissions_groups_query, { bot_phone });
     const member_permissions = {};
-    for (const group of groups.data.group_threads) {
+    const new_members = [];
+    const contacts = await Signal.get_contacts(bot_phone);
+    for (const group of result.data.group_threads) {
         const group_info = await Signal.get_group_info(bot_phone, group.group_id);
         if (group_info instanceof Error) {
             console.error('Error updating membership permissions:', group_info);
             return;
         }
         for (const member of group_info.members) {
-            if (member_permissions[member]) {
-                    member_permissions[member] = member_permissions[member].concat(group.permissions);
-                } else {
-                    member_permissions[member] = group.permissions;
-                }
+            let member_uuid;
+            // If Signal returned the member's phone number, get the member's UUID
+            if (member.startsWith('+') && member.length < 13) {
+                member_uuid = contacts[member];
+            } else {
+                member_uuid = member;
             }
-    }
-    for (const member of Object.keys(member_permissions)) {
-        const membership = await Membership.get(member, bot_phone);
-        if (membership) {
-            await Membership.update_permissions(membership.id, member_permissions[member]);
+            // Add the member's permissions for this group to the member's permissions hash
+            if (member_permissions[member_uuid]) {
+                    member_permissions[member_uuid] = member_permissions[member_uuid].concat(group.permissions);
+                } else {
+                    member_permissions[member_uuid] = group.permissions;
+                }
+            const registered_members = result.data.memberships.map(m => m.user.phone);
+            // If the member is not already registered, add them to the new members list
+            if (!registered_members.includes(member_uuid)) {
+                new_members.push(member_uuid);
+            };
+        };
+    };
+    // Create new memberships for the new members
+    for (const member of [...new Set(new_members)]) {
+        await new_member_joined_group(bot_phone, member, member_permissions[member]);
+    };
+    // Update the existing memberships with the new permissions
+    for (const member of result.data.memberships) {
+        const membership = new Membership(member);
+        if (!member_permissions[member.user.phone]) {
+            if (membership.permissions.length > 0) {
+                await Membership.update_permissions(membership.id, []);
+            }
+            continue;
+        }
+        const updateResult = await Membership.update_permissions(membership.id, member_permissions[member.user.phone]);
+        if (updateResult.oldPermissions && updateResult.newPermissions) {
+            const newPermissions = updateResult.newPermissions.filter(
+                perm => !updateResult.oldPermissions.includes(perm)
+            );
+            for (const permission of newPermissions) {
+                await Message.send_permission_message(membership, permission);
+            }
         }
     }
 };

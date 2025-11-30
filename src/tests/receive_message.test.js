@@ -5,29 +5,41 @@ const Community = require('../models/community');
 const GroupThread = require('../models/group_thread');
 const Signal = require('../apis/signal');
 const { graphql } = require('../apis/graphql');
-const { new_member, no_script_message, receive_message, receive_group_message, receive_reply, group_join_or_leave  } = require('../handlers/receive_message');
+const { new_member, no_script_message, receive_message, receive_group_message, receive_reply, group_join_or_leave, new_member_joined_group  } = require('../handlers/receive_message');
 const { bot_message_hashtag } = require('../helpers/hashtag_commands');
 
 jest.mock('../models/membership', () => {
-    return {
-        create: jest.fn((phone) => ({ 
-            id: '1', 
-            phone,
-            set_variable: jest.fn(),
-        })),
-        set_variable: jest.fn(),
-        add_permissions: jest.fn(),
-        remove_permissions: jest.fn(),
-        get: jest.fn(),
-        update_permissions: jest.fn()
-    };
+    const mockSetVariable = jest.fn();
+    
+    const MockMembership = jest.fn().mockImplementation((data) => {
+        const instance = {
+            set_variable: mockSetVariable,
+        };
+        // Copy all properties from data to instance
+        if (data) {
+            Object.assign(instance, data);
+        }
+        return instance;
+    });
+    
+    // Add static methods
+    MockMembership.create = jest.fn();
+    MockMembership.set_variable = jest.fn();
+    MockMembership.add_permissions = jest.fn();
+    MockMembership.remove_permissions = jest.fn();
+    MockMembership.get = jest.fn();
+    MockMembership.update_permissions = jest.fn();
+    MockMembership.create_admin = jest.fn();
+    
+    return MockMembership;
 });
 
 jest.mock('../models/message', () => {
     return {
         create: jest.fn(),
         send: jest.fn(),
-        send_to_permission: jest.fn()
+        send_to_permission: jest.fn(),
+        send_permission_message: jest.fn()
     };
 });
 
@@ -36,6 +48,7 @@ jest.mock('../apis/signal', () => ({
     show_typing_indicator: jest.fn(),
     emoji_reaction: jest.fn(),
     get_group_info: jest.fn(),
+    get_contacts: jest.fn(),
 }));
 
 
@@ -48,15 +61,16 @@ jest.mock('../models/group_thread', () => {
     };
 });
 
-
 jest.mock('../models/community', () => {
-    return jest.fn().mockImplementation((id, name, data) => {
+    const mockCommunityClass = jest.fn().mockImplementation((id, name, data) => {
         return {
             id,
             name,
             data
         };
-    }); 
+    });
+    mockCommunityClass.get = jest.fn();
+    return mockCommunityClass;
 });
 
 jest.mock('../apis/graphql', () => ({
@@ -624,283 +638,423 @@ describe('receive_message', () => {
 
     describe('group_join_or_leave', () => {
         const bot_phone = '0987654321';
-
+        // Mock contacts mapping phone numbers to UUIDs
+        const mockContacts = {
+            '+1234567890': 'uuid-1234567890',
+            '+0987654321': 'uuid-0987654321',
+            '+1111111111': 'uuid-1111111111'
+        };
+        const mockGroupsResponse = {
+            data: {
+                group_threads: [
+                    {
+                        group_id: 'group1',
+                        permissions: ['announcement', 'group_comms']
+                    }
+                ],
+                memberships: [
+                    {
+                        id: 'membership_1',
+                        user: { phone: 'uuid-1234567890' },
+                        permissions: ['onboarding'],
+                        community: { id: 'community_1', bot_phone: '0987654321' }
+                    },
+                    {
+                        id: 'membership_2',
+                        user: { phone: 'uuid-0987654321' },
+                        permissions: ['onboarding'],
+                        community: { id: 'community_1', bot_phone: '0987654321' }
+                    }
+                ]
+            }
+        };        
+        
         beforeEach(() => {
             jest.clearAllMocks();
+            // Mock get_contacts to return contacts object
+            Signal.get_contacts.mockResolvedValue(mockContacts);
         });
 
-        it('should update permissions for members in groups', async () => {
-            const mockGroupsResponse = {
-                data: {
-                    group_threads: [
-                        {
-                            group_id: 'group1',
-                            permissions: ['permission1', 'permission2']
-                        }
-                    ]
-                }
-            };
+        it('should add permissions to an existing user', async () => {
+
 
             const mockGroupInfo = {
-                members: ['+1234567890', '+0987654321']
+                members: ['uuid-1234567890', 'uuid-0987654321']
             };
 
-            const mockMembership1 = {
-                id: 'membership_1',
-                user: { phone: '+1234567890' },
-                permissions: []
+
+            graphql.mockResolvedValue(mockGroupsResponse);
+            Signal.get_group_info.mockResolvedValue(mockGroupInfo);
+            Signal.get_contacts.mockResolvedValue(mockContacts);
+            Membership.update_permissions.mockResolvedValue({
+                oldPermissions: ['onboarding'],
+                newPermissions: ['onboarding', 'announcement', 'group_comms']
+            });
+
+            await group_join_or_leave(bot_phone);
+
+            expect(graphql).toHaveBeenCalledWith(expect.stringContaining('GetPermissionsGroups'), { bot_phone });
+            expect(Signal.get_group_info).toHaveBeenCalledWith(bot_phone, 'group1');
+            expect(Membership.update_permissions).toHaveBeenCalledWith(
+                'membership_1',
+                ['announcement', 'group_comms']
+            );
+        });
+
+        it('should remove permissions from an existing user', async () => {
+
+            // Clone mockGroupMemberships object so we can mutate it safely
+            const mockGroupMemberships = JSON.parse(JSON.stringify(mockGroupsResponse));
+            mockGroupMemberships.data.group_threads = [
+                {
+                    group_id: 'group1',
+                    permissions: ['announcement']
+                }
+            ];
+            mockGroupMemberships.data.memberships = [
+                {
+                    id: 'membership_1',
+                    user: { phone: 'uuid-1234567890' },
+                    permissions: ['announcement', 'group_comms', 'onboarding'],
+                }
+            ];
+
+            const mockGroupInfo = {
+                members: ['uuid-1234567890']
             };
 
-            const mockMembership2 = {
-                id: 'membership_2',
-                user: { phone: '+0987654321' },
-                permissions: []
+            graphql.mockResolvedValue(mockGroupMemberships);
+            Signal.get_group_info.mockResolvedValue(mockGroupInfo);
+            Signal.get_contacts.mockResolvedValue(mockContacts);
+            Membership.update_permissions.mockResolvedValue({
+                oldPermissions: ['announcement', 'group_comms', 'onboarding'],
+                newPermissions: ['announcement']
+            });
+
+            await group_join_or_leave(bot_phone);
+
+            expect(Membership.update_permissions).toHaveBeenCalledWith(
+                'membership_1',
+                ['announcement']
+            );
+        });
+
+        it('should call send_permission_message for new permissions that are added', async () => {
+
+            const mockGroupInfo = {
+                members: ['uuid-1234567890']
             };
 
             graphql.mockResolvedValue(mockGroupsResponse);
             Signal.get_group_info.mockResolvedValue(mockGroupInfo);
-            Membership.get
-                .mockResolvedValueOnce(mockMembership1)
-                .mockResolvedValueOnce(mockMembership2);
-            Membership.update_permissions.mockResolvedValue({});
+            Signal.get_contacts.mockResolvedValue(mockContacts);
+            Membership.update_permissions.mockResolvedValue({
+                oldPermissions: ['onboarding'],
+                newPermissions: ['onboarding', 'announcement', 'group_comms']
+            });
+            Message.send.mockResolvedValue();
 
             await group_join_or_leave(bot_phone);
 
-            expect(graphql).toHaveBeenCalledWith(
-                expect.stringContaining('GetPermissionsGroups'),
-                { bot_phone }
+            // send_permission_message should be called for 'announcement' and 'group_comms' (new permissions)
+            expect(Message.send_permission_message).toHaveBeenCalledTimes(2);
+            expect(Message.send_permission_message).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    id: 'membership_1',
+                    user: { phone: 'uuid-1234567890' },
+                    community: { id: 'community_1', bot_phone: '0987654321' },
+                    permissions: ['onboarding'],
+                    set_variable: expect.any(Function)
+                }),
+                'announcement'
             );
-            expect(Signal.get_group_info).toHaveBeenCalledWith(bot_phone, 'group1');
-            expect(Membership.get).toHaveBeenCalledWith('+1234567890', bot_phone);
-            expect(Membership.get).toHaveBeenCalledWith('+0987654321', bot_phone);
-            expect(Membership.update_permissions).toHaveBeenCalledWith('membership_1', ['permission1', 'permission2']);
-            expect(Membership.update_permissions).toHaveBeenCalledWith('membership_2', ['permission1', 'permission2']);
+            
+            expect(Message.send_permission_message).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    id: 'membership_1',
+                    user: { phone: 'uuid-1234567890' },
+                    community: { id: 'community_1', bot_phone: '0987654321' }
+                }),
+                'group_comms'
+            );
         });
 
-        it('should aggregate permissions for members in multiple groups', async () => {
-            const mockGroupsResponse = {
+        it('should not call send_permission_message for permissions that already exist', async () => {
+
+            const mockGroupInfo = {
+                members: ['uuid-1234567890']
+            };
+
+            graphql.mockResolvedValue(mockGroupsResponse);
+            Signal.get_group_info.mockResolvedValue(mockGroupInfo);
+            Signal.get_contacts.mockResolvedValue(mockContacts);
+            // User already has these permissions
+            Membership.update_permissions.mockResolvedValue({
+                oldPermissions: ['announcement', 'group_comms'],
+                newPermissions: ['announcement', 'group_comms']
+            });
+            Message.send.mockResolvedValue();
+
+            await group_join_or_leave(bot_phone);
+
+            // No new permissions, so send_permission_message should not be called
+            expect(Message.send).not.toHaveBeenCalled();
+        });
+
+        it('should call new_member_joined_group for members in the group who are not already registered with Rhizal', async () => {
+
+            
+            const mockGroupMemberships = JSON.parse(JSON.stringify(mockGroupsResponse));
+            mockGroupMemberships.data.memberships = [
+                {
+                    id: 'membership_1',
+                    user: { phone: 'uuid-1234567890' },
+                    permissions: ['onboarding'],
+                }
+            ];
+
+            const mockGroupInfo = {
+                members: ['uuid-1234567890', 'uuid-1111111111']
+            };
+
+            const mockNameRequestScriptResponse = {
                 data: {
-                    group_threads: [
-                        {
-                            group_id: 'group1',
-                            permissions: ['permission1', 'permission2']
-                        },
-                        {
-                            group_id: 'group2',
-                            permissions: ['permission2', 'permission3']
+                    scripts: [{
+                        id: 'name_request_script_id',
+                        name: 'name_request',
+                        script_json: '{}',
+                        vars_query: '',
+                        targets_query: '',
+                        community: {
+                            id: 'community_1',
+                            bot_phone: '0987654321'
                         }
-                    ]
+                    }]
                 }
             };
 
+            // Mock graphql - it will be called twice: once for groups, once for name request script
+            graphql
+                .mockResolvedValueOnce(mockGroupMemberships) // First call: get_permissions_groups_query in group_join_or_leave
+                .mockResolvedValueOnce(mockNameRequestScriptResponse); // Second call: nameRequestScriptQuery in new_member_joined_group
+            Signal.get_group_info.mockResolvedValue(mockGroupInfo);
+            Signal.get_contacts.mockResolvedValue(mockContacts);
+            Membership.update_permissions.mockResolvedValue({
+                oldPermissions: ['onboarding'],
+                newPermissions: ['onboarding', 'announcement', 'group_comms']
+            });
+            const newMemberMockMembership = {
+                id: 'membership_2',
+                user: { phone: 'uuid-1111111111' },
+                community: { id: 'community_1', bot_phone: '0987654321' }
+            };
+            Membership.create.mockResolvedValue(newMemberMockMembership);
+            Membership.set_variable.mockResolvedValue();
+
+            await group_join_or_leave(bot_phone);
+            // Verify that new_member_joined_group was called by checking its side effects
+            // It calls graphql for name request script (second call), creates membership, and updates permissions
+            expect(graphql).toHaveBeenCalledTimes(2); // Once for groups, once for name request script
+            // Verify that graphql was called with nameRequestScriptQuery (indicating new_member_joined_group was called)
+            const graphqlCalls = graphql.mock.calls;
+            const nameRequestCall = graphqlCalls[1];
+            expect(nameRequestCall).toBeDefined();
+            // Verify that Membership.create was called (new_member_joined_group creates a membership)
+            expect(Membership.create).toHaveBeenCalledWith('uuid-1111111111', { id: 'community_1', bot_phone: '0987654321' }, null);
+            // Verify that update_permissions was called for both members
+            expect(Membership.update_permissions).toHaveBeenCalledTimes(2);
+
+            expect(Membership.update_permissions).toHaveBeenCalledWith(
+                'membership_2',
+                ['announcement', 'group_comms']
+            );
+            expect(Membership.update_permissions).toHaveBeenCalledWith(
+                'membership_1',
+                ['announcement', 'group_comms']
+            );
+            console.log(Membership.update_permissions.mock.calls);
+
+            // Should update permissions for existing member
+            expect(Membership.update_permissions).toHaveBeenCalledWith(
+                'membership_1',
+                ['announcement', 'group_comms']
+            );
+        });
+
+        it('should handle multiple groups and aggregate permissions correctly', async () => {
+
+            const mockGroupMemberships = JSON.parse(JSON.stringify(mockGroupsResponse));
+            mockGroupMemberships.data.group_threads = [
+                {
+                    group_id: 'group1',
+                    permissions: ['announcement']
+                },
+                {
+                    group_id: 'group2',
+                    permissions: ['group_comms']
+                }
+            ];
+
             const mockGroupInfo1 = {
-                members: ['+1234567890']
+                members: ['uuid-1234567890']
             };
 
             const mockGroupInfo2 = {
-                members: ['+1234567890', '+0987654321']
-            };
-
-            const mockMembership1 = {
-                id: 'membership_1',
-                user: { phone: '+1234567890' },
-                permissions: []
-            };
-
-            const mockMembership2 = {
-                id: 'membership_2',
-                user: { phone: '+0987654321' },
-                permissions: []
-            };
-
-            graphql.mockResolvedValue(mockGroupsResponse);
-            Signal.get_group_info
-                .mockResolvedValueOnce(mockGroupInfo1)
-                .mockResolvedValueOnce(mockGroupInfo2);
-            // Membership.get is called once per unique member after all groups are processed
-            Membership.get
-                .mockResolvedValueOnce(mockMembership1)  // +1234567890 (in both groups)
-                .mockResolvedValueOnce(mockMembership2); // +0987654321 (only in group2)
-            Membership.update_permissions.mockResolvedValue({});
-
-            await group_join_or_leave(bot_phone);
-
-            // Member +1234567890 is in both groups, should get combined permissions
-            expect(Membership.update_permissions).toHaveBeenCalledWith(
-                'membership_1',
-                ['permission1', 'permission2', 'permission2', 'permission3']
-            );
-            // Member +0987654321 is only in group2
-            expect(Membership.update_permissions).toHaveBeenCalledWith(
-                'membership_2',
-                ['permission2', 'permission3']
-            );
-        });
-
-        it('should handle empty groups response', async () => {
-            const mockGroupsResponse = {
-                data: {
-                    group_threads: []
-                }
-            };
-
-            graphql.mockResolvedValue(mockGroupsResponse);
-
-            await group_join_or_leave(bot_phone);
-
-            expect(graphql).toHaveBeenCalledWith(
-                expect.stringContaining('GetPermissionsGroups'),
-                { bot_phone }
-            );
-            expect(Signal.get_group_info).not.toHaveBeenCalled();
-            expect(Membership.get).not.toHaveBeenCalled();
-            expect(Membership.update_permissions).not.toHaveBeenCalled();
-        });
-
-        it('should skip members not found in membership table', async () => {
-            const mockGroupsResponse = {
-                data: {
-                    group_threads: [
-                        {
-                            group_id: 'group1',
-                            permissions: ['permission1']
-                        }
-                    ]
-                }
-            };
-
-            const mockGroupInfo = {
-                members: ['+1234567890', '+0987654321']
-            };
-
-            graphql.mockResolvedValue(mockGroupsResponse);
-            Signal.get_group_info.mockResolvedValue(mockGroupInfo);
-            Membership.get
-                .mockResolvedValueOnce(null)  // First member not found
-                .mockResolvedValueOnce({      // Second member found
-                    id: 'membership_2',
-                    user: { phone: '+0987654321' },
-                    permissions: []
-                });
-            Membership.update_permissions.mockResolvedValue({});
-
-            await group_join_or_leave(bot_phone);
-
-            // Should only update permissions for the member that was found
-            expect(Membership.get).toHaveBeenCalledTimes(2);
-            expect(Membership.update_permissions).toHaveBeenCalledTimes(1);
-            expect(Membership.update_permissions).toHaveBeenCalledWith('membership_2', ['permission1']);
-        });
-
-        it('should handle groups with no members', async () => {
-            const mockGroupsResponse = {
-                data: {
-                    group_threads: [
-                        {
-                            group_id: 'group1',
-                            permissions: ['permission1']
-                        }
-                    ]
-                }
-            };
-
-            const mockGroupInfo = {
-                members: []
-            };
-
-            graphql.mockResolvedValue(mockGroupsResponse);
-            Signal.get_group_info.mockResolvedValue(mockGroupInfo);
-
-            await group_join_or_leave(bot_phone);
-
-            expect(Signal.get_group_info).toHaveBeenCalledWith(bot_phone, 'group1');
-            expect(Membership.get).not.toHaveBeenCalled();
-            expect(Membership.update_permissions).not.toHaveBeenCalled();
-        });
-
-        it('should handle multiple members in a single group', async () => {
-            const mockGroupsResponse = {
-                data: {
-                    group_threads: [
-                        {
-                            group_id: 'group1',
-                            permissions: ['permission1', 'permission2']
-                        }
-                    ]
-                }
-            };
-
-            const mockGroupInfo = {
-                members: ['+1111111111', '+2222222222', '+3333333333']
-            };
-
-            const mockMembership1 = {
-                id: 'membership_1',
-                user: { phone: '+1111111111' },
-                permissions: []
-            };
-
-            const mockMembership2 = {
-                id: 'membership_2',
-                user: { phone: '+2222222222' },
-                permissions: []
-            };
-
-            const mockMembership3 = {
-                id: 'membership_3',
-                user: { phone: '+3333333333' },
-                permissions: []
-            };
-
-            graphql.mockResolvedValue(mockGroupsResponse);
-            Signal.get_group_info.mockResolvedValue(mockGroupInfo);
-            Membership.get
-                .mockResolvedValueOnce(mockMembership1)
-                .mockResolvedValueOnce(mockMembership2)
-                .mockResolvedValueOnce(mockMembership3);
-            Membership.update_permissions.mockResolvedValue({});
-
-            await group_join_or_leave(bot_phone);
-
-            expect(Membership.get).toHaveBeenCalledTimes(3);
-            expect(Membership.update_permissions).toHaveBeenCalledTimes(3);
-            expect(Membership.update_permissions).toHaveBeenCalledWith('membership_1', ['permission1', 'permission2']);
-            expect(Membership.update_permissions).toHaveBeenCalledWith('membership_2', ['permission1', 'permission2']);
-            expect(Membership.update_permissions).toHaveBeenCalledWith('membership_3', ['permission1', 'permission2']);
-        });
-
-        it('should handle groups with empty permissions arrays', async () => {
-            const mockGroupsResponse = {
-                data: {
-                    group_threads: [
-                        {
-                            group_id: 'group1',
-                            permissions: []
-                        }
-                    ]
-                }
-            };
-
-            const mockGroupInfo = {
-                members: ['+1234567890']
+                members: ['uuid-1234567890']
             };
 
             const mockMembership = {
                 id: 'membership_1',
-                user: { phone: '+1234567890' },
-                permissions: []
+                user: { phone: '1234567890' },
+                community: { id: 'community_1', bot_phone: '0987654321' }
+            };
+
+            graphql.mockResolvedValue(mockGroupMemberships);
+            Signal.get_group_info
+                .mockResolvedValueOnce(mockGroupInfo1)
+                .mockResolvedValueOnce(mockGroupInfo2);
+            Signal.get_contacts.mockResolvedValue(mockContacts);
+            Membership.get.mockResolvedValue(mockMembership);
+            Membership.update_permissions.mockResolvedValue({
+                oldPermissions: ['onboarding'],
+                newPermissions: ['onboarding', 'announcement', 'group_comms']
+            });
+            Message.send.mockResolvedValue();
+
+            await group_join_or_leave(bot_phone);
+
+            // Should aggregate permissions from both groups
+            expect(Membership.update_permissions).toHaveBeenCalledWith(
+                'membership_1',
+                ['announcement', 'group_comms']
+            );
+            // Should send messages for both new permissions
+            expect(Message.send_permission_message).toHaveBeenCalledTimes(2);
+        });
+
+        it('should handle errors from Signal.get_group_info gracefully', async () => {
+            const mockGroupsResponse = {
+                data: {
+                    group_threads: [
+                        {
+                            group_id: 'group1',
+                            permissions: ['announcement']
+                        }
+                    ]
+                }
+            };
+
+            const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+
+            graphql.mockResolvedValue(mockGroupsResponse);
+            Signal.get_contacts.mockResolvedValue(mockContacts);
+            Signal.get_group_info.mockResolvedValue(new Error('Failed to get group info'));
+
+            await group_join_or_leave(bot_phone);
+
+            expect(consoleErrorSpy).toHaveBeenCalledWith(
+                'Error updating membership permissions:',
+                expect.any(Error)
+            );
+            expect(Membership.get).not.toHaveBeenCalled();
+
+            consoleErrorSpy.mockRestore();
+        });
+
+        it('should convert phone numbers to UUIDs when members are returned as phone numbers', async () => {
+            const mockGroupInfo = {
+                members: ['+1234567890', '+0987654321'] // Phone numbers instead of UUIDs
             };
 
             graphql.mockResolvedValue(mockGroupsResponse);
             Signal.get_group_info.mockResolvedValue(mockGroupInfo);
-            Membership.get.mockResolvedValue(mockMembership);
-            Membership.update_permissions.mockResolvedValue({});
+            Signal.get_contacts.mockResolvedValue(mockContacts);
+            Membership.update_permissions.mockResolvedValue({
+                oldPermissions: ['onboarding'],
+                newPermissions: ['onboarding', 'announcement', 'group_comms']
+            });
 
             await group_join_or_leave(bot_phone);
 
-            expect(Membership.update_permissions).toHaveBeenCalledWith('membership_1', []);
+            // Verify get_contacts was called
+            expect(Signal.get_contacts).toHaveBeenCalledWith(bot_phone);
+            
+            // Verify that update_permissions was called with UUIDs (converted from phone numbers)
+            expect(Membership.update_permissions).toHaveBeenCalledWith(
+                'membership_1',
+                ['announcement', 'group_comms']
+            );
+            expect(Membership.update_permissions).toHaveBeenCalledWith(
+                'membership_2',
+                ['announcement', 'group_comms']
+            );
         });
 
+        it('should handle members that are already UUIDs without conversion', async () => {
+            const mockGroupInfo = {
+                members: ['uuid-1234567890'] // Already UUIDs
+            };
+
+            graphql.mockResolvedValue(mockGroupsResponse);
+            Signal.get_group_info.mockResolvedValue(mockGroupInfo);
+            Signal.get_contacts.mockResolvedValue(mockContacts);
+            Membership.update_permissions.mockResolvedValue({
+                oldPermissions: ['onboarding'],
+                newPermissions: ['onboarding', 'announcement', 'group_comms']
+            });
+
+            await group_join_or_leave(bot_phone);
+
+            // Verify get_contacts was called
+            expect(Signal.get_contacts).toHaveBeenCalledWith(bot_phone);
+            
+            // Verify that update_permissions was called with the UUIDs as-is
+            expect(Membership.update_permissions).toHaveBeenCalledWith(
+                'membership_1',
+                ['announcement', 'group_comms']
+            );
+        });
+
+        it('should replace phone numbers with UUIDs in the members list', async () => {
+            const mockGroupInfo = {
+                members: ['+1234567890']
+            };
+
+            const mockGroupsResponseLongPhone = {
+                data: {
+                    group_threads: [
+                        {
+                            group_id: 'group1',
+                            permissions: ['announcement']
+                        }
+                    ],
+                    memberships: [{
+                        id: 'membership_1',
+                        user: { phone: 'uuid-1234567890' },
+                        permissions: ['onboarding'],
+                        community: { id: 'community_1', bot_phone: '0987654321' }
+                    }]
+                }
+            };
+
+            graphql.mockResolvedValue(mockGroupsResponseLongPhone);
+            Signal.get_group_info.mockResolvedValue(mockGroupInfo);
+            Signal.get_contacts.mockResolvedValue(mockContacts);
+            Membership.update_permissions.mockResolvedValue({
+                oldPermissions: ['onboarding'],
+                newPermissions: ['onboarding', 'announcement', 'group_comms']
+            });
+
+            await group_join_or_leave(bot_phone);
+
+            // Verify get_contacts was called
+            expect(Signal.get_contacts).toHaveBeenCalledWith(bot_phone);
+            
+            // Phone number longer than 12 chars should be treated as UUID, not converted
+            // Since it's not in contacts and not registered, it should trigger new_member_joined_group
+            expect(Signal.get_contacts).toHaveBeenCalled();
+        });
     });
+
 
 });

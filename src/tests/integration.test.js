@@ -185,6 +185,10 @@ const expectedQueries = {
     getPermissionsGroups: `query GetPermissionsGroups($bot_phone:String!)`,
     getMembershipFromPhoneNumbers: `query GetMembershipFromPhoneNumbers($phone: String!, $bot_phone: String!)`,
     updateMembershipPermissions: `mutation UpdatePermissions($id:uuid!, $permissions:[String!])`,
+    getCurrentPermissions: `query GetCurrentPermissions($id:uuid!)`,
+    getCommunityWithOnboarding: `query GetCommunityWithOnboarding($bot_phone:String!)`,
+    getNameRequestScript: `query GetNameRequestScript($name:String!, $bot_phone:String!)`,
+    getUser: `query GetUser($phone:String!)`,
 }
 
 const testScript = JSON.stringify(script);
@@ -195,6 +199,7 @@ jest.mock('../apis/signal', () => ({
     show_typing_indicator: jest.fn(),
     emoji_reaction: jest.fn(),
     get_group_info: jest.fn(),
+    get_contacts: jest.fn(),
 }));
 jest.mock('../apis/graphql', () => ({
     graphql: jest.fn()
@@ -1126,53 +1131,309 @@ describe('Integration Tests for receive_message Handler', () => {
     });
 
     describe('group_join_or_leave', () => {
-        it('should update permissions for members in groups', async () => {
+        // Mock contacts mapping phone numbers to UUIDs
+        const mockContacts = {
+            '+1234567890': 'uuid-1234567890',
+            '+0987654321': 'uuid-0987654321',
+            '+1111111111': 'uuid-1111111111'
+        };
+
+        beforeEach(() => {
+            // Ensure spies are properly set up before each test
+            // jest.restoreAllMocks() in parent afterEach restores the original implementation,
+            // so we need to re-spy to ensure mock methods are available
+            if (typeof Community.get.mockImplementation !== 'function') {
+                jest.spyOn(Community, 'get');
+            }
+            if (typeof Message.send.mockImplementation !== 'function') {
+                jest.spyOn(Message, 'send');
+            }
+            if (typeof Membership.create.mockImplementation !== 'function') {
+                jest.spyOn(Membership, 'create');
+            }
+            // Mock Signal methods to return contacts object
+            signal.get_contacts.mockResolvedValue(mockContacts);
+            signal.get_group_info.mockResolvedValue({ members: [] });
+        });
+
+        it('should grant new permissions to an already registered user and send permission messages', async () => {
             const phone = '+1234567890';
+            const userUuid = 'uuid-1234567890';
             const bot_phone = '+0987654321';
             const group_id = 'group_123';
             const base64_group_id = Buffer.from(group_id).toString('base64');
+            const communityId = 'community_1';
+            const membershipId = 'membership_1';
+            
             const mockGroupInfo = {
-                members: ['+1234567890', '+0987654321'],
+                members: [userUuid], // UUID instead of phone number
             };
             signal.get_group_info.mockResolvedValue(mockGroupInfo);
+            signal.get_contacts.mockResolvedValue(mockContacts);
+
             const mockGraphql = [
                 {
                     query: expectedQueries.getPermissionsGroups,
                     variables: { bot_phone: bot_phone },
-                    response: { data: { group_threads: [{ group_id: base64_group_id, permissions: ['group_comms'] }] } }
+                    response: { 
+                        data: { 
+                            group_threads: [{ group_id: base64_group_id, permissions: ['announcement'] }],
+                            memberships: [{ 
+                                id: membershipId, 
+                                permissions: [], // User currently has no permissions
+                                user: { phone: userUuid }, // Use UUID to match member UUID
+                                community: { id: communityId, bot_phone: bot_phone }
+                            }] 
+                        } 
+                    }
                 },
                 {
-                    query: expectedQueries.getMembershipFromPhoneNumbers,
-                    variables: { phone: '+1234567890', bot_phone: bot_phone },
-                    response: { data: { memberships: [{ id: 'membership_1', permissions: ['group_comms'] }] } }
+                    query: expectedQueries.getCurrentPermissions,
+                    variables: { id: membershipId },
+                    response: { data: { memberships: [{ permissions: [] }] } }
                 },
                 {
                     query: expectedQueries.updateMembershipPermissions,
-                    variables: { id: 'membership_1', permissions: ['group_comms'] },
-                    response: { data: { update_memberships: { returning: [{ id: 'membership_1' }] } } }
-                },
-                {
-                    query: expectedQueries.getMembershipFromPhoneNumbers,
-                    variables: { phone: bot_phone, bot_phone: bot_phone },
-                    response: { data: { memberships: [{ id: 'membership_2', permissions: ['group_comms'] }] } }
-                },
-                {
-                    query: expectedQueries.updateMembershipPermissions,
-                    variables: { id: 'membership_2', permissions: ['group_comms'] },
-                    response: { data: { update_memberships: { returning: [{ id: 'membership_2' }] } } }
+                    variables: { id: membershipId, permissions: ['announcement'] },
+                    response: { data: { update_memberships: { returning: [{ id: membershipId, permissions: ['announcement'] }] } } }
                 },
             ];
+
+            // Set up mocks in order
             for (let i = 0; i < mockGraphql.length; i++) {
                 graphql.mockImplementationOnce((...args) => {
                     return Promise.resolve(mockGraphql[i].response);
                 });
             }
+
             await group_join_or_leave(bot_phone);
-            for (let i = 0; i < mockGraphql.length; i++) {
-                expect(graphql).toHaveBeenNthCalledWith(i + 1, expect.stringContaining(mockGraphql[i].query), mockGraphql[i].variables);
-            }
+
+            // Verify all GraphQL queries were called correctly
             expect(graphql).toHaveBeenCalledTimes(mockGraphql.length);
+            expect(graphql).toHaveBeenNthCalledWith(1, expect.stringContaining(expectedQueries.getPermissionsGroups), { bot_phone });
+            expect(graphql).toHaveBeenNthCalledWith(2, expect.stringContaining(expectedQueries.getCurrentPermissions), { id: membershipId });
+            expect(graphql).toHaveBeenNthCalledWith(3, expect.stringContaining(expectedQueries.updateMembershipPermissions), { id: membershipId, permissions: ['announcement'] });
+
+            // Verify Signal.get_group_info was called
+            expect(signal.get_group_info).toHaveBeenCalledWith(bot_phone, base64_group_id);
+
+            // Verify permission message was sent for the new 'announcement' permission
+            // Message.send_permission_message is called, which internally calls Message.send
+            expect(Message.send).toHaveBeenCalledWith(
+                communityId,
+                membershipId,
+                userUuid, // Message.send uses membership.user.phone which is the UUID
+                bot_phone,
+                expect.stringContaining('announcement permission'),
+                false
+            );
         });
+
+        it('should remove permissions from an already registered user when they are removed from groups', async () => {
+            const phone = '+1234567890';
+            const userUuid = 'uuid-1234567890';
+            const bot_phone = '+0987654321';
+            const group_id = 'group_123';
+            const base64_group_id = Buffer.from(group_id).toString('base64');
+            const communityId = 'community_1';
+            const membershipId = 'membership_1';
+            
+            // User is no longer in the group (empty members array)
+            const mockGroupInfo = {
+                members: [],
+            };
+            signal.get_group_info.mockResolvedValue(mockGroupInfo);
+            
+            const mockGraphql = [
+                {
+                    query: expectedQueries.getPermissionsGroups,
+                    variables: { bot_phone: bot_phone },
+                    response: { 
+                        data: { 
+                            group_threads: [{ group_id: base64_group_id, permissions: ['announcement'] }],
+                            memberships: [{ 
+                                id: membershipId, 
+                                permissions: ['announcement'], // User currently has permissions
+                                user: { phone: userUuid }, // Use UUID to match member UUID
+                                community: { id: communityId, bot_phone: bot_phone }
+                            }] 
+                        } 
+                    }
+                },
+                {
+                    query: expectedQueries.getCurrentPermissions,
+                    variables: { id: membershipId },
+                    response: { data: { memberships: [{ permissions: ['announcement'] }] } }
+                },
+                {
+                    query: expectedQueries.updateMembershipPermissions,
+                    variables: { id: membershipId, permissions: [] },
+                    response: { data: { update_memberships: { returning: [{ id: membershipId, permissions: [] }] } } }
+                },
+            ];
+
+            // Set up mocks in order
+            for (let i = 0; i < mockGraphql.length; i++) {
+                graphql.mockImplementationOnce((...args) => {
+                    return Promise.resolve(mockGraphql[i].response);
+                });
+            }
+
+            await group_join_or_leave(bot_phone);
+
+            // Verify GraphQL queries were called
+            expect(graphql).toHaveBeenCalledTimes(3);
+            expect(graphql).toHaveBeenNthCalledWith(1, expect.stringContaining(expectedQueries.getPermissionsGroups), { bot_phone });
+            expect(graphql).toHaveBeenNthCalledWith(2, expect.stringContaining(expectedQueries.getCurrentPermissions), { id: membershipId });
+            expect(graphql).toHaveBeenNthCalledWith(3, expect.stringContaining(expectedQueries.updateMembershipPermissions), { id: membershipId, permissions: [] });
+            
+            // Verify that get_group_info was called to check group membership
+            expect(signal.get_group_info).toHaveBeenCalledWith(bot_phone, base64_group_id);
+            
+            // Since the user is not in any groups, permissions should be removed (set to empty array)
+        });
+
+        it('should register a new user, grant permissions, and send name request script', async () => {
+            const phone = '+1234567890';
+            const userUuid = 'uuid-1234567890';
+            const bot_phone = '+0987654321';
+            const group_id = 'group_123';
+            const base64_group_id = Buffer.from(group_id).toString('base64');
+            const communityId = 'community_1';
+            const membershipId = 'membership_1';
+            const nameRequestScriptId = 'name_request_script';
+            
+            const mockGroupInfo = {
+                members: [userUuid], // UUID instead of phone number
+            };
+            signal.get_group_info.mockResolvedValue(mockGroupInfo);
+            signal.get_contacts.mockResolvedValue(mockContacts);
+            
+            const nameRequestScript = {
+                "0": {
+                    "send": [
+                        "Welcome! What name would you like Rhizal to use when relaying your messages to others?"
+                    ],
+                    "on_receive": {
+                        "set_variable": {
+                            "variable": "name",
+                            "value": "regex(message, '^[a-zA-Z ]+$')"
+                        },
+                        "step": "done"
+                    }
+                }
+            };
+
+            const mockGraphql = [
+                {
+                    query: expectedQueries.getPermissionsGroups,
+                    variables: { bot_phone: bot_phone },
+                    response: { 
+                        data: { 
+                            group_threads: [{ group_id: base64_group_id, permissions: ['group_comms'] }],
+                            memberships: [] // User is not registered yet
+                        } 
+                    }
+                },
+                {
+                    query: expectedQueries.getNameRequestScript,
+                    variables: { name: 'name_request', bot_phone: bot_phone },
+                    response: { 
+                        data: { 
+                            scripts: [{
+                                id: nameRequestScriptId,
+                                name: 'name_request',
+                                script_json: JSON.stringify(nameRequestScript),
+                                vars_query: null,
+                                targets_query: null,
+                                community: {
+                                    id: communityId,
+                                    bot_phone: bot_phone,
+                                    onboarding: {
+                                        id: 'onboarding_script'
+                                    }
+                                }
+                            }] 
+                        } 
+                    }
+                },
+                {
+                    query: expectedQueries.createUserAndMembership,
+                    variables: { phone: userUuid, community_id: communityId, current_script_id: 'onboarding_script' },
+                    response: { 
+                        data: { 
+                            insert_memberships_one: { 
+                                id: membershipId,
+                                user: { id: 'user_1', phone: userUuid },
+                                community: { id: communityId, bot_phone: bot_phone },
+                                permissions: [],
+                                step: '0',
+                                current_script_id: 'onboarding_script'
+                            } 
+                        } 
+                    }
+                },
+                {
+                    query: expectedQueries.getCurrentPermissions,
+                    variables: { id: membershipId },
+                    response: { data: { memberships: [{ permissions: [] }] } }
+                },
+                {
+                    query: expectedQueries.updateMembershipPermissions,
+                    variables: { id: membershipId, permissions: ['group_comms'] },
+                    response: { data: { update_memberships: { returning: [{ id: membershipId, permissions: ['group_comms'] }] } } }
+                },
+                {
+                    query: "mutation updateMembershipVariable($id:uuid!, $value:uuid!)",
+                    variables: { id: membershipId, value: nameRequestScriptId },
+                    response: { data: { update_memberships: { returning: [{ id: membershipId }] } } }
+                },
+                {
+                    query: expectedQueries.updateMembershipVariable,
+                    variables: { id: membershipId, value: '0' },
+                    response: { data: { update_memberships: { returning: [{ id: membershipId }] } } }
+                },
+            ];
+
+            // Mock Script methods - need to set up before the script is instantiated
+            const Script = require('../models/script');
+            const mockScriptGetVars = jest.fn().mockResolvedValue({});
+            const mockScriptSend = jest.fn().mockResolvedValue();
+            
+            // Spy on Script prototype methods before they're called
+            jest.spyOn(Script.prototype, 'get_vars').mockImplementation(mockScriptGetVars);
+            jest.spyOn(Script.prototype, 'send').mockImplementation(mockScriptSend);
+
+            // Set up mocks in order
+            for (let i = 0; i < mockGraphql.length; i++) {
+                graphql.mockImplementationOnce((...args) => {
+                    return Promise.resolve(mockGraphql[i].response);
+                });
+            }
+
+            await group_join_or_leave(bot_phone);
+
+            // Verify all GraphQL queries were called correctly
+            expect(graphql).toHaveBeenCalledTimes(mockGraphql.length);
+            expect(graphql).toHaveBeenNthCalledWith(1, expect.stringContaining(expectedQueries.getPermissionsGroups), { bot_phone });
+            expect(graphql).toHaveBeenNthCalledWith(2, expect.stringContaining(expectedQueries.getNameRequestScript), { name: 'name_request', bot_phone });
+            expect(graphql).toHaveBeenNthCalledWith(3, expect.stringContaining(expectedQueries.createUserAndMembership), expect.objectContaining({ phone: userUuid, community_id: communityId }));
+            expect(graphql).toHaveBeenNthCalledWith(4, expect.stringContaining(expectedQueries.getCurrentPermissions), { id: membershipId });
+            expect(graphql).toHaveBeenNthCalledWith(5, expect.stringContaining(expectedQueries.updateMembershipPermissions), { id: membershipId, permissions: ['group_comms'] });
+            expect(graphql).toHaveBeenNthCalledWith(6, expect.stringContaining("mutation updateMembershipVariable($id:uuid!, $value:uuid!)"), { id: membershipId, value: nameRequestScriptId });
+            expect(graphql).toHaveBeenNthCalledWith(7, expect.stringContaining(expectedQueries.updateMembershipVariable), { id: membershipId, value: '0' });
+
+            // Verify Signal.get_group_info was called
+            expect(signal.get_group_info).toHaveBeenCalledWith(bot_phone, base64_group_id);
+
+            // Verify new membership was created (with UUID converted from phone)
+            expect(Membership.create).toHaveBeenCalledWith(userUuid, expect.objectContaining({ id: communityId }), null);
+
+            // Verify name request script was executed
+            expect(mockScriptGetVars).toHaveBeenCalled();
+            expect(mockScriptSend).toHaveBeenCalledWith('0');
+        });
+        
     });
 
 });
