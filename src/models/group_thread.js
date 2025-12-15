@@ -18,34 +18,13 @@ class GroupThread {
             script.vars.hashtag = group_thread.hashtag;
         }
         
-        console.log(`Running group_thread script. Step: ${group_thread.step}, Has message: ${!!message}, Message: ${message}`);
-        
-        // If step is '0', send the initial welcome message and then process the message
-        // Only send welcome messages if there's actually a message to process
-        if (group_thread.step == '0') {
-            if (!message) {
-                console.log('Step is 0 but no message provided - skipping script execution.');
-                return;
-            }
-            console.log('Step is 0 - sending welcome messages, then processing message.');
-            await script.send('0');
-            // Process the message after sending welcome messages
-            console.log(`Processing message "${message}" after sending welcome messages to advance step.`);
-            // Ensure message is in vars for processing
-            script.vars.message = message;
-            await script.receive('0', message);
-            console.log('Message processed, step should have advanced.');
-            return;
-        }
         // Check if message contains a hashtag that's already taken (only check during setup, not if group_thread already has a hashtag)
         // This check should only happen when the group_thread doesn't have a hashtag yet (steps 0, 1, 2)
         if (!group_thread.hashtag && message && message.match(/#[\w]+/) && membership.community.group_threads && membership.community.group_threads.map(ht => ht.hashtag).includes(message.match(/#[\w]+/)[0])) {
-            console.log('Hashtag already taken, sending step 3');
             await script.send('3');
             return;
         }
         // Otherwise, process the message normally
-        console.log(`Processing message in step ${group_thread.step}`);
         await script.receive(group_thread.step, message || '');
     }
 
@@ -108,16 +87,12 @@ mutation CreateGroupThread($community_id: uuid!, $group_id: String!) {
 `;
         const get_result = await graphql(GET_GROUP_THREAD, {group_id});
         if (get_result.data.group_threads.length > 0) {
-            console.log(`Found existing group_thread for group_id: ${group_id}`);
             return get_result.data.group_threads[0];
         }
-        console.log(`Creating new group_thread for group_id: ${group_id}, community_id: ${community_id}`);
         const create_result = await graphql(CREATE_GROUP_THREAD, {community_id, group_id});
         if (!create_result.data || !create_result.data.insert_group_threads_one) {
-            console.error(`Failed to create group_thread. Response:`, JSON.stringify(create_result, null, 2));
             throw new Error('Failed to create group_thread');
         }
-        console.log(`Successfully created group_thread: ${create_result.data.insert_group_threads_one.id}`);
         return create_result.data.insert_group_threads_one;
     }
 
