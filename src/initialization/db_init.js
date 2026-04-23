@@ -31,7 +31,8 @@ const schema_exists = async () => {
     });
     await client.connect();
     const result = await client.query(
-        `SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'communities'`
+        `SELECT 1 FROM information_schema.routines
+         WHERE routine_schema = 'public' AND routine_name = 'set_current_timestamp_updated_at'`
     );
     await client.end();
     return result.rowCount > 0;
@@ -53,10 +54,10 @@ const load_sql_schema = async () => {
         await client.query(sql);
         console.log('SQL schema loaded successfully.');
     } catch (err) {
-        console.error('Error loading SQL schema:', err);
-    } finally {
         await client.end();
+        throw err;
     }
+    await client.end();
 };
 
 const upload_metadata = async () => {

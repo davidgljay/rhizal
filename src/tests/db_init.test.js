@@ -96,34 +96,20 @@ describe('db_init.js', () => {
             consoleSpy.mockRestore();
         });
 
-        it('should handle pg Client connection errors', async () => {
-            const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
-            
-            // Mock connection error
+        it('should propagate pg Client connection errors', async () => {
             mockClient.connect.mockRejectedValue(new Error('Connection failed'));
 
-            await load_sql_schema();
-            
-            expect(consoleSpy).toHaveBeenCalledWith('Error loading SQL schema:', expect.any(Error));
-            expect(mockClient.end).toHaveBeenCalled(); // Should still call end in finally block
-            
-            consoleSpy.mockRestore();
+            await expect(load_sql_schema()).rejects.toThrow('Connection failed');
+            expect(mockClient.end).toHaveBeenCalled();
         });
 
-        it('should handle pg query errors', async () => {
-            const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
-            
-            // Mock successful connection but failed query
+        it('should propagate pg query errors', async () => {
             mockClient.connect.mockResolvedValue();
             mockClient.query.mockRejectedValue(new Error('Query failed'));
             mockClient.end.mockResolvedValue();
 
-            await load_sql_schema();
-            
-            expect(consoleSpy).toHaveBeenCalledWith('Error loading SQL schema:', expect.any(Error));
-            expect(mockClient.end).toHaveBeenCalled(); // Should still call end in finally block
-            
-            consoleSpy.mockRestore();
+            await expect(load_sql_schema()).rejects.toThrow('Query failed');
+            expect(mockClient.end).toHaveBeenCalled();
         });
     });
 
