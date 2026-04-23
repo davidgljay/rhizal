@@ -22,8 +22,17 @@ class GroupThread {
     }
 
     static async set_variable(group_id, variable, value) {
+        const validVariables = ['hashtag', 'step'];
+        const variableTypes = {
+            hashtag: 'String',
+            step: 'String',
+        };
+        if (!validVariables.includes(variable)) {
+            throw new Error(`Invalid variable. Valid variables are: ${validVariables.join(', ')}`);
+        }
+
         const query = `
-mutation UpdateGroupThreadVariable($group_id:String!, $value:String!) {
+mutation UpdateGroupThreadVariable($group_id:String!, $value:${variableTypes[variable]}!) {
   update_group_threads(where: {group_id: {_eq: $group_id}}, _set: {${variable}: $value}) {
     returning {
       id

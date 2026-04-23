@@ -114,8 +114,8 @@ describe('GroupThread', () => {
     describe('set_variable', () => {
         it('should make the expected graphql mutation', async () => {
             const group_id = 'test_group_thread_id';
-            const variable = 'test_variable';
-            const value = 'test_value';
+            const variable = 'step';
+            const value = '1';
             const variables = { group_id, value };
 
             graphql.mockResolvedValueOnce({ data: { update_group_threads: { returning: [{id:'456'}] } } });
@@ -125,10 +125,16 @@ describe('GroupThread', () => {
             expect(graphql).toHaveBeenCalledWith(expect.stringContaining('mutation UpdateGroupThreadVariable($group_id:String!, $value:String!)'), variables);
         });
 
+        it('should reject invalid variable names', async () => {
+            await expect(GroupThread.set_variable('group_id', 'invalid_variable', 'value'))
+                .rejects.toThrow('Invalid variable');
+            expect(graphql).not.toHaveBeenCalled();
+        });
+
         it('should handle errors gracefully', async () => {
             const group_thread_id = 'test_group_thread_id';
-            const variable = 'test_variable';
-            const value = 'test_value';
+            const variable = 'hashtag';
+            const value = '#test';
 
             graphql.mockRejectedValueOnce(new Error('GraphQL error'));
 
