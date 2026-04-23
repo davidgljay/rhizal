@@ -1,19 +1,23 @@
 const fs = require('fs');
 const path = require('path');
 const yaml = require('js-yaml');
-const { load_sql_schema, upload_metadata, create_system } = require('./initialization/db_init');
+const { schema_exists, load_sql_schema, upload_metadata, create_system } = require('./initialization/db_init');
 const { update_community_and_scripts, initial_message, set_admin, init_access_groups } = require('./initialization/script_sync');
 const { promptSignalCaptchaUrl, getVerificationCodeFromSignalCaptchaUrl, verifySignalRegistrationCode, setSignalProfileName } = require('./initialization/signal_config');
 const Message = require('./models/message');
 
 async function initialize() {
     await initial_message();
-    console.log('Initializing database');
-    await load_sql_schema();
-    console.log('Uploading metadata');
-    await upload_metadata();
-    console.log('Creating system');
-    await create_system();
+    if (await schema_exists()) {
+        console.log('Database already initialized, skipping DB setup.');
+    } else {
+        console.log('Initializing database');
+        await load_sql_schema();
+        console.log('Uploading metadata');
+        await upload_metadata();
+        console.log('Creating system');
+        await create_system();
+    }
 
     console.log('Updating community and scripts');
     const community = await update_community_and_scripts();

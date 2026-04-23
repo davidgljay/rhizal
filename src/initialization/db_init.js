@@ -21,6 +21,22 @@ const wipe_db = async () => {
 
 
 
+const schema_exists = async () => {
+    const client = new Client({
+        host: process.env.PGHOST || 'postgres',
+        port: process.env.PGPORT ? parseInt(process.env.PGPORT) : 5432,
+        user: process.env.PGUSER || 'postgres',
+        password: process.env.POSTGRES_PASSWORD || 'postgres',
+        database: process.env.PGDATABASE || 'postgres',
+    });
+    await client.connect();
+    const result = await client.query(
+        `SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'communities'`
+    );
+    await client.end();
+    return result.rowCount > 0;
+};
+
 const load_sql_schema = async () => {
     const sqlFilePath = path.join(__dirname, 'rhizal_schema.sql');
     const sql = fs.readFileSync(sqlFilePath, 'utf8');
@@ -220,6 +236,7 @@ const create_system = async () => {
 
 // Export functions for testing
 module.exports = {
+    schema_exists,
     load_sql_schema,
     upload_metadata,
     create_system,
