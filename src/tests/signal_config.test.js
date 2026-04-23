@@ -269,11 +269,11 @@ describe('signal_config.js', () => {
                     // Simulate the response emitting 'data' and then 'end'
                     resMock.on.mock.calls.forEach(([event, handler]) => {
                         if (event === 'data') {
-                            // First request (username) returns username data, second request (profile) returns empty
+                            // First request (profile name) returns empty, second request (username) returns username data
                             if (requestCount === 0) {
-                                handler('{"username":"rhizal"}');
-                            } else {
                                 handler('');
+                            } else {
+                                handler('{"username":"rhizal"}');
                             }
                         }
                         if (event === 'end') handler();

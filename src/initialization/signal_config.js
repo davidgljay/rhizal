@@ -154,41 +154,8 @@ async function setSignalProfileName() {
     console.log('Setting Signal username to:', username);
     console.log('Setting Signal profile name to:', profileName);
 
-    const postData = JSON.stringify({ username });
-
-    const urlPath = `/v1/accounts/${botPhone}/username`;
-
-    const registered_username = await new Promise((resolve, reject) => {
-        const req = http.request({
-            hostname: 'signal-cli',
-            port: 8080,
-            path: urlPath,
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Content-Length': Buffer.byteLength(postData)
-            }
-        }, (res) => {
-            let data = '';
-            res.on('data', (chunk) => {
-                data += chunk;
-            });
-
-            res.on('end', () => {
-                if (res.statusCode >= 200 && res.statusCode < 300) {
-                    console.log("Signal username set successfully, assigned username:", JSON.parse(data).username);
-                    resolve(JSON.parse(data).username);
-                } else {
-                    reject(new Error(`Failed to set Signal username: ${res.statusCode} ${data}`));
-                }
-            });
-        });
-        req.on('error', reject);
-        req.write(postData);
-        req.end();
-    });
-
-    // Now set the profile name
+    // Set profile name first — Signal requires a profile before accepting username changes
+    // on a newly verified account.
     const profileData = JSON.stringify({ name: profileName });
     const profilePath = `/v1/profiles/${botPhone}`;
 
@@ -204,10 +171,7 @@ async function setSignalProfileName() {
             }
         }, (res) => {
             let data = '';
-            res.on('data', (chunk) => {
-                data += chunk;
-            });
-
+            res.on('data', (chunk) => { data += chunk; });
             res.on('end', () => {
                 if (res.statusCode >= 200 && res.statusCode < 300) {
                     console.log("Signal profile name set successfully to:", profileName);
@@ -221,6 +185,58 @@ async function setSignalProfileName() {
         req.write(profileData);
         req.end();
     });
+
+    // Set username with retries — newly registered accounts occasionally need a brief
+    // settling period after verification before Signal's servers accept username changes.
+    const postData = JSON.stringify({ username });
+    const urlPath = `/v1/accounts/${botPhone}/username`;
+    const MAX_ATTEMPTS = 3;
+    const RETRY_DELAY_MS = 3000;
+
+    let registered_username;
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+        try {
+            registered_username = await new Promise((resolve, reject) => {
+                const req = http.request({
+                    hostname: 'signal-cli',
+                    port: 8080,
+                    path: urlPath,
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Content-Length': Buffer.byteLength(postData)
+                    }
+                }, (res) => {
+                    let data = '';
+                    res.on('data', (chunk) => { data += chunk; });
+                    res.on('end', () => {
+                        if (res.statusCode >= 200 && res.statusCode < 300) {
+                            console.log("Signal username set successfully, assigned username:", JSON.parse(data).username);
+                            resolve(JSON.parse(data).username);
+                        } else {
+                            reject(new Error(`Failed to set Signal username: ${res.statusCode} ${data}`));
+                        }
+                    });
+                });
+                req.on('error', reject);
+                req.write(postData);
+                req.end();
+            });
+            break; // success
+        } catch (err) {
+            if (attempt < MAX_ATTEMPTS) {
+                console.log(`Username attempt ${attempt} failed (${err.message}), retrying in ${RETRY_DELAY_MS / 1000}s...`);
+                await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
+            } else {
+                throw new Error(
+                    `Failed to set Signal username after ${MAX_ATTEMPTS} attempts: ${err.message}\n` +
+                    `The username "${username}" may already be taken on Signal. ` +
+                    `Try a different signal_username in scripts_config/community_config.yml and re-run rhizal-init.`
+                );
+            }
+        }
+    }
+
     return registered_username;
 }
 

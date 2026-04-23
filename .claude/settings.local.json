@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C /Users/davidjay/Projects/rhizal log --oneline)",
+      "Bash(gh api *)",
+      "WebFetch(domain:github.com)",
+      "Bash(npx jest *)"
+    ]
+  }
+}
